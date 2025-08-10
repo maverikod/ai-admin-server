@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-admin-server"
+dynamic = ["version"]
+authors = [
+    {name = "Vasily VZ", email = "vasilyvz@gmail.com"},
+]
+description = "AI Admin server with command autodiscovery support to manage DockerHub, GitHub, Vast.ai GPU instances, and Kubernetes resources"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+dependencies = [
+    "mcp-proxy-adapter>=1.0.0",
+    "uvicorn>=0.20.0",
+    "fastapi>=0.95.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+ai-admin = "ai_admin.server:main"
+
+[project.urls]
+Homepage = "https://github.com/vasilyvz/ai-admin-server"
+Documentation = "https://github.com/vasilyvz/ai-admin-server#readme"
+Repository = "https://github.com/vasilyvz/ai-admin-server.git"
+Issues = "https://github.com/vasilyvz/ai-admin-server/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "ai_admin.version.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ai_admin*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true 
