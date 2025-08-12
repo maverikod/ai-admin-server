@@ -210,3 +210,9 @@ test_*.py
 WORK_COMPLETED.txt
 *.debug
 debug_*.py
+# Additional ignored files
+config/
+docker/kubeconfig.yaml
+docker/kubeconfig/
+docker/models/
+logs/
