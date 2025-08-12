@@ -76,6 +76,7 @@ def custom_commands_hook(registry):
     from ai_admin.commands.git_remote_command import GitRemoteCommand
     from ai_admin.commands.git_reset_command import GitResetCommand
     from ai_admin.commands.git_rebase_command import GitRebaseCommand
+    from ai_admin.commands.git_diff_command import GitDiffCommand
     from ai_admin.commands.k8s_pod_status_command import K8sPodStatusCommand
     from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
@@ -116,6 +117,7 @@ def custom_commands_hook(registry):
         GitRemoteCommand,
         GitResetCommand,
         GitRebaseCommand,
+        GitDiffCommand,
         K8sPodStatusCommand,
         K8sDeploymentCreateCommand,
         OllamaStatusCommand,
