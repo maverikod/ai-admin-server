@@ -26,6 +26,7 @@ class GitRemoteCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         action: str = "list",
         remote_name: Optional[str] = None,
         remote_url: Optional[str] = None,
@@ -41,6 +42,7 @@ class GitRemoteCommand(Command):
         Manage Git remote repositories.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             action: Action to perform (list, add, remove, rename, set-url, show)
             remote_name: Name of the remote
             remote_url: URL of the remote repository
@@ -49,12 +51,27 @@ class GitRemoteCommand(Command):
             push: Show push URL
             all: Show all URLs
             verbose: Show detailed output
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
             # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -219,6 +236,8 @@ class GitRemoteCommand(Command):
                 "remote_details": {}
             }
     
+
+    
     @classmethod
     def get_schema(cls) -> Dict[str, Any]:
         """Get command schema."""
@@ -226,6 +245,11 @@ class GitRemoteCommand(Command):
             "name": cls.name,
             "description": "Manage Git remote repositories",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "action": {
                     "type": "string",
                     "description": "Action to perform",
@@ -266,13 +290,14 @@ class GitRemoteCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "List all remotes",
                     "params": {
+                        "current_directory": ".",
                         "action": "list",
                         "verbose": True
                     }
@@ -280,6 +305,7 @@ class GitRemoteCommand(Command):
                 {
                     "description": "Add new remote",
                     "params": {
+                        "current_directory": ".",
                         "action": "add",
                         "remote_name": "origin",
                         "remote_url": "https://github.com/user/repo.git"
@@ -288,6 +314,7 @@ class GitRemoteCommand(Command):
                 {
                     "description": "Remove remote",
                     "params": {
+                        "current_directory": ".",
                         "action": "remove",
                         "remote_name": "old-remote"
                     }
@@ -295,6 +322,7 @@ class GitRemoteCommand(Command):
                 {
                     "description": "Rename remote",
                     "params": {
+                        "current_directory": ".",
                         "action": "rename",
                         "remote_name": "old-name",
                         "new_name": "new-name"
@@ -303,6 +331,7 @@ class GitRemoteCommand(Command):
                 {
                     "description": "Set remote URL",
                     "params": {
+                        "current_directory": ".",
                         "action": "set-url",
                         "remote_name": "origin",
                         "remote_url": "https://github.com/user/new-repo.git"
@@ -311,6 +340,7 @@ class GitRemoteCommand(Command):
                 {
                     "description": "Show remote details",
                     "params": {
+                        "current_directory": ".",
                         "action": "show",
                         "remote_name": "origin"
                     }

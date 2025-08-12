@@ -26,6 +26,7 @@ class GitAddCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         files: Optional[List[str]] = None,
         all_files: bool = False,
         interactive: bool = False,
@@ -42,6 +43,7 @@ class GitAddCommand(Command):
         Add files to Git staging area.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             files: List of files to add (optional)
             all_files: Add all files (equivalent to git add .)
             interactive: Use interactive mode
@@ -51,12 +53,28 @@ class GitAddCommand(Command):
             dry_run: Show what would be added without actually adding
             ignore_errors: Continue even if some files cannot be added
             ignore_missing: Ignore missing files
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -143,7 +161,23 @@ class GitAddCommand(Command):
     async def _get_staged_files(self, repo_path: str) -> List[str]:
         """Get list of staged files."""
         try:
-            # Get staged files using git diff --cached --name-only
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get staged files using git diff --cached --name-only
             cmd = ["git", "diff", "--cached", "--name-only"]
             result = subprocess.run(
                 cmd,
@@ -167,6 +201,11 @@ class GitAddCommand(Command):
             "name": cls.name,
             "description": "Add files to Git staging area",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "files": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -194,31 +233,35 @@ class GitAddCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Add specific files",
                     "params": {
+                        "current_directory": ".",
                         "files": ["file1.txt", "file2.py"]
                     }
                 },
                 {
                     "description": "Add all files",
                     "params": {
+                        "current_directory": ".",
                         "all_files": True
                     }
                 },
                 {
                     "description": "Interactive add",
                     "params": {
+                        "current_directory": ".",
                         "interactive": True
                     }
                 },
                 {
                     "description": "Force add ignored files",
                     "params": {
+                        "current_directory": ".",
                         "files": ["ignored_file.txt"],
                         "force": True
                     }

@@ -27,6 +27,7 @@ class GitDiffCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         commit1: Optional[str] = None,
         commit2: Optional[str] = None,
         files: Optional[List[str]] = None,
@@ -44,6 +45,7 @@ class GitDiffCommand(Command):
         Show differences in Git.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             commit1: First commit or reference (optional)
             commit2: Second commit or reference (optional)
             files: Specific files to diff (optional)
@@ -54,12 +56,28 @@ class GitDiffCommand(Command):
             color: Use color output
             stat: Show diffstat instead of diff
             name_only: Show only names of changed files
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -141,7 +159,23 @@ class GitDiffCommand(Command):
     async def _get_diff_info(self, repo_path: str, commit1: Optional[str], commit2: Optional[str], staged: bool) -> Dict[str, Any]:
         """Get information about the diff operation."""
         try:
-            # Get current branch
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get current branch
             branch_cmd = ["git", "branch", "--show-current"]
             branch_result = subprocess.run(
                 branch_cmd,
@@ -217,6 +251,11 @@ class GitDiffCommand(Command):
             "name": cls.name,
             "description": "Show differences in Git",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "commit1": {
                     "type": "string",
                     "description": "First commit or reference (optional)"
@@ -266,23 +305,26 @@ class GitDiffCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Show working directory changes",
-                    "params": {}
+                    "params": {
+                        "current_directory": ".",}
                 },
                 {
                     "description": "Show staged changes",
                     "params": {
+                        "current_directory": ".",
                         "staged": True
                     }
                 },
                 {
                     "description": "Show changes between commits",
                     "params": {
+                        "current_directory": ".",
                         "commit1": "HEAD~1",
                         "commit2": "HEAD"
                     }
@@ -290,24 +332,28 @@ class GitDiffCommand(Command):
                 {
                     "description": "Show changes for specific file",
                     "params": {
+                        "current_directory": ".",
                         "files": ["README.md"]
                     }
                 },
                 {
                     "description": "Show diffstat",
                     "params": {
+                        "current_directory": ".",
                         "stat": True
                     }
                 },
                 {
                     "description": "Show word-level diff",
                     "params": {
+                        "current_directory": ".",
                         "word_diff": True
                     }
                 },
                 {
                     "description": "Show only changed file names",
                     "params": {
+                        "current_directory": ".",
                         "name_only": True
                     }
                 }

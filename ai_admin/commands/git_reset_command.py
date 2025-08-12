@@ -25,6 +25,7 @@ class GitResetCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         commit: str = "HEAD",
         mode: str = "mixed",
         files: Optional[List[str]] = None,
@@ -37,17 +38,34 @@ class GitResetCommand(Command):
         Reset Git repository state.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             commit: Commit to reset to (default: HEAD)
             mode: Reset mode (soft, mixed, hard)
             files: Specific files to reset (optional)
             quiet: Suppress output
             verbose: Show detailed output
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -128,7 +146,23 @@ class GitResetCommand(Command):
     async def _get_reset_info(self, repo_path: str, commit: str, mode: str) -> Dict[str, Any]:
         """Get information about the reset operation."""
         try:
-            # Get current HEAD
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get current HEAD
             head_cmd = ["git", "rev-parse", "HEAD"]
             head_result = subprocess.run(
                 head_cmd,
@@ -211,6 +245,11 @@ class GitResetCommand(Command):
             "name": cls.name,
             "description": "Reset Git repository state",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "commit": {
                     "type": "string",
                     "description": "Commit to reset to",
@@ -239,13 +278,14 @@ class GitResetCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Soft reset to previous commit",
                     "params": {
+                        "current_directory": ".",
                         "commit": "HEAD~1",
                         "mode": "soft"
                     }
@@ -253,6 +293,7 @@ class GitResetCommand(Command):
                 {
                     "description": "Hard reset to specific commit",
                     "params": {
+                        "current_directory": ".",
                         "commit": "abc1234",
                         "mode": "hard"
                     }
@@ -260,12 +301,14 @@ class GitResetCommand(Command):
                 {
                     "description": "Mixed reset (default)",
                     "params": {
+                        "current_directory": ".",
                         "commit": "HEAD"
                     }
                 },
                 {
                     "description": "Reset specific files",
                     "params": {
+                        "current_directory": ".",
                         "commit": "HEAD",
                         "files": ["file1.txt", "file2.py"]
                     }
@@ -273,6 +316,7 @@ class GitResetCommand(Command):
                 {
                     "description": "Reset to remote branch",
                     "params": {
+                        "current_directory": ".",
                         "commit": "origin/main",
                         "mode": "hard"
                     }

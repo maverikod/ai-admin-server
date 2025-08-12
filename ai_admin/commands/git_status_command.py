@@ -27,6 +27,7 @@ class GitStatusCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         repository_path: Optional[str] = None,
         porcelain: bool = False,
         branch: bool = False,
@@ -37,15 +38,31 @@ class GitStatusCommand(Command):
         Get Git repository status.
         
         Args:
-            repository_path: Path to repository (optional, defaults to current directory)
+            current_directory: Current working directory where to execute git commands
+            repository_path: Path to repository (optional, defaults to current_directory)
             porcelain: Use porcelain format for machine-readable output
             branch: Show branch information
             show_stash: Include stash information
         """
         try:
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
             # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -292,9 +309,14 @@ class GitStatusCommand(Command):
             "name": cls.name,
             "description": "Check the status of a Git repository",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 },
                 "porcelain": {
                     "type": "boolean",
@@ -315,11 +337,13 @@ class GitStatusCommand(Command):
             "examples": [
                 {
                     "description": "Check status of current repository",
-                    "params": {}
+                    "params": {
+                        "current_directory": ".",}
                 },
                 {
                     "description": "Check status with branch info",
                     "params": {
+                        "current_directory": ".",
                         "branch": True,
                         "show_stash": True
                     }
@@ -327,6 +351,7 @@ class GitStatusCommand(Command):
                 {
                     "description": "Check status of specific repository",
                     "params": {
+                        "current_directory": ".",
                         "repository_path": "/path/to/repo"
                     }
                 }

@@ -25,6 +25,7 @@ class GitRebaseCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         action: str = "start",
         base: Optional[str] = None,
         branch: Optional[str] = None,
@@ -43,6 +44,7 @@ class GitRebaseCommand(Command):
         Rebase Git branches.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             action: Action to perform (start, continue, abort, skip)
             base: Base branch or commit to rebase onto
             branch: Branch to rebase (optional, uses current branch if not specified)
@@ -54,12 +56,28 @@ class GitRebaseCommand(Command):
             skip: Skip current commit in rebase
             quiet: Suppress output
             verbose: Show detailed output
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -158,7 +176,23 @@ class GitRebaseCommand(Command):
     async def _get_rebase_info(self, repo_path: str, action: str, base: Optional[str] = None) -> Dict[str, Any]:
         """Get information about the rebase operation."""
         try:
-            # Check if rebase is in progress
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Check if rebase is in progress
             rebase_merge_cmd = ["git", "rev-parse", "--git-path", "rebase-merge"]
             rebase_merge_result = subprocess.run(
                 rebase_merge_cmd,
@@ -243,6 +277,11 @@ class GitRebaseCommand(Command):
             "name": cls.name,
             "description": "Rebase Git branches",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "action": {
                     "type": "string",
                     "description": "Action to perform",
@@ -299,13 +338,14 @@ class GitRebaseCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Start rebase onto main branch",
                     "params": {
+                        "current_directory": ".",
                         "action": "start",
                         "base": "main"
                     }
@@ -313,6 +353,7 @@ class GitRebaseCommand(Command):
                 {
                     "description": "Interactive rebase",
                     "params": {
+                        "current_directory": ".",
                         "action": "start",
                         "base": "main",
                         "interactive": True
@@ -321,24 +362,28 @@ class GitRebaseCommand(Command):
                 {
                     "description": "Continue rebase",
                     "params": {
+                        "current_directory": ".",
                         "action": "continue"
                     }
                 },
                 {
                     "description": "Abort rebase",
                     "params": {
+                        "current_directory": ".",
                         "action": "abort"
                     }
                 },
                 {
                     "description": "Skip current commit",
                     "params": {
+                        "current_directory": ".",
                         "action": "skip"
                     }
                 },
                 {
                     "description": "Squash rebase",
                     "params": {
+                        "current_directory": ".",
                         "action": "start",
                         "base": "main",
                         "squash": True

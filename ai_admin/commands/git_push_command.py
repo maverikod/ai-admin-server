@@ -25,6 +25,7 @@ class GitPushCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         remote: str = "origin",
         branch: Optional[str] = None,
         force: bool = False,
@@ -42,6 +43,7 @@ class GitPushCommand(Command):
         Push Git commits to remote repository.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             remote: Remote repository name (default: origin)
             branch: Branch to push (optional, uses current branch if not specified)
             force: Force push (overwrites remote history)
@@ -52,12 +54,28 @@ class GitPushCommand(Command):
             dry_run: Show what would be pushed without actually pushing
             verbose: Show detailed output
             quiet: Suppress output
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -139,7 +157,23 @@ class GitPushCommand(Command):
     async def _get_push_info(self, repo_path: str, remote: str) -> Dict[str, Any]:
         """Get information about the push operation."""
         try:
-            # Get current branch
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get current branch
             branch_cmd = ["git", "branch", "--show-current"]
             branch_result = subprocess.run(
                 branch_cmd,
@@ -216,6 +250,11 @@ class GitPushCommand(Command):
             "name": cls.name,
             "description": "Push Git commits to remote repositories",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "remote": {
                     "type": "string",
                     "description": "Remote repository name",
@@ -267,19 +306,21 @@ class GitPushCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Push current branch to origin",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin"
                     }
                 },
                 {
                     "description": "Push specific branch",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "branch": "main"
                     }
@@ -287,6 +328,7 @@ class GitPushCommand(Command):
                 {
                     "description": "Force push",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "force": True
                     }
@@ -294,6 +336,7 @@ class GitPushCommand(Command):
                 {
                     "description": "Push all branches and tags",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "all_branches": True,
                         "tags": True
@@ -302,6 +345,7 @@ class GitPushCommand(Command):
                 {
                     "description": "Set upstream and push",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "set_upstream": True
                     }

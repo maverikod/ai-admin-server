@@ -25,6 +25,7 @@ class GitBranchCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         action: str = "list",
         branch_name: Optional[str] = None,
         start_point: Optional[str] = None,
@@ -40,6 +41,7 @@ class GitBranchCommand(Command):
         Manage Git branches.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             action: Action to perform (list, create, delete, rename, set-upstream)
             branch_name: Name of the branch
             start_point: Starting point for new branch (commit, branch, tag)
@@ -48,12 +50,28 @@ class GitBranchCommand(Command):
             rename: Rename the branch
             new_name: New name for the branch (when renaming)
             set_upstream: Set upstream branch
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -167,7 +185,23 @@ class GitBranchCommand(Command):
     async def _get_branch_info(self, repo_path: str) -> Dict[str, Any]:
         """Get information about branches."""
         try:
-            # Get current branch
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get current branch
             current_cmd = ["git", "branch", "--show-current"]
             current_result = subprocess.run(
                 current_cmd,
@@ -234,6 +268,11 @@ class GitBranchCommand(Command):
             "name": cls.name,
             "description": "Manage Git branches",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "action": {
                     "type": "string",
                     "description": "Action to perform",
@@ -273,13 +312,14 @@ class GitBranchCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "List all branches",
                     "params": {
+                        "current_directory": ".",
                         "action": "list",
                         "force": True
                     }
@@ -287,6 +327,7 @@ class GitBranchCommand(Command):
                 {
                     "description": "Create new branch",
                     "params": {
+                        "current_directory": ".",
                         "action": "create",
                         "branch_name": "feature/new-feature",
                         "start_point": "main"
@@ -295,6 +336,7 @@ class GitBranchCommand(Command):
                 {
                     "description": "Delete branch",
                     "params": {
+                        "current_directory": ".",
                         "action": "delete",
                         "branch_name": "old-branch",
                         "force": True
@@ -303,6 +345,7 @@ class GitBranchCommand(Command):
                 {
                     "description": "Rename branch",
                     "params": {
+                        "current_directory": ".",
                         "action": "rename",
                         "branch_name": "old-name",
                         "new_name": "new-name"
@@ -311,6 +354,7 @@ class GitBranchCommand(Command):
                 {
                     "description": "Set upstream",
                     "params": {
+                        "current_directory": ".",
                         "action": "set-upstream",
                         "branch_name": "feature",
                         "set_upstream": "origin/feature"

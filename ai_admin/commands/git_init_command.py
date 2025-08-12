@@ -24,6 +24,7 @@ class GitInitCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         repository_path: Optional[str] = None,
         bare: bool = False,
         shared: Optional[str] = None,
@@ -36,7 +37,8 @@ class GitInitCommand(Command):
         Initialize a Git repository.
         
         Args:
-            repository_path: Path to repository (optional, defaults to current directory)
+            current_directory: Current working directory where to execute git commands
+            repository_path: Path to repository (optional, defaults to current_directory)
             bare: Create a bare repository
             shared: Set repository sharing permissions (umask, group, all, world, everybody, 0xxx)
             template: Specify template directory
@@ -44,9 +46,25 @@ class GitInitCommand(Command):
             verbose: Show detailed output
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory already has a Git repository
             if os.path.exists(os.path.join(repository_path, ".git")):
@@ -82,7 +100,7 @@ class GitInitCommand(Command):
                 cmd,
                 capture_output=True,
                 text=True,
-                cwd=os.getcwd()  # Run from current directory
+                cwd=current_directory  # Run from current directory
             )
             
             if result.returncode != 0:
@@ -117,7 +135,23 @@ class GitInitCommand(Command):
     async def _get_repository_info(self, repo_path: str) -> Dict[str, Any]:
         """Get information about the initialized repository."""
         try:
-            # Check if .git directory exists
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Check if .git directory exists
             git_dir = os.path.join(repo_path, ".git")
             is_bare = not os.path.exists(git_dir)
             
@@ -174,9 +208,14 @@ class GitInitCommand(Command):
             "name": cls.name,
             "description": "Initialize Git repositories",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 },
                 "bare": {
                     "type": "boolean",
@@ -205,17 +244,20 @@ class GitInitCommand(Command):
             "examples": [
                 {
                     "description": "Initialize repository in current directory",
-                    "params": {}
+                    "params": {
+                        "current_directory": ".",}
                 },
                 {
                     "description": "Initialize repository in specific path",
                     "params": {
+                        "current_directory": ".",
                         "repository_path": "/path/to/repo"
                     }
                 },
                 {
                     "description": "Create bare repository",
                     "params": {
+                        "current_directory": ".",
                         "repository_path": "/path/to/bare-repo",
                         "bare": True
                     }
@@ -223,6 +265,7 @@ class GitInitCommand(Command):
                 {
                     "description": "Initialize shared repository",
                     "params": {
+                        "current_directory": ".",
                         "repository_path": "/path/to/shared-repo",
                         "shared": "group"
                     }
@@ -230,6 +273,7 @@ class GitInitCommand(Command):
                 {
                     "description": "Initialize with custom template",
                     "params": {
+                        "current_directory": ".",
                         "repository_path": "/path/to/repo",
                         "template": "/path/to/template"
                     }

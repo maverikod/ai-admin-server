@@ -26,6 +26,7 @@ class GitCommitCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         message: str,
         amend: bool = False,
         sign: bool = False,
@@ -43,6 +44,7 @@ class GitCommitCommand(Command):
         Create a Git commit.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             message: Commit message
             amend: Amend the previous commit
             sign: Sign the commit with GPG
@@ -53,12 +55,28 @@ class GitCommitCommand(Command):
             quiet: Suppress output
             author: Override author (format: "Name <email>")
             date: Override commit date (format: "YYYY-MM-DD HH:MM:SS")
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -151,7 +169,23 @@ class GitCommitCommand(Command):
     async def _get_commit_info(self, repo_path: str) -> Dict[str, Any]:
         """Get information about the latest commit."""
         try:
-            # Get commit hash
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get commit hash
             hash_cmd = ["git", "rev-parse", "HEAD"]
             hash_result = subprocess.run(
                 hash_cmd,
@@ -227,6 +261,11 @@ class GitCommitCommand(Command):
             "name": cls.name,
             "description": "Create Git commits",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "message": {
                     "type": "string",
                     "description": "Commit message"
@@ -276,19 +315,21 @@ class GitCommitCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Create a commit with message",
                     "params": {
+                        "current_directory": ".",
                         "message": "Add new feature"
                     }
                 },
                 {
                     "description": "Amend previous commit",
                     "params": {
+                        "current_directory": ".",
                         "message": "Updated commit message",
                         "amend": True
                     }
@@ -296,6 +337,7 @@ class GitCommitCommand(Command):
                 {
                     "description": "Sign commit",
                     "params": {
+                        "current_directory": ".",
                         "message": "Signed commit",
                         "sign": True
                     }
@@ -303,6 +345,7 @@ class GitCommitCommand(Command):
                 {
                     "description": "Commit specific files",
                     "params": {
+                        "current_directory": ".",
                         "message": "Update specific files",
                         "files": ["file1.txt", "file2.py"]
                     }

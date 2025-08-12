@@ -27,6 +27,7 @@ class GitCloneCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         repository_url: str,
         target_directory: Optional[str] = None,
         branch: Optional[str] = None,
@@ -39,6 +40,7 @@ class GitCloneCommand(Command):
         Clone a Git repository.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             repository_url: URL of the repository to clone
             target_directory: Directory to clone into (optional)
             branch: Specific branch to clone (optional)
@@ -47,6 +49,21 @@ class GitCloneCommand(Command):
             quiet: Suppress output
         """
         try:
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
             # Validate repository URL
             if not repository_url:
                 raise ValidationError("Repository URL is required")
@@ -60,11 +77,12 @@ class GitCloneCommand(Command):
                 target_directory = repo_name
             
             # Ensure target directory doesn't exist
-            if os.path.exists(target_directory):
+            target_path = os.path.join(current_directory, target_directory)
+            if os.path.exists(target_path):
                 return ErrorResult(
-                    message=f"Target directory '{target_directory}' already exists",
+                    message=f"Target directory '{target_path}' already exists",
                     code="DIRECTORY_EXISTS",
-                    details={"target_directory": target_directory}
+                    details={"target_directory": target_path}
                 )
             
             # Build git clone command
@@ -89,7 +107,7 @@ class GitCloneCommand(Command):
                 cmd,
                 capture_output=True,
                 text=True,
-                cwd=os.getcwd()
+                cwd=current_directory
             )
             
             if result.returncode != 0:
@@ -104,12 +122,12 @@ class GitCloneCommand(Command):
                 )
             
             # Get repository info
-            repo_info = await self._get_repository_info(target_directory)
+            repo_info = await self._get_repository_info(target_path)
             
             return SuccessResult(data={
-                "message": f"Successfully cloned repository to '{target_directory}'",
+                "message": f"Successfully cloned repository to '{target_path}'",
                 "repository_url": repository_url,
-                "target_directory": os.path.abspath(target_directory),
+                "target_directory": os.path.abspath(target_path),
                 "branch": branch or "default",
                 "repository_info": repo_info,
                 "timestamp": datetime.now().isoformat()
@@ -172,6 +190,11 @@ class GitCloneCommand(Command):
             "name": cls.name,
             "description": "Clone Git repositories from various sources",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "repository_url": {
                     "type": "string",
                     "description": "URL of the repository to clone",
@@ -204,6 +227,7 @@ class GitCloneCommand(Command):
                 {
                     "description": "Clone a GitHub repository",
                     "params": {
+                        "current_directory": ".",
                         "repository_url": "https://github.com/user/repo.git",
                         "target_directory": "my-repo"
                     }
@@ -211,6 +235,7 @@ class GitCloneCommand(Command):
                 {
                     "description": "Clone specific branch",
                     "params": {
+                        "current_directory": ".",
                         "repository_url": "https://github.com/user/repo.git",
                         "branch": "develop"
                     }
@@ -218,6 +243,7 @@ class GitCloneCommand(Command):
                 {
                     "description": "Shallow clone",
                     "params": {
+                        "current_directory": ".",
                         "repository_url": "https://github.com/user/repo.git",
                         "depth": 1
                     }

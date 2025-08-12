@@ -25,6 +25,7 @@ class GitCheckoutCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         target: str,
         create_branch: bool = False,
         force: bool = False,
@@ -36,16 +37,33 @@ class GitCheckoutCommand(Command):
         Checkout Git branch, commit, or files.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             target: Branch name, commit hash, or file path to checkout
             create_branch: Create new branch if it doesn't exist
             force: Force checkout (discard local changes)
             files: Specific files to checkout (optional)
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
-            # Determine repository path
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -111,7 +129,23 @@ class GitCheckoutCommand(Command):
     async def _get_checkout_info(self, repo_path: str, target: str) -> Dict[str, Any]:
         """Get information about the checkout operation."""
         try:
-            # Get current branch
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
+
+        # Get current branch
             branch_cmd = ["git", "branch", "--show-current"]
             branch_result = subprocess.run(
                 branch_cmd,
@@ -216,6 +250,11 @@ class GitCheckoutCommand(Command):
             "name": cls.name,
             "description": "Checkout Git branches and files",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "target": {
                     "type": "string",
                     "description": "Branch name, commit hash, or file path to checkout",
@@ -238,19 +277,21 @@ class GitCheckoutCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Switch to existing branch",
                     "params": {
+                        "current_directory": ".",
                         "target": "main"
                     }
                 },
                 {
                     "description": "Create and switch to new branch",
                     "params": {
+                        "current_directory": ".",
                         "target": "feature/new-feature",
                         "create_branch": True
                     }
@@ -258,12 +299,14 @@ class GitCheckoutCommand(Command):
                 {
                     "description": "Checkout specific commit",
                     "params": {
+                        "current_directory": ".",
                         "target": "abc1234"
                     }
                 },
                 {
                     "description": "Force checkout (discard changes)",
                     "params": {
+                        "current_directory": ".",
                         "target": "main",
                         "force": True
                     }
@@ -271,6 +314,7 @@ class GitCheckoutCommand(Command):
                 {
                     "description": "Checkout specific file",
                     "params": {
+                        "current_directory": ".",
                         "target": "HEAD",
                         "files": ["file1.txt", "file2.py"]
                     }

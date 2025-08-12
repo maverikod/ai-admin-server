@@ -25,6 +25,7 @@ class GitPullCommand(Command):
     
     async def execute(
         self,
+        current_directory: str,
         remote: str = "origin",
         branch: Optional[str] = None,
         rebase: bool = False,
@@ -42,6 +43,7 @@ class GitPullCommand(Command):
         Pull changes from remote repository.
         
         Args:
+            current_directory: Current working directory where to execute git commands
             remote: Remote repository name (default: origin)
             branch: Branch to pull (optional, uses current branch if not specified)
             rebase: Use rebase instead of merge
@@ -52,12 +54,27 @@ class GitPullCommand(Command):
             quiet: Suppress output
             progress: Show progress
             no_edit: Don't open editor for merge commit message
-            repository_path: Path to repository (optional, defaults to current directory)
+            repository_path: Path to repository (optional, defaults to current_directory)
         """
         try:
+            # Validate current_directory
+            if not current_directory:
+                return ErrorResult(
+                    message="current_directory is required",
+                    code="MISSING_CURRENT_DIRECTORY",
+                    details={}
+                )
+            
+            if not os.path.exists(current_directory):
+                return ErrorResult(
+                    message=f"Directory '{current_directory}' does not exist",
+                    code="DIRECTORY_NOT_FOUND",
+                    details={"current_directory": current_directory}
+                )
+            
             # Determine repository path
             if not repository_path:
-                repository_path = os.getcwd()
+                repository_path = current_directory
             
             # Check if directory is a Git repository
             if not os.path.exists(os.path.join(repository_path, ".git")):
@@ -236,6 +253,11 @@ class GitPullCommand(Command):
             "name": cls.name,
             "description": "Pull changes from remote Git repositories",
             "parameters": {
+                "current_directory": {
+                    "type": "string",
+                    "description": "Current working directory where to execute git commands",
+                    "required": True
+                },
                 "remote": {
                     "type": "string",
                     "description": "Remote repository name",
@@ -287,19 +309,21 @@ class GitPullCommand(Command):
                 },
                 "repository_path": {
                     "type": "string",
-                    "description": "Path to repository (optional, defaults to current directory)"
+                    "description": "Path to repository (optional, defaults to current_directory)"
                 }
             },
             "examples": [
                 {
                     "description": "Pull from origin",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin"
                     }
                 },
                 {
                     "description": "Pull specific branch",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "branch": "main"
                     }
@@ -307,6 +331,7 @@ class GitPullCommand(Command):
                 {
                     "description": "Pull with rebase",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "rebase": True
                     }
@@ -314,6 +339,7 @@ class GitPullCommand(Command):
                 {
                     "description": "Fast-forward only pull",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "fast_forward_only": True
                     }
@@ -321,6 +347,7 @@ class GitPullCommand(Command):
                 {
                     "description": "Pull with tags",
                     "params": {
+                        "current_directory": ".",
                         "remote": "origin",
                         "tags": True
                     }
