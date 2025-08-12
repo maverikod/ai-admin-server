@@ -10,6 +10,7 @@ from ai_admin.commands.docker_images_compare_command import DockerImagesCompareC
 from ai_admin.commands.docker_images_command import DockerImagesCommand
 from ai_admin.commands.docker_build_command import DockerBuildCommand
 from ai_admin.commands.docker_push_command import DockerPushCommand
+from ai_admin.commands.docker_pull_command import DockerPullCommand
 from ai_admin.commands.docker_search_command import DockerSearchCommand
 from ai_admin.commands.docker_search_cli_command import DockerSearchCLICommand
 from ai_admin.commands.docker_tag_command import DockerTagCommand
@@ -74,6 +75,7 @@ __all__ = [
     "DockerImagesCommand",
     "DockerBuildCommand",
     "DockerPushCommand",
+    "DockerPullCommand",
     "DockerSearchCommand",
     "DockerSearchCLICommand",
     "DockerTagCommand",

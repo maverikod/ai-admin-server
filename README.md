@@ -1,268 +1,219 @@
-# MCP Empty Server
+# AI Admin - Enhanced MCP Server
 
-Empty server with command autodiscovery support using mcp_proxy_adapter framework.
+AI Admin - это расширенный MCP (Model Context Protocol) сервер для управления Docker, Vast.ai, FTP, GitHub и Kubernetes ресурсами.
 
-## Features
+## 🚀 Возможности
 
-- **Automatic Command Discovery**: Commands are automatically discovered and registered
-- **Standard JSON-RPC API**: Compatible with mcp_proxy_adapter JSON-RPC protocol
-- **Built-in Commands**: Includes help, health, config, and reload commands
-- **OpenAPI Schema**: Automatic API documentation generation
-- **Configuration Support**: Flexible configuration through files and environment variables
-- **Extensible**: Easy to add custom commands
+- **Docker Management**: Сборка, загрузка, поиск и управление Docker образами
+- **Vast.ai Integration**: Создание, мониторинг и управление GPU инстансами
+- **FTP Operations**: Загрузка, скачивание и управление файлами через FTP
+- **GitHub Integration**: Управление репозиториями и проектами
+- **Kubernetes Management**: Развертывание и управление K8s ресурсами
+- **Queue System**: Асинхронное выполнение задач
+- **System Monitoring**: Мониторинг системных ресурсов
+- **Enhanced Hooks**: Расширенная система хуков для кастомизации
 
-## Installation
+## 📁 Структура проекта
+
+```
+vast_srv/
+├── ai_admin/                 # Основной пакет AI Admin
+│   ├── commands/            # Команды для различных сервисов
+│   ├── queue/              # Система очередей
+│   ├── server.py           # Основной сервер
+│   └── settings_manager.py # Управление настройками
+├── config/                 # Конфигурационные файлы
+│   ├── config.json        # Основная конфигурация
+│   └── auth.json          # Учетные данные
+├── scripts/               # Скрипты для тестирования и отладки
+│   ├── gpu_test_script.py # GPU тестирование
+│   ├── cuda_ftp_test.py   # CUDA + FTP тестирование
+│   └── ...
+├── tests/                 # Тесты
+├── docs/                  # Документация
+├── results/               # Результаты тестов
+├── logs/                  # Логи приложения
+└── docker/               # Docker файлы
+```
+
+## 🛠️ Установка
+
+1. **Клонирование репозитория**:
+```bash
+git clone <repository-url>
+cd vast_srv
+```
+
+2. **Создание виртуального окружения**:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+# или
+.venv\Scripts\activate     # Windows
+```
+
+3. **Установка зависимостей**:
+```bash
+pip install -r requirements.txt
+```
+
+4. **Настройка конфигурации**:
+```bash
+cp config/config.example.json config/config.json
+cp config/auth.example.json config/auth.json
+# Отредактируйте файлы с вашими настройками
+```
+
+## 🚀 Запуск
+
+### Запуск сервера
+```bash
+python -m ai_admin
+```
+
+### Запуск с отладкой
+```bash
+python -m ai_admin --debug
+```
+
+### Запуск с кастомной конфигурацией
+```bash
+python -m ai_admin --config config/my_config.json
+```
+
+## 📖 Использование
+
+### API Endpoints
+
+Сервер предоставляет JSON-RPC API на порту 8060:
 
 ```bash
-pip install mcp-empty-server
-```
-
-## Quick Start
-
-### Command Line Usage
-
-Start the server with default settings:
-
-```bash
-mcp-empty-server
-```
-
-With custom configuration:
-
-```bash
-mcp-empty-server --host 127.0.0.1 --port 8080 --config config.json
-```
-
-### Programmatic Usage
-
-```python
-from mcp_empty_server import create_server, run_server
-
-# Create application
-app = create_server(
-    title="My Custom Server",
-    description="My custom server description",
-    version="1.0.0"
-)
-
-# Or run directly
-run_server(
-    host="0.0.0.0",
-    port=8060,
-    debug=True
-)
-```
-
-## Adding Custom Commands
-
-Create a command file with `_command.py` suffix in the `mcp_empty_server/commands/` directory:
-
-```python
-# my_custom_command.py
-from typing import Dict, Any
-from mcp_proxy_adapter.commands.base import Command
-from mcp_proxy_adapter.commands.result import SuccessResult
-
-class MyCustomCommand(Command):
-    """My custom command description."""
-    
-    name = "my_custom"
-    
-    async def execute(self, param1: str = "default") -> SuccessResult:
-        """Execute my custom command.
-        
-        Args:
-            param1: First parameter
-            
-        Returns:
-            Success result
-        """
-        return SuccessResult(data={
-            "result": f"Hello {param1}!",
-            "command": self.name
-        })
-    
-    @classmethod
-    def get_schema(cls) -> Dict[str, Any]:
-        """Get command schema."""
-        return {
-            "type": "object",
-            "properties": {
-                "param1": {
-                    "type": "string",
-                    "description": "First parameter",
-                    "default": "default"
-                }
-            }
-        }
-```
-
-The command will be automatically discovered and available via JSON-RPC:
-
-```bash
+# Получение списка команд
 curl -X POST http://localhost:8060/cmd \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc": "2.0", "method": "my_custom", "params": {"param1": "world"}, "id": 1}'
+  -d '{"jsonrpc": "2.0", "method": "help", "id": 1}'
+
+# Мониторинг системы
+curl -X POST http://localhost:8060/cmd \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "system_monitor", "id": 1}'
+
+# Поиск Vast.ai инстансов
+curl -X POST http://localhost:8060/cmd \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "method": "vast_search", "params": {"max_cost": 0.5}, "id": 1}'
 ```
 
-## Built-in Commands
+### Доступные команды
 
-- `help` - List all available commands
-- `health` - Server health check
-- `config` - Get server configuration
-- `reload` - Reload server configuration and commands
-- `example` - Example command demonstrating the server
+#### Docker Commands
+- `docker_build` - Сборка Docker образа
+- `docker_push` - Загрузка образа в registry
+- `docker_images` - Список образов
+- `docker_search` - Поиск образов
 
-## Docker Commands
+#### Vast.ai Commands
+- `vast_search` - Поиск доступных инстансов
+- `vast_create` - Создание инстанса
+- `vast_destroy` - Удаление инстанса
+- `vast_instances` - Список инстансов
 
-- `docker_login` - Authenticate with Docker registries
-- `docker_build` - Build Docker images from Dockerfile
-- `docker_tag` - Tag Docker images with new names
-- `docker_push` - Push Docker images to registries
-- `docker_images` - List local Docker images
-- `docker_rmi` - Remove Docker images
-- `docker_hub_images` - Search and view remote Docker Hub images
-- `docker_hub_image_info` - Get detailed information about Docker Hub images
-- `docker_images_compare` - Compare local and remote Docker images
+#### FTP Commands
+- `ftp_upload` - Загрузка файла
+- `ftp_download` - Скачивание файла
+- `ftp_list` - Список файлов
+- `ftp_delete` - Удаление файла
 
-## GitHub Commands
+#### System Commands
+- `system_monitor` - Мониторинг системы
+- `queue_status` - Статус очереди
+- `queue_push` - Добавление задачи в очередь
 
-- `github_create_repo` - Create new GitHub repository via API
-- `github_list_repos` - List your GitHub repositories
-- `git_clone` - Clone Git repositories locally
+## 🧪 Тестирование
 
-## Git Commands (Local Repository)
+### GPU Testing
+```bash
+# Локальное тестирование GPU
+python scripts/gpu_test_local.py
 
-- `git_init` - Initialize Git repository
-- `git_status` - Get repository status and file changes
-- `git_commit` - Create commits with file staging
-- `git_push` - Push changes to remote repository
+# Тестирование на Vast.ai
+python scripts/cuda_ftp_test.py
+```
 
-## Vast.ai Commands (GPU Cloud Computing)
+### FTP Testing
+```bash
+# Проверка FTP соединения
+python scripts/check_ftp.py
 
-- `vast_search` - Search for available GPU instances
-- `vast_create` - Create (rent) GPU instances
-- `vast_instances` - List your active instances
-- `vast_destroy` - Stop/delete GPU instances
+# Отладка FTP
+bash scripts/full_ftp_debug.sh
+```
 
-## Queue Commands
+## 📚 Документация
 
-- `queue_status` - Get overall queue status
-- `queue_task_status` - Get specific task status
-- `queue_push` - Add Docker push task to queue
-- `queue_cancel` - Cancel a queued task
+- [Техническая спецификация](docs/tech_spec.md)
+- [Docker команды](docs/docker_images_commands.md)
+- [FTP команды](docs/ftp_commands.md)
+- [Система очередей](docs/enhanced_queue_system.md)
+- [Управление сервером](docs/server_management.md)
 
-## Configuration
+## 🔧 Конфигурация
 
-Create a `config.json` file:
-
+### Основные настройки (config/config.json)
 ```json
 {
   "server": {
     "host": "0.0.0.0",
     "port": 8060,
-    "debug": false,
-    "log_level": "INFO"
-  },
-  "logging": {
-    "level": "INFO",
-    "file_output": true,
-    "log_dir": "./logs"
+    "debug": false
   },
   "commands": {
     "auto_discovery": true,
-    "discovery_path": "mcp_empty_server.commands"
+    "discovery_path": "ai_admin.commands"
   },
-  "docker": {
-    "username": "your-docker-username",
-    "token": "your-docker-access-token",
-    "registry": "docker.io"
-  },
-  "github": {
-    "username": "your-github-username", 
-    "token": "ghp_your_personal_access_token_here"
-  },
-  "vast": {
-    "api_key": "your-vast-api-key-here",
-    "api_url": "https://console.vast.ai/api/v0"
+  "ai_admin": {
+    "features": {
+      "docker_operations": true,
+      "vast_operations": true,
+      "ftp_operations": true
+    }
   }
 }
 ```
 
-### Getting API Keys
-
-- **Docker**: Create access token at [Docker Hub Settings](https://hub.docker.com/settings/security)
-- **GitHub**: Create PAT at [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
-- **Vast.ai**: Get API key from [Vast.ai Console > Account](https://console.vast.ai/account/)
-
-## API Documentation
-
-Once the server is running, visit:
-- OpenAPI docs: `http://localhost:8060/docs`
-- ReDoc: `http://localhost:8060/redoc`
-
-## Docker Deployment
-
-### Auto-Restart Configuration
-
-The container is configured with `restart: unless-stopped` policy, which means:
-- ✅ Container automatically restarts if it crashes
-- ✅ Container starts automatically when Docker daemon starts
-- ✅ Container starts automatically after system reboot
-- ❌ Container won't restart if explicitly stopped with `docker stop`
-
-### Build and Run
-
-```bash
-# Build the image
-cd docker && ./build.sh
-
-# Setup environment (for docker-compose)
-./setup-env.sh
-
-# Run with Docker Compose (recommended)
-docker-compose up -d
-
-# Or run manually with auto-restart
-./run.sh
+### Учетные данные (config/auth.json)
+```json
+{
+  "docker": {
+    "username": "your_username",
+    "password": "your_password"
+  },
+  "vast": {
+    "api_key": "your_api_key"
+  },
+  "ftp": {
+    "host": "ftp.example.com",
+    "username": "your_username",
+    "password": "your_password"
+  }
+}
 ```
 
-### Manual Docker Run with Auto-Restart
+## 🤝 Вклад в проект
 
-```bash
-docker run -d -p 8060:8060 \
-  --restart unless-stopped \
-  -v $(pwd)/config:/app/config:ro \
-  -v $(pwd)/logs:/app/logs \
-  -v $(pwd)/cache:/app/cache \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  --user $(id -u):$(id -g) \
-  --network smart-assistant \
-  mcp-dochub-server:latest
-```
+1. Форкните репозиторий
+2. Создайте ветку для новой функции
+3. Внесите изменения
+4. Добавьте тесты
+5. Создайте Pull Request
 
-## Development
+## 📄 Лицензия
 
-Clone the repository and install in development mode:
+Этот проект лицензирован под MIT License.
 
-```bash
-git clone https://github.com/yourusername/mcp-empty-server.git
-cd mcp-empty-server
-pip install -e ".[dev]"
-```
+## 🆘 Поддержка
 
-Run tests:
-
-```bash
-pytest
-```
-
-Format code:
-
-```bash
-black .
-```
-
-## License
-
-MIT License 
+Для получения помощи:
+- Создайте Issue в GitHub
+- Обратитесь к документации в папке `docs/`
+- Проверьте логи в папке `logs/` 
