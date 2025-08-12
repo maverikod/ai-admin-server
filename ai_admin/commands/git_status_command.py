@@ -60,6 +60,9 @@ class GitStatusCommand(Command):
             
             if porcelain:
                 cmd.append("--porcelain")
+            else:
+                # Use normal format to get untracked files info
+                pass  # Default format shows untracked files
             
             if branch:
                 cmd.append("--branch")
@@ -85,6 +88,12 @@ class GitStatusCommand(Command):
             
             # Parse status output
             status_info = await self._parse_status_output(result.stdout, repository_path)
+            
+            # Get untracked files separately
+            untracked_files = await self._get_untracked_files(repository_path)
+            status_info["untracked"] = untracked_files
+            if untracked_files:
+                status_info["clean"] = False
             
             # Add stash information if requested
             if show_stash:
@@ -174,6 +183,25 @@ class GitStatusCommand(Command):
         status_info.update(repo_info)
         
         return status_info
+    
+    async def _get_untracked_files(self, repo_path: str) -> List[str]:
+        """Get list of untracked files."""
+        try:
+            cmd = ["git", "ls-files", "--others", "--exclude-standard"]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=repo_path
+            )
+            
+            if result.returncode == 0:
+                files = [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+                return files
+            else:
+                return []
+        except Exception:
+            return []
     
     async def _get_repository_info(self, repo_path: str) -> Dict[str, Any]:
         """Get additional repository information."""
