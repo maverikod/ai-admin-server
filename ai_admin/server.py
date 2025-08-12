@@ -49,6 +49,7 @@ def custom_commands_hook(registry):
     from ai_admin.commands.docker_push_command import DockerPushCommand
     from ai_admin.commands.docker_images_command import DockerImagesCommand
     from ai_admin.commands.docker_search_command import DockerSearchCommand
+    from ai_admin.commands.docker_pull_command import DockerPullCommand
     from ai_admin.commands.vast_search_command import VastSearchCommand
     from ai_admin.commands.vast_create_command import VastCreateCommand
     from ai_admin.commands.vast_destroy_command import VastDestroyCommand
@@ -61,6 +62,24 @@ def custom_commands_hook(registry):
     from ai_admin.commands.queue_status_command import QueueStatusCommand
     from ai_admin.commands.queue_cancel_command import QueueCancelCommand
     from ai_admin.commands.queue_task_status_command import QueueTaskStatusCommand
+    from ai_admin.commands.github_list_repos_command import GitHubListReposCommand
+    from ai_admin.commands.github_create_repo_command import GitHubCreateRepoCommand
+    from ai_admin.commands.git_clone_command import GitCloneCommand
+    from ai_admin.commands.git_status_command import GitStatusCommand
+    from ai_admin.commands.git_add_command import GitAddCommand
+    from ai_admin.commands.git_commit_command import GitCommitCommand
+    from ai_admin.commands.git_push_command import GitPushCommand
+    from ai_admin.commands.git_pull_command import GitPullCommand
+    from ai_admin.commands.git_branch_command import GitBranchCommand
+    from ai_admin.commands.git_checkout_command import GitCheckoutCommand
+    from ai_admin.commands.git_init_command import GitInitCommand
+    from ai_admin.commands.git_remote_command import GitRemoteCommand
+    from ai_admin.commands.git_reset_command import GitResetCommand
+    from ai_admin.commands.git_rebase_command import GitRebaseCommand
+    from ai_admin.commands.k8s_pod_status_command import K8sPodStatusCommand
+    from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
+    from ai_admin.commands.ollama_status_command import OllamaStatusCommand
+    from ai_admin.commands.ollama_models_command import OllamaModelsCommand
     from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
     
     # Register AI Admin commands
@@ -70,6 +89,7 @@ def custom_commands_hook(registry):
         DockerPushCommand,
         DockerImagesCommand,
         DockerSearchCommand,
+        DockerPullCommand,
         VastSearchCommand,
         VastCreateCommand,
         VastDestroyCommand,
@@ -82,6 +102,24 @@ def custom_commands_hook(registry):
         QueueStatusCommand,
         QueueCancelCommand,
         QueueTaskStatusCommand,
+        GitHubListReposCommand,
+        GitHubCreateRepoCommand,
+        GitCloneCommand,
+        GitStatusCommand,
+        GitAddCommand,
+        GitCommitCommand,
+        GitPushCommand,
+        GitPullCommand,
+        GitBranchCommand,
+        GitCheckoutCommand,
+        GitInitCommand,
+        GitRemoteCommand,
+        GitResetCommand,
+        GitRebaseCommand,
+        K8sPodStatusCommand,
+        K8sDeploymentCreateCommand,
+        OllamaStatusCommand,
+        OllamaModelsCommand,
         TestDiscoveryCommand
     ]
     
