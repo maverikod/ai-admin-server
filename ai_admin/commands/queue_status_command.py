@@ -19,24 +19,56 @@ class QueueStatusCommand(Command):
     async def execute(
         self,
         include_logs: bool = False,
+        detailed: bool = True,
         **kwargs
     ) -> SuccessResult:
         """Execute queue status command.
         
         Args:
             include_logs: Include task logs in response
+            detailed: Include detailed statistics
             
         Returns:
             Success result with queue status
         """
         try:
-            # Get queue status
-            queue_status = await queue_manager.get_queue_status()
+            # Get queue statistics
+            queue_stats = await queue_manager.get_queue_stats()
             
-            # Get all tasks if logs requested
+            # Get all tasks
+            all_tasks = await queue_manager.get_all_tasks()
+            
+            # Get running tasks
+            running_tasks = [task for task in all_tasks if task.status.value == "running"]
+            
+            # Build queue status
+            queue_status = {
+                "statistics": queue_stats,
+                "recent_tasks": [task.to_dict() for task in all_tasks[:10]],
+                "running_tasks": [task.to_dict() for task in running_tasks]
+            }
+            
+            # Add all tasks with logs if requested
             if include_logs:
-                all_tasks = await queue_manager.get_all_tasks()
-                queue_status["all_tasks_with_logs"] = all_tasks
+                queue_status["all_tasks_with_logs"] = [task.to_dict() for task in all_tasks]
+            
+            # Add status descriptions
+            if detailed:
+                queue_status["status_descriptions"] = {
+                    "pending": "Tasks waiting in queue",
+                    "running": "Tasks currently executing",
+                    "paused": "Tasks paused by user",
+                    "validating": "Tasks validating parameters",
+                    "preparing": "Tasks preparing for execution",
+                    "uploading": "Tasks uploading data",
+                    "downloading": "Tasks downloading data",
+                    "building": "Tasks building Docker images",
+                    "pulling": "Tasks pulling Docker images",
+                    "completed": "Tasks completed successfully",
+                    "failed": "Tasks failed with errors",
+                    "cancelled": "Tasks cancelled by user",
+                    "timeout": "Tasks timed out"
+                }
             
             return SuccessResult(data={
                 "status": "success",

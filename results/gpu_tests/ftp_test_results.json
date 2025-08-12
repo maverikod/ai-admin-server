@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-08-11T15:38:13.965572",
+  "tests": {
+    "connection": {
+      "success": true,
+      "message": "FTP connection successful"
+    },
+    "upload": {
+      "success": false,
+      "error": "550 Permission denied."
+    },
+    "list": {
+      "success": true,
+      "file_count": 0,
+      "files": []
+    },
+    "download": {
+      "success": false,
+      "error": "Test file not found",
+      "note": "Upload test must be run first"
+    },
+    "delete": {
+      "success": false,
+      "error": "Test file not found",
+      "note": "Upload test must be run first"
+    }
+  }
+}

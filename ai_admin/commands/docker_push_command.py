@@ -47,11 +47,12 @@ class DockerPushCommand(Command):
             
             # Use queue for long-running operations
             if use_queue:
-                from ai_admin.queue.task_queue import TaskQueue, DockerTask, TaskType, TaskStatus
+                from ai_admin.queue.task_queue import Task, TaskType, TaskStatus
+                from ai_admin.queue.queue_manager import queue_manager
                 
                 # Create task
-                task = DockerTask(
-                    task_type=TaskType.PUSH,
+                task = Task(
+                    task_type=TaskType.DOCKER_PUSH,
                     params={
                         "image_name": image_name,
                         "tag": tag,
@@ -61,17 +62,15 @@ class DockerPushCommand(Command):
                     }
                 )
                 
-                # Add to queue
-                queue = TaskQueue()
-                task_id = await queue.add_task(task)
+                # Add to global queue
+                task_id = await queue_manager.add_task(task)
                 
                 return SuccessResult(data={
                     "status": "queued",
                     "message": "Docker push task added to queue",
                     "task_id": task_id,
                     "image_name": image_name,
-                    "tag": tag if not all_tags else "all",
-                    "queue_position": len(await queue.get_tasks_by_status(TaskStatus.PENDING))
+                    "tag": tag if not all_tags else "all"
                 })
             
             # Construct full image name

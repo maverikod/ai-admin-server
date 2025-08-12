@@ -78,16 +78,18 @@ class DockerHubImagesCommand(Command):
                     "q": repository,
                     "page_size": limit,
                     "page": page,
-                    "ordering": f"{sort_by}_{order}"
+                    "ordering": sort_by  # Docker Hub API doesn't support _desc/_asc suffix
                 }
             elif username:
                 # Get user's repositories
                 api_url = f"https://hub.docker.com/v2/repositories/{username}/"
                 params = {
                     "page_size": limit,
-                    "page": page,
-                    "ordering": f"{sort_by}_{order}"
+                    "page": page
                 }
+                # Only add ordering if it's a supported value
+                if sort_by in ["name", "last_updated"]:
+                    params["ordering"] = sort_by
             elif query:
                 # Search repositories - use multiple strategies
                 results = await self._search_with_multiple_strategies(query, limit, page, sort_by, order)
@@ -125,7 +127,7 @@ class DockerHubImagesCommand(Command):
                 params = {
                     "page_size": limit,
                     "page": page,
-                    "ordering": f"{sort_by}_{order}"
+                    "ordering": sort_by  # Docker Hub API doesn't support _desc/_asc suffix
                 }
             
             # Add filters
@@ -134,14 +136,18 @@ class DockerHubImagesCommand(Command):
             if automated_only:
                 params["is_automated"] = "true"
             
-            # Get Docker auth token
-            auth_token = self._get_docker_auth_token()
-            
             # Make API request
             headers = {
                 "Accept": "application/json",
                 "User-Agent": "AI-Admin-Server/1.0"
             }
+            
+            # For Hub API, we need JWT token for authenticated requests
+            # For public repositories, we can try without auth first
+            auth_token = None
+            if username or repository:
+                # Try to get JWT token for authenticated requests
+                auth_token = await self._get_jwt_token()
             
             if auth_token:
                 headers["Authorization"] = f"JWT {auth_token}"
@@ -158,7 +164,10 @@ class DockerHubImagesCommand(Command):
                         "status_code": response.status_code,
                         "response_text": response.text[:1000],
                         "url": response.url,
-                        "headers": dict(response.headers)
+                        "headers": dict(response.headers),
+                        "request_url": api_url,
+                        "request_params": params,
+                        "request_headers": dict(headers)
                     }
                 )
             
@@ -238,9 +247,17 @@ class DockerHubImagesCommand(Command):
     
     def _process_repository_data(self, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process repository data from Docker Hub API."""
+        # Handle different response formats
+        name = repo_data.get("repo_name", repo_data.get("name", ""))
+        full_name = repo_data.get("name", "")
+        
+        # If name is empty but we have namespace and name, construct it
+        if not name and repo_data.get("namespace") and repo_data.get("name"):
+            name = f"{repo_data['namespace']}/{repo_data['name']}"
+        
         return {
-            "name": repo_data.get("repo_name", ""),
-            "full_name": repo_data.get("name", ""),
+            "name": name,
+            "full_name": full_name,
             "description": repo_data.get("short_description", ""),
             "full_description": repo_data.get("full_description", ""),
             "is_official": repo_data.get("is_official", False),
@@ -255,6 +272,42 @@ class DockerHubImagesCommand(Command):
             "status": repo_data.get("status", ""),
             "tags": []  # Will be populated if include_tags=True
         }
+    
+    async def _get_jwt_token(self) -> Optional[str]:
+        """Get JWT token from Docker Hub using Personal Access Token."""
+        try:
+            # Get PAT from config
+            pat_token = self._get_docker_auth_token()
+            if not pat_token:
+                return None
+            
+            # Get username from config
+            username = self._get_docker_username()
+            if not username:
+                return None
+            
+            # Request JWT token from Docker Hub
+            auth_url = "https://hub.docker.com/v2/users/login"
+            auth_data = {
+                "username": username,
+                "password": pat_token  # PAT is used as password
+            }
+            
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "AI-Admin-Server/1.0"
+            }
+            
+            response = requests.post(auth_url, json=auth_data, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("token")
+            else:
+                return None
+                
+        except Exception:
+            return None
     
     def _get_docker_auth_token(self) -> Optional[str]:
         """Get Docker authentication token from server config."""
@@ -278,6 +331,23 @@ class DockerHubImagesCommand(Command):
                         return None
                     else:
                         return token
+            
+            return None
+        except Exception:
+            return None
+    
+    def _get_docker_username(self) -> Optional[str]:
+        """Get Docker username from server config."""
+        try:
+            # Try to get username from server config
+            config_path = "config/config.json"
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                
+                # Check for docker section
+                if "docker" in config and "username" in config["docker"]:
+                    return config["docker"]["username"]
             
             return None
         except Exception:
@@ -555,14 +625,14 @@ class DockerHubImagesCommand(Command):
                 "ordering": "last_updated"
             }
             
-            # Get Docker auth token
-            auth_token = self._get_docker_auth_token()
-            
             headers = {
                 "Accept": "application/json",
                 "User-Agent": "AI-Admin-Server/1.0"
             }
             
+            # For tags, we can try without auth first (public repos)
+            # If it fails, we can try with JWT token
+            auth_token = await self._get_jwt_token()
             if auth_token:
                 headers["Authorization"] = f"JWT {auth_token}"
             

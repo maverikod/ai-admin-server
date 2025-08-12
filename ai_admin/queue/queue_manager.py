@@ -1,7 +1,7 @@
 """Queue manager for Docker operations."""
 
 from typing import Dict, List, Any, Optional
-from ai_admin.queue.task_queue import TaskQueue, DockerTask, TaskType, TaskStatus
+from ai_admin.queue.task_queue import TaskQueue, Task, TaskType, TaskStatus
 
 
 class QueueManager:
@@ -40,8 +40,8 @@ class QueueManager:
         Returns:
             Task ID
         """
-        task = DockerTask(
-            task_type=TaskType.PUSH,
+        task = Task(
+            task_type=TaskType.DOCKER_PUSH,
             params={
                 "image_name": image_name,
                 "tag": tag,
@@ -69,8 +69,8 @@ class QueueManager:
         Returns:
             Task ID
         """
-        task = DockerTask(
-            task_type=TaskType.BUILD,
+        task = Task(
+            task_type=TaskType.DOCKER_BUILD,
             params={
                 "dockerfile_path": dockerfile_path,
                 "tag": tag,
@@ -97,8 +97,8 @@ class QueueManager:
         Returns:
             Task ID
         """
-        task = DockerTask(
-            task_type=TaskType.PULL,
+        task = Task(
+            task_type=TaskType.DOCKER_PULL,
             params={
                 "image_name": image_name,
                 "tag": tag,
@@ -122,7 +122,7 @@ class QueueManager:
         Returns:
             Task ID
         """
-        task = DockerTask(
+        task = Task(
             task_type=TaskType.OLLAMA_PULL,
             params={
                 "model_name": model_name,
@@ -152,7 +152,7 @@ class QueueManager:
         Returns:
             Task ID
         """
-        task = DockerTask(
+        task = Task(
             task_type=TaskType.OLLAMA_RUN,
             params={
                 "model_name": model_name,
@@ -164,6 +164,28 @@ class QueueManager:
         )
         
         return await self.task_queue.add_task(task)
+    
+    async def add_task(self, task: Task) -> str:
+        """Add generic task to queue.
+        
+        Args:
+            task: Task to add
+            
+        Returns:
+            Task ID
+        """
+        return await self.task_queue.add_task(task)
+    
+    async def get_task(self, task_id: str) -> Optional[Task]:
+        """Get task by ID.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Task object or None if not found
+        """
+        return await self.task_queue.get_task(task_id)
     
     async def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
         """Get task status by ID.
@@ -185,6 +207,14 @@ class QueueManager:
         """
         tasks = await self.task_queue.get_all_tasks()
         return [task.to_dict() for task in tasks]
+    
+    async def get_queue_stats(self) -> Dict[str, Any]:
+        """Get queue statistics.
+        
+        Returns:
+            Queue statistics
+        """
+        return await self.task_queue.get_queue_stats()
     
     async def get_queue_status(self) -> Dict[str, Any]:
         """Get queue status and statistics.

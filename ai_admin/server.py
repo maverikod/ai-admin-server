@@ -1,152 +1,219 @@
-"""Main server implementation with command autodiscovery."""
+"""AI Admin MCP Server with enhanced integration."""
 
 import os
-import logging
-from typing import Optional, Dict, Any
-import uvicorn
+import sys
+from pathlib import Path
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
 from mcp_proxy_adapter import create_app
-from mcp_proxy_adapter.core.logging import get_logger, setup_logging
-from mcp_proxy_adapter.config import config
+from mcp_proxy_adapter.core.logging import setup_logging, get_logger
+from mcp_proxy_adapter.core.settings import (
+    Settings, 
+    get_server_host, 
+    get_server_port, 
+    get_server_debug,
+    get_setting
+)
+from mcp_proxy_adapter.commands.command_registry import registry
+from mcp_proxy_adapter.commands.hooks import register_custom_commands_hook
 
-from ai_admin.commands.registry import command_registry
-from ai_admin.version import __version__
+# Import AI Admin specific components
+from ai_admin.settings_manager import AIAdminSettingsManager, get_settings_manager
+from ai_admin.hooks import register_ai_admin_hooks
 
 
-def create_server(
-    title: str = "AI Admin - MCP Server",
-    description: str = "AI Admin server with command autodiscovery support to manage DockerHub, GitHub, Vast.ai GPU instances, and Kubernetes resources",
-    version: str = __version__,
-    config_path: Optional[str] = None
-) -> Any:
-    """Create FastAPI application with autodiscovered commands.
-    
-    Args:
-        title: Server title
-        description: Server description
-        version: Server version
-        config_path: Path to configuration file (defaults to config/config.json)
-        
-    Returns:
-        FastAPI application instance
+def initialize_commands():
     """
-    # Set default config path if not provided
-    if config_path is None:
-        config_path = "config/config.json"
+    Initialize commands using the unified system initialization logic.
+    This function is used both at startup and during reload.
     
-    # Load configuration if file exists
+    Returns:
+        Number of commands discovered.
+    """
+    # Use the unified reload method from registry
+    result = registry.reload_system()
+    return result["total_commands"]
+
+
+def custom_commands_hook(registry):
+    """Hook function for registering AI Admin custom commands."""
+    logger = get_logger("ai_admin")
+    logger.info("Registering AI Admin custom commands via hook...")
+    
+    # Import all AI Admin commands
+    from ai_admin.commands.system_monitor_command import SystemMonitorCommand
+    from ai_admin.commands.docker_build_command import DockerBuildCommand
+    from ai_admin.commands.docker_push_command import DockerPushCommand
+    from ai_admin.commands.docker_images_command import DockerImagesCommand
+    from ai_admin.commands.docker_search_command import DockerSearchCommand
+    from ai_admin.commands.vast_search_command import VastSearchCommand
+    from ai_admin.commands.vast_create_command import VastCreateCommand
+    from ai_admin.commands.vast_destroy_command import VastDestroyCommand
+    from ai_admin.commands.vast_instances_command import VastInstancesCommand
+    from ai_admin.commands.ftp_upload_command import FtpUploadCommand
+    from ai_admin.commands.ftp_download_command import FtpDownloadCommand
+    from ai_admin.commands.ftp_list_command import FtpListCommand
+    from ai_admin.commands.ftp_delete_command import FtpDeleteCommand
+    from ai_admin.commands.queue_push_command import QueuePushCommand
+    from ai_admin.commands.queue_status_command import QueueStatusCommand
+    from ai_admin.commands.queue_cancel_command import QueueCancelCommand
+    from ai_admin.commands.queue_task_status_command import QueueTaskStatusCommand
+    from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
+    
+    # Register AI Admin commands
+    commands_to_register = [
+        SystemMonitorCommand,
+        DockerBuildCommand,
+        DockerPushCommand,
+        DockerImagesCommand,
+        DockerSearchCommand,
+        VastSearchCommand,
+        VastCreateCommand,
+        VastDestroyCommand,
+        VastInstancesCommand,
+        FtpUploadCommand,
+        FtpDownloadCommand,
+        FtpListCommand,
+        FtpDeleteCommand,
+        QueuePushCommand,
+        QueueStatusCommand,
+        QueueCancelCommand,
+        QueueTaskStatusCommand,
+        TestDiscoveryCommand
+    ]
+    
+    for command_class in commands_to_register:
+        if not registry.command_exists(command_class.name):
+            registry.register_custom(command_class)
+            logger.info(f"Registered: {command_class.name} command")
+        else:
+            logger.debug(f"Command '{command_class.name}' is already registered, skipping")
+    
+    logger.info(f"Total AI Admin commands registered: {len(commands_to_register)}")
+
+
+def setup_hooks():
+    """Setup hooks for AI Admin server."""
+    logger = get_logger("ai_admin")
+    logger.info("Setting up AI Admin hooks...")
+    
+    # Register custom commands hook
+    register_custom_commands_hook(custom_commands_hook)
+    
+    # Register AI Admin specific hooks
+    from mcp_proxy_adapter.commands.hooks import hooks
+    register_ai_admin_hooks(hooks)
+    
+    logger.info("Registered: AI Admin hooks")
+
+
+def main():
+    """Run the AI Admin server."""
+    # Load configuration from config.json in the same directory
+    config_path = "config/config.json"
     if os.path.exists(config_path):
+        from mcp_proxy_adapter.config import config
         config.load_from_file(config_path)
-        logging.info(f"Loaded configuration from: {config_path}")
+        print(f"✅ Loaded configuration from: {config_path}")
     else:
-        logging.warning(f"Configuration file not found: {config_path}")
+        print(f"⚠️  Configuration file not found: {config_path}")
+        print("   Using default configuration")
+        from mcp_proxy_adapter.config import config
+        config.load_config()
     
-    # Setup logging
+    # Setup logging with configuration
     setup_logging()
     logger = get_logger("ai_admin")
     
-    # Discover and register commands from our package
-    logger.info("Starting command autodiscovery...")
-    command_registry.discover_commands("ai_admin.commands")
+    # Initialize custom settings manager
+    settings_manager = get_settings_manager()
     
-    # Get command count
-    all_commands = command_registry.get_all_commands()
-    logger.info(f"Total commands available: {len(all_commands)}")
+    # Print custom settings summary
+    settings_manager.print_settings_summary()
     
-    # Create FastAPI application
-    app = create_app(
-        title=title,
-        description=description,
-        version=version
-    )
+    # Get settings from configuration
+    server_settings = Settings.get_server_settings()
+    logging_settings = Settings.get_logging_settings()
+    commands_settings = Settings.get_commands_settings()
     
-    return app
-
-
-def run_server(
-    host: str = "0.0.0.0",
-    port: int = 8060,
-    debug: bool = False,
-    config_path: Optional[str] = None,
-    **server_kwargs
-) -> None:
-    """Run the server with specified parameters.
-    
-    Args:
-        host: Server host
-        port: Server port
-        debug: Debug mode
-        config_path: Path to configuration file
-        **server_kwargs: Additional uvicorn parameters
-    """
-    # Create application
-    app = create_server(config_path=config_path)
-    
-    # Get logger
-    logger = get_logger("ai_admin")
-    
-    # Print server information
+    # Print server header and description
     print("=" * 80)
-    print("🚀 AI ADMIN")
+    print("🚀 AI ADMIN - ENHANCED MCP SERVER")
     print("=" * 80)
-    print(f"📋 Description: AI Admin with command autodiscovery")
-    print(f"🔧 Version: {__version__}")
-    print()
+    print("📋 Description: AI Admin server with command autodiscovery support to manage DockerHub, GitHub, Vast.ai GPU instances, and Kubernetes resources")
+    print("🔧 Version: 1.0.0")
     print("⚙️  Configuration:")
-    print(f"   • Server: {host}:{port}")
-    print(f"   • Debug: {debug}")
-    print()
-    
-    # Get command information
-    all_commands = command_registry.get_all_commands()
-    print(f"🔧 Available Commands ({len(all_commands)}):")
-    for cmd_name in sorted(all_commands.keys()):
-        cmd_class = all_commands[cmd_name]
-        cmd_doc = cmd_class.__doc__ or "No description"
-        # Get first line of docstring
-        summary = cmd_doc.split('\n')[0].strip()
-        print(f"   • {cmd_name} - {summary}")
-    print()
-    
-    print("🎯 Features:")
+    print(f"   • Server: {server_settings['host']}:{server_settings['port']}")
+    print(f"   • Debug: {server_settings['debug']}")
+    print(f"   • Log Level: {logging_settings['level']}")
+    print(f"   • Log Directory: {logging_settings['log_dir']}")
+    print(f"   • Auto Discovery: {commands_settings['auto_discovery']}")
+    print("🔧 Available Commands:")
+    print("   • Built-in: 8")
+    print("   • Custom: 0")
+    print("   • Auto-discovered: 0")
+    print("   📁 Config: config, reload, settings, load, unload, plugins")
+    print("🎯 Enhanced Features:")
+    print("   • Advanced JSON-RPC API")
     print("   • Automatic command discovery")
-    print("   • Standard JSON-RPC API")
+    print("   • Hooks system for extensibility")
     print("   • Built-in logging and error handling")
     print("   • OpenAPI schema generation")
-    print("   • Configuration support")
+    print("   • Configuration-driven settings")
+    print("   • Custom settings management")
+    print("   • Performance monitoring")
+    print("   • Security monitoring")
+    print("   • Operation-specific hooks (Docker, Vast.ai, FTP, Queue)")
+    print("   • Credential management")
+    print("   • Settings validation")
     print("=" * 80)
-    print()
     
-    logger.info(f"Starting AI Admin on {host}:{port}")
+    # Validate settings
+    validation_result = settings_manager.validate_settings()
+    if not validation_result["valid"]:
+        logger.warning(f"Configuration validation warnings: {validation_result['warnings']}")
     
-    # Run server
+    logger.info("Starting AI Admin MCP Proxy Adapter Server...")
+    logger.info(f"Server configuration: {server_settings}")
+    logger.info(f"Logging configuration: {logging_settings}")
+    logger.info(f"Commands configuration: {commands_settings}")
+    
+    # Setup hooks for command processing
+    setup_hooks()
+    
+    # Initialize commands
+    initialize_commands()
+    
+    # Create application with settings from configuration
+    app = create_app(
+        title="AI Admin - Enhanced MCP Server",
+        description="AI Admin server with command autodiscovery support to manage DockerHub, GitHub, Vast.ai GPU instances, and Kubernetes resources",
+        version="2.0.0"
+    )
+    
+    # Run the server with configuration settings
+    import uvicorn
     uvicorn.run(
         app,
-        host=host,
-        port=port,
-        log_level="debug" if debug else "info",
-        **server_kwargs
-    )
-
-
-def main() -> None:
-    """Main entry point for command line usage."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="AI Admin")
-    parser.add_argument("--host", default="0.0.0.0", help="Server host")
-    parser.add_argument("--port", type=int, default=8060, help="Server port")
-    parser.add_argument("--debug", action="store_true", help="Debug mode")
-    parser.add_argument("--config", help="Configuration file path")
-    
-    args = parser.parse_args()
-    
-    run_server(
-        host=args.host,
-        port=args.port,
-        debug=args.debug,
-        config_path=args.config
+        host=server_settings['host'],
+        port=server_settings['port'],
+        log_level=server_settings['log_level'].lower()
     )
 
 
 if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="AI Admin MCP Server")
+    parser.add_argument("--config", help="Path to configuration file")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    
+    args = parser.parse_args()
+    
+    if args.debug:
+        os.environ["DEBUG"] = "true"
+    
     main() 

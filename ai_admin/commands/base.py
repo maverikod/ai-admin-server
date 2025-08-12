@@ -1,23 +1,23 @@
-"""Base command class for MCP Empty Server."""
+"""Base command class for AI Admin Server."""
 
 from typing import Any, Dict
 from abc import ABC, abstractmethod
 from mcp_proxy_adapter.commands.base import Command
-from mcp_proxy_adapter.commands.result import CommandResult
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 
 
-class EmptyCommand(Command):
-    """Base class for empty server commands.
+class AIAdminCommand(Command):
+    """Base class for AI Admin server commands.
     
-    This class provides a simple foundation for creating custom commands
+    This class provides a foundation for creating custom commands
     that can be automatically discovered by the server.
     """
     
     # Override this in subclasses
-    name: str = "empty"
+    name: str = "ai_admin_command"
     
     @abstractmethod
-    async def execute(self, **kwargs) -> CommandResult:
+    async def execute(self, **kwargs) -> SuccessResult:
         """Execute the command.
         
         Args:
@@ -39,4 +39,8 @@ class EmptyCommand(Command):
             "type": "object",
             "properties": {},
             "additionalProperties": True
-        } 
+        }
+
+
+# Backward compatibility
+EmptyCommand = AIAdminCommand 

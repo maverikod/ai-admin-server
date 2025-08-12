@@ -52,8 +52,17 @@ from ai_admin.commands.queue_task_status_command import QueueTaskStatusCommand
 # Import System commands
 from ai_admin.commands.system_monitor_command import SystemMonitorCommand
 
+# Import FTP commands
+from ai_admin.commands.ftp_upload_command import FtpUploadCommand
+from ai_admin.commands.ftp_download_command import FtpDownloadCommand
+from ai_admin.commands.ftp_list_command import FtpListCommand
+from ai_admin.commands.ftp_delete_command import FtpDeleteCommand
+
 # Import Example command
 from ai_admin.commands.example_command import ExampleCommand
+
+# Import Test command
+from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
 
 __all__ = [
     "EmptyCommand", 
@@ -106,6 +115,13 @@ __all__ = [
     "QueueTaskStatusCommand",
     # System commands
     "SystemMonitorCommand",
+    # FTP commands
+    "FtpUploadCommand",
+    "FtpDownloadCommand", 
+    "FtpListCommand",
+    "FtpDeleteCommand",
     # Example command
-    "ExampleCommand"
+    "ExampleCommand",
+    # Test command
+    "TestDiscoveryCommand"
 ] 

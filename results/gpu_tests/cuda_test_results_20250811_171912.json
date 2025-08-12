@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-08-11T17:19:12.349956",
+  "hostname": "VASILIY-NOTE",
+  "cuda_available": true,
+  "gpus": [
+    {
+      "id": 0,
+      "name": "NVIDIA GeForce MX150",
+      "memory_total_gb": 1.9476318359375,
+      "memory_allocated_gb": 0.0,
+      "memory_cached_gb": 0.0,
+      "compute_capability": "6.1",
+      "multiprocessor_count": 3
+    }
+  ],
+  "cuda_version": "12.1",
+  "gpu_count": 1,
+  "nvidia_smi": "NVIDIA GeForce MX150, 2048, 505, 1491, 71, 57",
+  "performance_tests": {
+    "memory_allocation_time": 0.09524393081665039,
+    "tensor_size": [
+      1000,
+      1000
+    ],
+    "matrix_multiplication_time": 0.022780895233154297,
+    "element_wise_operations_time": 0.09157252311706543,
+    "cpu_to_gpu_transfer_time": 0.010056018829345703,
+    "large_matrix_multiplication_time": 0.0003597736358642578,
+    "large_tensor_success": true,
+    "success": true
+  }
+}
