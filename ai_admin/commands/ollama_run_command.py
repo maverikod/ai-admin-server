@@ -1,6 +1,7 @@
 import subprocess
 import json
 import asyncio
+import aiohttp
 from typing import Optional, Dict, Any
 from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
@@ -57,7 +58,7 @@ class OllamaRunCommand(Command):
             )
     
     async def _run_model_direct(self, model_name: str, prompt: str, max_tokens: int, temperature: float) -> SuccessResult:
-        """Run model inference directly."""
+        """Run model inference directly via API."""
         try:
             # Prepare request data
             request_data = {
@@ -70,56 +71,42 @@ class OllamaRunCommand(Command):
                 }
             }
             
-            # Use curl to make request to Ollama API
-            curl_cmd = [
-                "curl", "-s", "-X", "POST",
-                f"{ollama_config.get_ollama_url()}/api/generate",
-                "-H", "Content-Type: application/json",
-                "-d", json.dumps(request_data)
-            ]
+            server_url = ollama_config.get_ollama_url()
             
-            result = subprocess.run(
-                curl_cmd,
-                capture_output=True,
-                text=True,
-                timeout=ollama_config.get_ollama_timeout()
-            )
-            
-            if result.returncode != 0:
-                return ErrorResult(
-                    message=f"Ollama API request failed: {result.stderr}",
-                    code="API_REQUEST_FAILED",
-                    details={"model_name": model_name, "stderr": result.stderr}
-                )
-            
-            try:
-                response_data = json.loads(result.stdout)
-                generated_text = response_data.get("response", "")
-                
-                return SuccessResult(data={
-                    "message": f"Inference completed with model {model_name}",
-                    "model_name": model_name,
-                    "prompt": prompt,
-                    "generated_text": generated_text,
-                    "prompt_tokens": response_data.get("prompt_eval_count", 0),
-                    "generated_tokens": response_data.get("eval_count", 0),
-                    "total_duration": response_data.get("eval_duration", 0),
-                    "tokens_per_second": response_data.get("eval_count", 0) / (response_data.get("eval_duration", 1) / 1e9),
-                    "timestamp": datetime.now().isoformat()
-                })
-                
-            except json.JSONDecodeError as e:
-                return ErrorResult(
-                    message=f"Invalid JSON response from Ollama: {str(e)}",
-                    code="INVALID_RESPONSE",
-                    details={"model_name": model_name, "raw_response": result.stdout}
-                )
-                
-        except subprocess.TimeoutExpired:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{server_url}/api/generate",
+                    json=request_data,
+                    timeout=ollama_config.get_ollama_timeout()
+                ) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+                        generated_text = response_data.get("response", "")
+                        
+                        return SuccessResult(data={
+                            "message": f"Inference completed with model {model_name}",
+                            "model_name": model_name,
+                            "prompt": prompt,
+                            "generated_text": generated_text,
+                            "prompt_tokens": response_data.get("prompt_eval_count", 0),
+                            "generated_tokens": response_data.get("eval_count", 0),
+                            "total_duration": response_data.get("eval_duration", 0),
+                            "tokens_per_second": response_data.get("eval_count", 0) / (response_data.get("eval_duration", 1) / 1e9),
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    else:
+                        error_text = await response.text()
+                        return ErrorResult(
+                            message=f"Ollama API request failed: HTTP {response.status}",
+                            code="API_REQUEST_FAILED",
+                            details={"model_name": model_name, "status": response.status, "error": error_text}
+                        )
+                        
+        except Exception as e:
             return ErrorResult(
-                message=f"Ollama inference timed out after {ollama_config.get_ollama_timeout()} seconds",
-                code="TIMEOUT",
-                details={"model_name": model_name, "timeout": ollama_config.get_ollama_timeout()}
+                message=f"Ollama inference failed: {str(e)}",
+                code="INFERENCE_ERROR",
+                details={"model_name": model_name, "error": str(e)}
             )
     
     async def _run_model_queued(self, model_name: str, prompt: str, max_tokens: int, temperature: float) -> SuccessResult:

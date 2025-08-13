@@ -1587,7 +1587,12 @@ class TaskQueue:
         params = task.params
         image_name = params.get("image_name", "")
         tag = params.get("tag", "latest")
-        full_image_name = f"{image_name}:{tag}"
+        
+        # Check if image_name already contains a tag
+        if ":" in image_name:
+            full_image_name = image_name
+        else:
+            full_image_name = f"{image_name}:{tag}"
         
         logger.info(f"Pull parameters: image_name={image_name}, tag={tag}, full_name={full_image_name}")
         

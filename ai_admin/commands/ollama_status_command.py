@@ -2,6 +2,7 @@ import subprocess
 import json
 import psutil
 import os
+import aiohttp
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
@@ -49,10 +50,10 @@ class OllamaStatusCommand(Command):
                 server_config = None
             
             # Check if Ollama service is running
-            service_status = await self._check_service_status(server)
+            service_status = await self._check_service_status()
             
             # Get models list
-            models_status = await self._get_models_status(server)
+            models_status = await self._get_models_status()
             
             # Get memory usage
             memory_status = await self._get_memory_status()
@@ -87,86 +88,120 @@ class OllamaStatusCommand(Command):
                 details={"error": str(e)}
             )
     
-    async def _check_service_status(self) -> Dict[str, Any]:
-        """Check if Ollama service is running."""
+    async def _check_service_status(self, server: Optional[str] = None) -> Dict[str, Any]:
+        """Check if Ollama service is running via API."""
         try:
-            # Check if ollama serve process is running
-            result = subprocess.run(
-                ["pgrep", "-f", "ollama serve"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
             
-            is_running = result.returncode == 0
-            pid = result.stdout.strip() if is_running else None
+            # Get server URL
+            if server:
+                server_url = ollama_config.get_server_url(server)
+            else:
+                server_url = ollama_config.get_ollama_url()
             
-            return {
-                "running": is_running,
-                "pid": pid,
-                "status": "active" if is_running else "stopped"
-            }
+            if not server_url:
+                return {
+                    "running": False,
+                    "pid": None,
+                    "status": "no_url"
+                }
             
-        except subprocess.TimeoutExpired:
+            # Check API endpoint
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.get(f"{server_url}/api/version", timeout=5) as response:
+                        if response.status == 200:
+                            version_data = await response.json()
+                            return {
+                                "running": True,
+                                "pid": None,
+                                "status": "active",
+                                "version": version_data.get("version"),
+                                "url": server_url
+                            }
+                        else:
+                            return {
+                                "running": False,
+                                "pid": None,
+                                "status": f"http_{response.status}"
+                            }
+                except Exception as e:
+                    return {
+                        "running": False,
+                        "pid": None,
+                        "status": "connection_error",
+                        "error": str(e)
+                    }
+            
+        except Exception as e:
             return {
                 "running": False,
                 "pid": None,
-                "status": "timeout"
+                "status": "error",
+                "error": str(e)
             }
     
-    async def _get_models_status(self) -> Dict[str, Any]:
-        """Get models list and status."""
+    async def _get_models_status(self, server: Optional[str] = None) -> Dict[str, Any]:
+        """Get models list and status via API."""
         try:
-            # Set OLLAMA_MODELS environment variable for this command
-            env = os.environ.copy()
-            env['OLLAMA_MODELS'] = ollama_config.get_models_cache_path()
+            import aiohttp
             
-            result = subprocess.run(
-                ["ollama", "list"],
-                capture_output=True,
-                text=True,
-                timeout=ollama_config.get_ollama_timeout(),
-                env=env
-            )
+            # Get server URL
+            if server:
+                server_url = ollama_config.get_server_url(server)
+            else:
+                server_url = ollama_config.get_ollama_url()
             
-            if result.returncode != 0:
+            if not server_url:
                 return {
                     "available": [],
                     "count": 0,
-                    "error": result.stderr
+                    "error": "no_url"
                 }
             
-            # Parse output
-            output_lines = result.stdout.strip().split('\n')
-            models = []
+            # Get models via API
+            async with aiohttp.ClientSession() as session:
+                try:
+                    async with session.get(f"{server_url}/api/tags", timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            models_data = data.get("models", [])
+                            
+                            models = []
+                            for model in models_data:
+                                model_info = {
+                                    "name": model.get("name", "unknown"),
+                                    "id": model.get("digest", "unknown"),
+                                    "size": model.get("size", "unknown"),
+                                    "modified": model.get("modified_at", "unknown")
+                                }
+                                models.append(model_info)
+                            
+                            return {
+                                "available": models,
+                                "count": len(models),
+                                "raw_output": str(data)
+                            }
+                        else:
+                            return {
+                                "available": [],
+                                "count": 0,
+                                "error": f"http_{response.status}"
+                            }
+                except Exception as e:
+                    return {
+                        "available": [],
+                        "count": 0,
+                        "error": str(e)
+                    }
             
-            # Skip header line and parse each model line
-            for line in output_lines[1:]:
-                if line.strip():
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        model_info = {
-                            "name": parts[0],
-                            "id": parts[1] if len(parts) > 1 else "unknown",
-                            "size": parts[2] if len(parts) > 2 else "unknown",
-                            "modified": parts[3] if len(parts) > 3 else "unknown"
-                        }
-                        models.append(model_info)
-            
-            return {
-                "available": models,
-                "count": len(models),
-                "raw_output": result.stdout
-            }
-            
-        except subprocess.TimeoutExpired:
+        except Exception as e:
             return {
                 "available": [],
                 "count": 0,
-                "error": "timeout"
+                "error": str(e)
             }
     
-    async def _get_memory_status(self) -> Dict[str, Any]:
+    async def _get_memory_status(self, server: Optional[str] = None) -> Dict[str, Any]:
         """Get memory usage information."""
         try:
             # Get system memory info
@@ -206,7 +241,7 @@ class OllamaStatusCommand(Command):
                 "ollama_process_count": 0
             }
     
-    async def _get_processes_status(self) -> Dict[str, Any]:
+    async def _get_processes_status(self, server: Optional[str] = None) -> Dict[str, Any]:
         """Get detailed Ollama processes information."""
         try:
             processes = []

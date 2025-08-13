@@ -2,6 +2,7 @@ import subprocess
 import json
 import psutil
 import os
+import aiohttp
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
@@ -91,32 +92,29 @@ class OllamaMemoryCommand(Command):
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
             
-            # Get available models
-            env = os.environ.copy()
-            env['OLLAMA_MODELS'] = ollama_config.get_models_cache_path()
+            # Get available models via API
+            server_url = ollama_config.get_ollama_url()
+            models = []
             
-            models_result = subprocess.run(
-                ["ollama", "list"],
-                capture_output=True,
-                text=True,
-                timeout=ollama_config.get_ollama_timeout(),
-                env=env
-            )
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(f"{server_url}/api/tags", timeout=10) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            models_data = data.get("models", [])
+                            
+                            for model in models_data:
+                                model_info = {
+                                    "name": model.get("name", "unknown"),
+                                    "size": model.get("size", "unknown"),
+                                    "modified": model.get("modified_at", "unknown")
+                                }
+                                models.append(model_info)
+            except Exception as e:
+                # If API fails, return empty list
+                models = []
             
-            available_models = []
-            if models_result.returncode == 0:
-                output_lines = models_result.stdout.strip().split('\n')
-                for line in output_lines[1:]:
-                    if line.strip():
-                        parts = line.split()
-                        if len(parts) >= 2:
-                            model_info = {
-                                "name": parts[0],
-                                "id": parts[1] if len(parts) > 1 else "unknown",
-                                "size": parts[2] if len(parts) > 2 else "unknown",
-                                "modified": parts[3] if len(parts) > 3 else "unknown"
-                            }
-                            available_models.append(model_info)
+            available_models = models
             
             return SuccessResult(data={
                 "message": "Ollama memory status retrieved",
@@ -161,35 +159,38 @@ class OllamaMemoryCommand(Command):
                     details={"model_name": model_name, "loaded_models": [p["model"] for p in loaded_models]}
                 )
             
-            # Use ollama stop command
+            # Use API to stop model
             try:
-                result = subprocess.run(
-                    ["ollama", "stop", model_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=ollama_config.get_ollama_timeout()
-                )
+                server_url = ollama_config.get_ollama_url()
                 
-                if result.returncode == 0:
-                    return SuccessResult(data={
-                        "message": f"Model {model_name} unloaded from memory via ollama stop",
-                        "model_name": model_name,
-                        "pid": target_process["pid"],
-                        "memory_freed_mb": target_process["memory_mb"],
-                        "memory_freed_gb": round(target_process["memory_mb"] / 1024, 2),
-                        "method": "ollama_stop",
-                        "timestamp": datetime.now().isoformat()
-                    })
-                else:
-                    return ErrorResult(
-                        message=f"Failed to unload model {model_name} via ollama stop: {result.stderr}",
-                        code="UNLOAD_FAILED",
-                        details={
-                            "model_name": model_name,
-                            "stderr": result.stderr,
-                            "pid": target_process["pid"]
-                        }
-                    )
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        f"{server_url}/api/stop",
+                        json={"name": model_name},
+                        timeout=10
+                    ) as response:
+                        if response.status == 200:
+                            return SuccessResult(data={
+                                "message": f"Model {model_name} unloaded from memory via API",
+                                "model_name": model_name,
+                                "pid": target_process["pid"],
+                                "memory_freed_mb": target_process["memory_mb"],
+                                "memory_freed_gb": round(target_process["memory_mb"] / 1024, 2),
+                                "method": "api_stop",
+                                "timestamp": datetime.now().isoformat()
+                            })
+                        else:
+                            error_text = await response.text()
+                            return ErrorResult(
+                                message=f"Failed to unload model {model_name} via API: HTTP {response.status}",
+                                code="UNLOAD_FAILED",
+                                details={
+                                    "model_name": model_name,
+                                    "status": response.status,
+                                    "error": error_text,
+                                    "pid": target_process["pid"]
+                                }
+                            )
                 
             except subprocess.TimeoutExpired:
                 # Fallback to process kill

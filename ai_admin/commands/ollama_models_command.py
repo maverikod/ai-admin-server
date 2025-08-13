@@ -1,6 +1,7 @@
 import subprocess
 import json
 import asyncio
+import aiohttp
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
@@ -63,108 +64,82 @@ class OllamaModelsCommand(Command):
             )
     
     async def _list_models(self) -> SuccessResult:
-        """List all available Ollama models."""
+        """List all available Ollama models via API."""
         try:
-            # Set OLLAMA_MODELS environment variable for this command
-            env = os.environ.copy()
-            env['OLLAMA_MODELS'] = ollama_config.get_models_cache_path()
+            server_url = ollama_config.get_ollama_url()
             
-            result = subprocess.run(
-                ["ollama", "list"],
-                capture_output=True,
-                text=True,
-                timeout=ollama_config.get_ollama_timeout(),
-                env=env
-            )
-            
-            if result.returncode != 0:
-                return ErrorResult(
-                    message=f"Failed to list models: {result.stderr}",
-                    code="OLLAMA_LIST_FAILED",
-                    details={"stderr": result.stderr}
-                )
-            
-            # Parse the output manually since --json is not supported
-            output_lines = result.stdout.strip().split('\n')
-            models = []
-            
-            # Skip header line and parse each model line
-            for line in output_lines[1:]:  # Skip "NAME" header
-                if line.strip():
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        model_info = {
-                            "name": parts[0],
-                            "size": parts[1] if len(parts) > 1 else "unknown",
-                            "modified": parts[2] if len(parts) > 2 else "unknown"
-                        }
-                        models.append(model_info)
-            
-            return SuccessResult(data={
-                "message": f"Found {len(models)} Ollama models",
-                "models": models,
-                "count": len(models),
-                "raw_output": result.stdout,
-                "cache_path": ollama_config.get_models_cache_path(),
-                "timestamp": datetime.now().isoformat()
-            })
-            
-        except subprocess.TimeoutExpired:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{server_url}/api/tags", timeout=10) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        models_data = data.get("models", [])
+                        
+                        models = []
+                        for model in models_data:
+                            model_info = {
+                                "name": model.get("name", "unknown"),
+                                "size": model.get("size", "unknown"),
+                                "modified": model.get("modified_at", "unknown"),
+                                "digest": model.get("digest", "unknown")
+                            }
+                            models.append(model_info)
+                        
+                        return SuccessResult(data={
+                            "message": f"Found {len(models)} models",
+                            "models": models,
+                            "count": len(models),
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    else:
+                        return ErrorResult(
+                            message=f"Failed to list models: HTTP {response.status}",
+                            code="OLLAMA_LIST_FAILED",
+                            details={"status": response.status}
+                        )
+                        
+        except Exception as e:
             return ErrorResult(
-                message="Ollama list command timed out",
-                code="TIMEOUT",
-                details={"timeout": ollama_config.get_ollama_timeout()}
+                message=f"Failed to list models: {str(e)}",
+                code="OLLAMA_LIST_FAILED",
+                details={"error": str(e)}
             )
     
     async def _pull_model(self, model_name: str) -> SuccessResult:
-        """Pull/download an Ollama model."""
+        """Pull/download an Ollama model via API."""
         try:
-            # Set OLLAMA_MODELS environment variable for this command
-            env = os.environ.copy()
-            env['OLLAMA_MODELS'] = ollama_config.get_models_cache_path()
+            server_url = ollama_config.get_ollama_url()
             
-            # Start pull process
-            process = subprocess.Popen(
-                ["ollama", "pull", model_name],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-                env=env
-            )
-            
-            # Collect output in real-time
-            output_lines = []
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    output_lines.append(output.strip())
-            
-            # Check if process completed successfully
-            return_code = process.poll()
-            if return_code != 0:
-                stderr = process.stderr.read()
-                return ErrorResult(
-                    message=f"Failed to pull model {model_name}",
-                    code="OLLAMA_PULL_FAILED",
-                    details={"model_name": model_name, "stderr": stderr, "return_code": return_code}
-                )
-            
-            return SuccessResult(data={
-                "message": f"Successfully pulled model {model_name}",
-                "model_name": model_name,
-                "output": output_lines,
-                "timestamp": datetime.now().isoformat()
-            })
-            
+            async with aiohttp.ClientSession() as session:
+                # Start pull request
+                async with session.post(
+                    f"{server_url}/api/pull",
+                    json={"name": model_name},
+                    timeout=300  # 5 minutes timeout for model download
+                ) as response:
+                    if response.status == 200:
+                        return SuccessResult(data={
+                            "message": f"Successfully pulled model {model_name}",
+                            "model_name": model_name,
+                            "status": "completed",
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    else:
+                        error_text = await response.text()
+                        return ErrorResult(
+                            message=f"Failed to pull model {model_name}",
+                            code="OLLAMA_PULL_FAILED",
+                            details={
+                                "model_name": model_name,
+                                "status": response.status,
+                                "error": error_text
+                            }
+                        )
+                        
         except Exception as e:
             return ErrorResult(
                 message=f"Error pulling model {model_name}: {str(e)}",
                 code="OLLAMA_PULL_ERROR",
-                details={"model_name": model_name}
+                details={"model_name": model_name, "error": str(e)}
             )
     
     async def _remove_model(self, model_name: str) -> SuccessResult:

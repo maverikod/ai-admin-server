@@ -42,7 +42,7 @@ def custom_commands_hook(registry):
     """Hook function for registering AI Admin custom commands."""
     logger = get_logger("ai_admin")
     logger.info("Registering AI Admin custom commands via hook...")
-    
+
     # Import all AI Admin commands
     from ai_admin.commands.system_monitor_command import SystemMonitorCommand
     from ai_admin.commands.docker_build_command import DockerBuildCommand
@@ -56,6 +56,13 @@ def custom_commands_hook(registry):
     from ai_admin.commands.docker_stop_command import DockerStopCommand
     from ai_admin.commands.docker_restart_command import DockerRestartCommand
     from ai_admin.commands.docker_logs_command import DockerLogsCommand
+    from ai_admin.commands.docker_containers_command import DockerContainersCommand
+    from ai_admin.commands.docker_exec_command import DockerExecCommand
+    from ai_admin.commands.docker_inspect_command import DockerInspectCommand
+    from ai_admin.commands.ollama_show_command import OllamaShowCommand
+    from ai_admin.commands.ollama_remove_command import OllamaRemoveCommand
+    from ai_admin.commands.ollama_copy_command import OllamaCopyCommand
+    from ai_admin.commands.ollama_push_command import OllamaPushCommand
     from ai_admin.commands.docker_tag_command import DockerTagCommand
     from ai_admin.commands.docker_login_command import DockerLoginCommand
     from ai_admin.commands.docker_hub_images_command import DockerHubImagesCommand
@@ -108,11 +115,19 @@ def custom_commands_hook(registry):
     from ai_admin.commands.git_cherry_pick_command import GitCherryPickCommand
     from ai_admin.commands.k8s_pod_status_command import K8sPodStatusCommand
     from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
+    from ai_admin.commands.k8s_service_create_command import K8sServiceCreateCommand
+    from ai_admin.commands.k8s_pod_create_command import K8sPodCreateCommand
+    from ai_admin.commands.k8s_pod_delete_command import K8sPodDeleteCommand
+    from ai_admin.commands.k8s_configmap_command import K8sConfigMapCreateCommand, K8sSecretCreateCommand, K8sResourceDeleteCommand
+    from ai_admin.commands.k8s_logs_command import K8sLogsCommand, K8sExecCommand, K8sPortForwardCommand
+    from ai_admin.commands.k8s_namespace_command import K8sNamespaceCreateCommand, K8sNamespaceListCommand, K8sNamespaceDeleteCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
     from ai_admin.commands.ollama_models_command import OllamaModelsCommand
     from ai_admin.commands.ollama_run_command import OllamaRunCommand
     from ai_admin.commands.ollama_memory_command import OllamaMemoryCommand
     from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
+    from ai_admin.commands.queue_manage_command import QueueManageCommand
+    from ai_admin.commands.config_command import ConfigCommand
     
     # Register AI Admin commands
     commands_to_register = [
@@ -128,6 +143,13 @@ def custom_commands_hook(registry):
         DockerStopCommand,
         DockerRestartCommand,
         DockerLogsCommand,
+        DockerContainersCommand,
+        DockerExecCommand,
+        DockerInspectCommand,
+        OllamaShowCommand,
+        OllamaRemoveCommand,
+        OllamaCopyCommand,
+        OllamaPushCommand,
         DockerTagCommand,
         DockerLoginCommand,
         DockerHubImagesCommand,
@@ -184,7 +206,9 @@ def custom_commands_hook(registry):
         OllamaModelsCommand,
         OllamaRunCommand,
         OllamaMemoryCommand,
-        TestDiscoveryCommand
+        TestDiscoveryCommand,
+        QueueManageCommand,
+        ConfigCommand
     ]
     
     for command_class in commands_to_register:

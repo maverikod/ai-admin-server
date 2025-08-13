@@ -26,6 +26,13 @@ from ai_admin.commands.docker_start_command import DockerStartCommand
 from ai_admin.commands.docker_stop_command import DockerStopCommand
 from ai_admin.commands.docker_restart_command import DockerRestartCommand
 from ai_admin.commands.docker_logs_command import DockerLogsCommand
+from ai_admin.commands.docker_containers_command import DockerContainersCommand
+from ai_admin.commands.docker_exec_command import DockerExecCommand
+from ai_admin.commands.docker_inspect_command import DockerInspectCommand
+from ai_admin.commands.ollama_show_command import OllamaShowCommand
+from ai_admin.commands.ollama_remove_command import OllamaRemoveCommand
+from ai_admin.commands.ollama_copy_command import OllamaCopyCommand
+from ai_admin.commands.ollama_push_command import OllamaPushCommand
 from ai_admin.commands.docker_login_command import DockerLoginCommand
 
 # Import Vast.ai commands
@@ -70,8 +77,7 @@ from ai_admin.commands.ftp_download_command import FtpDownloadCommand
 from ai_admin.commands.ftp_list_command import FtpListCommand
 from ai_admin.commands.ftp_delete_command import FtpDeleteCommand
 
-# Import Example command
-from ai_admin.commands.example_command import ExampleCommand
+
 
 # Import Test command
 from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
