@@ -4,11 +4,15 @@ import subprocess
 import json
 import time
 import yaml
+import asyncio
+import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from ai_admin.settings_manager import get_settings_manager
+from ai_admin.queue.queue_manager import queue_manager
 
 
 class K8sClusterManagerCommand(Command):
@@ -32,6 +36,7 @@ class K8sClusterManagerCommand(Command):
                      version: str = "latest",
                      description: Optional[str] = None,
                      tags: Optional[List[str]] = None,
+                     use_queue: bool = True,
                      **kwargs):
         """
         Manage Kubernetes clusters.
@@ -53,7 +58,10 @@ class K8sClusterManagerCommand(Command):
             if action == "list":
                 return await self._list_clusters()
             elif action == "create":
-                return await self._create_cluster(cluster_name, cluster_type, container_name, port, config)
+                if use_queue:
+                    return await self._create_cluster_with_queue(cluster_name, cluster_type, container_name, port, config)
+                else:
+                    return await self._create_cluster(cluster_name, cluster_type, container_name, port, config)
             elif action == "delete":
                 return await self._delete_cluster(cluster_name, cluster_type)
             elif action == "init":
@@ -186,11 +194,20 @@ class K8sClusterManagerCommand(Command):
             )
     
     async def _create_k3s_cluster(self, cluster_name: str, port: Optional[int], config: Optional[Dict[str, Any]]) -> SuccessResult:
-        """Create a k3s cluster."""
+        """Create a k3s cluster with proper SSL certificate integration."""
         try:
             # Generate port if not provided
             if not port:
                 port = 6443
+            
+            # Generate SSL certificates for the cluster with proper k3s structure
+            cert_result = await self._generate_k3s_certificates(cluster_name, port)
+            if not cert_result.get("success", False):
+                return ErrorResult(
+                    message=f"Failed to generate SSL certificates: {cert_result.get('error', 'Unknown error')}",
+                    code="CERT_GENERATION_FAILED",
+                    details=cert_result
+                )
             
             # Build Docker run command
             cmd = [
@@ -200,9 +217,15 @@ class K8sClusterManagerCommand(Command):
                 "-p", f"{port}:6443"
             ]
             
+            # Get k3s configuration
+            settings_manager = get_settings_manager()
+            config = settings_manager.get_all_settings()
+            k3s_config = config.get("k3s", {})
+            k3s_token = k3s_config.get("default_token", "mysecret")
+            
             # Add environment variables
             env_vars = [
-                "K3S_TOKEN=mysecret",
+                f"K3S_TOKEN={k3s_token}",
                 "K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml",
                 "K3S_KUBECONFIG_MODE=666"
             ]
@@ -246,14 +269,107 @@ class K8sClusterManagerCommand(Command):
             
             container_id = result.stdout.strip()
             
+            # Wait for cluster to be ready and actively check for kubeconfig
+            max_wait_time = 60  # seconds
+            wait_interval = 2   # seconds
+            waited_time = 0
+            
+            while waited_time < max_wait_time:
+                await asyncio.sleep(wait_interval)
+                waited_time += wait_interval
+                
+                # Check multiple possible kubeconfig locations
+                possible_paths = [
+                    f"./kubeconfig-{cluster_name}/kubeconfig.yaml",
+                    f"./kubeconfig-{cluster_name}/kubeconfig",
+                    f"./kubeconfig-{cluster_name}/config",
+                    f"./kubeconfig-{cluster_name}/config.yaml"
+                ]
+                
+                kubeconfig_path = None
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        kubeconfig_path = path
+                        break
+                
+                if kubeconfig_path:
+                    break
+                
+                # Also check if kubeconfig is being generated inside container
+                try:
+                    result = subprocess.run([
+                        "docker", "exec", cluster_name, "ls", "/output/kubeconfig.yaml"
+                    ], capture_output=True, text=True, timeout=5)
+                    
+                    if result.returncode == 0:
+                        # Kubeconfig exists in container, copy it out
+                        subprocess.run([
+                            "docker", "cp", f"{cluster_name}:/output/kubeconfig.yaml", f"./kubeconfig-{cluster_name}/kubeconfig.yaml"
+                        ], check=True, capture_output=True)
+                        kubeconfig_path = f"./kubeconfig-{cluster_name}/kubeconfig.yaml"
+                        break
+                except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+                    pass
+            
+            if not kubeconfig_path or not os.path.exists(kubeconfig_path):
+                # Try to get kubeconfig from container directly
+                try:
+                    subprocess.run([
+                        "docker", "cp", f"{cluster_name}:/output/kubeconfig.yaml", f"./kubeconfig-{cluster_name}/kubeconfig.yaml"
+                    ], check=True, capture_output=True)
+                    kubeconfig_path = f"./kubeconfig-{cluster_name}/kubeconfig.yaml"
+                except subprocess.CalledProcessError:
+                    return ErrorResult(
+                        message=f"Failed to create or copy kubeconfig after {max_wait_time} seconds",
+                        code="KUBECONFIG_FAILED",
+                        details={
+                            "cluster_name": cluster_name, 
+                            "checked_paths": possible_paths,
+                            "container_status": "running"
+                        }
+                    )
+            
+            # Replace k3s certificates with our custom ones
+            cert_replace_result = await self._replace_k3s_certificates(cluster_name, cert_result["certificates"])
+            if not cert_replace_result.get("success", False):
+                return ErrorResult(
+                    message=f"Failed to replace k3s certificates: {cert_replace_result.get('error', 'Unknown error')}",
+                    code="CERT_REPLACEMENT_FAILED",
+                    details=cert_replace_result
+                )
+            
+            # Restart k3s to use new certificates
+            restart_result = await self._restart_k3s_cluster(cluster_name)
+            if not restart_result.get("success", False):
+                return ErrorResult(
+                    message=f"Failed to restart k3s cluster: {restart_result.get('error', 'Unknown error')}",
+                    code="CLUSTER_RESTART_FAILED",
+                    details=restart_result
+                )
+            
+            # Wait for cluster to be ready after restart
+            await asyncio.sleep(10)
+            
+            # Update kubeconfig with new CA certificate
+            kubeconfig_result = await self._update_kubeconfig_with_ca(cluster_name, cert_result["certificates"]["ca_cert"], kubeconfig_path)
+            if not kubeconfig_result.get("success", False):
+                return ErrorResult(
+                    message=f"Failed to update kubeconfig: {kubeconfig_result.get('error', 'Unknown error')}",
+                    code="KUBECONFIG_UPDATE_FAILED",
+                    details=kubeconfig_result
+                )
+            
             return SuccessResult(data={
-                "message": f"Successfully created k3s cluster '{cluster_name}'",
+                "message": f"Successfully created k3s cluster '{cluster_name}' with custom SSL certificates",
                 "cluster_name": cluster_name,
                 "cluster_type": "k3s",
                 "container_id": container_id,
                 "port": port,
                 "config": config,
                 "command": " ".join(cmd),
+                "certificates": cert_result.get("certificates", {}),
+                "certificate_replacement": cert_replace_result,
+                "kubeconfig_updated": kubeconfig_result,
                 "timestamp": datetime.now().isoformat()
             })
             
@@ -596,6 +712,527 @@ class K8sClusterManagerCommand(Command):
                 details={"timeout": 300, "container_name": container_name}
             )
     
+    async def _generate_k3s_certificates(self, cluster_name: str, port: int) -> Dict[str, Any]:
+        """Generate SSL certificates for k3s cluster with proper structure."""
+        try:
+            import os
+            import tempfile
+            from pathlib import Path
+            
+            # Create certificates directory
+            certs_dir = Path(f"./certs-{cluster_name}")
+            certs_dir.mkdir(exist_ok=True)
+            
+            # Generate CA certificate and key with proper k3s structure
+            ca_key_path = certs_dir / "ca.key"
+            ca_cert_path = certs_dir / "ca.crt"
+            
+            # Generate CA private key
+            subprocess.run([
+                "openssl", "genrsa", "-out", str(ca_key_path), "2048"
+            ], check=True, capture_output=True)
+            
+            # Create CA certificate with proper x509 extensions for k3s
+            ca_config_content = f"""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_ca
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = State
+L = City
+O = {cluster_name}-CA
+OU = IT
+CN = {cluster_name}-CA
+emailAddress = admin@{cluster_name}.local
+
+[v3_ca]
+basicConstraints = CA:TRUE, pathlen:0
+keyUsage = keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+"""
+            
+            ca_config_path = certs_dir / "ca.cnf"
+            with open(ca_config_path, 'w') as f:
+                f.write(ca_config_content)
+            
+            subprocess.run([
+                "openssl", "req", "-new", "-x509", "-key", str(ca_key_path),
+                "-out", str(ca_cert_path), "-days", "365", "-config", str(ca_config_path),
+                "-extensions", "v3_ca"
+            ], check=True, capture_output=True)
+            
+            # Create k3s certificate structure
+            k3s_certs_dir = certs_dir / "tls"
+            k3s_certs_dir.mkdir(exist_ok=True)
+            
+            # Copy CA certificates to k3s structure
+            import shutil
+            shutil.copy2(ca_cert_path, k3s_certs_dir / "server-ca.crt")
+            shutil.copy2(ca_key_path, k3s_certs_dir / "server-ca.key")
+            shutil.copy2(ca_cert_path, k3s_certs_dir / "client-ca.crt")
+            shutil.copy2(ca_key_path, k3s_certs_dir / "client-ca.key")
+            
+            # Clean up temporary files
+            ca_config_path.unlink()
+            
+            return {
+                "success": True,
+                "certificates": {
+                    "ca_key": str(ca_key_path),
+                    "ca_cert": str(ca_cert_path),
+                    "certs_dir": str(certs_dir),
+                    "k3s_certs_dir": str(k3s_certs_dir),
+                    "server_ca_cert": str(k3s_certs_dir / "server-ca.crt"),
+                    "server_ca_key": str(k3s_certs_dir / "server-ca.key"),
+                    "client_ca_cert": str(k3s_certs_dir / "client-ca.crt"),
+                    "client_ca_key": str(k3s_certs_dir / "client-ca.key")
+                }
+            }
+            
+        except subprocess.CalledProcessError as e:
+            return {
+                "success": False,
+                "error": f"OpenSSL command failed: {e.stderr.decode() if e.stderr else str(e)}",
+                "return_code": e.returncode
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Certificate generation failed: {str(e)}"
+            }
+    
+    async def _replace_k3s_certificates(self, cluster_name: str, certificates: Dict[str, str]) -> Dict[str, Any]:
+        """Replace k3s certificates with custom ones using k3s certificate rotate-ca."""
+        try:
+            # Copy certificates to container
+            k3s_certs_dir = certificates["k3s_certs_dir"]
+            
+            # Copy server CA certificate
+            subprocess.run([
+                "docker", "cp", f"{k3s_certs_dir}/server-ca.crt", f"{cluster_name}:/tmp/server-ca.crt"
+            ], check=True, capture_output=True)
+            
+            # Copy server CA key
+            subprocess.run([
+                "docker", "cp", f"{k3s_certs_dir}/server-ca.key", f"{cluster_name}:/tmp/server-ca.key"
+            ], check=True, capture_output=True)
+            
+            # Copy client CA certificate
+            subprocess.run([
+                "docker", "cp", f"{k3s_certs_dir}/client-ca.crt", f"{cluster_name}:/tmp/client-ca.crt"
+            ], check=True, capture_output=True)
+            
+            # Copy client CA key
+            subprocess.run([
+                "docker", "cp", f"{k3s_certs_dir}/client-ca.key", f"{cluster_name}:/tmp/client-ca.key"
+            ], check=True, capture_output=True)
+            
+            # Create proper structure in container
+            subprocess.run([
+                "docker", "exec", cluster_name, "mkdir", "-p", "/tmp/tls"
+            ], check=True, capture_output=True)
+            
+            subprocess.run([
+                "docker", "exec", cluster_name, "cp", "/tmp/server-ca.crt", "/tmp/tls/server-ca.crt"
+            ], check=True, capture_output=True)
+            
+            subprocess.run([
+                "docker", "exec", cluster_name, "cp", "/tmp/server-ca.key", "/tmp/tls/server-ca.key"
+            ], check=True, capture_output=True)
+            
+            subprocess.run([
+                "docker", "exec", cluster_name, "cp", "/tmp/client-ca.crt", "/tmp/tls/client-ca.crt"
+            ], check=True, capture_output=True)
+            
+            subprocess.run([
+                "docker", "exec", cluster_name, "cp", "/tmp/client-ca.key", "/tmp/tls/client-ca.key"
+            ], check=True, capture_output=True)
+            
+            # Get k3s configuration for token
+            settings_manager = get_settings_manager()
+            config = settings_manager.get_all_settings()
+            k3s_config = config.get("k3s", {})
+            k3s_token = k3s_config.get("default_token", "mysecret")
+            token_file_path = k3s_config.get("certificate_management", {}).get("token_file_path", "/var/lib/rancher/k3s/server/token")
+            
+            # Replace CA certificates using k3s command with token from config
+            result = subprocess.run([
+                "docker", "exec", cluster_name, "sh", "-c", f"echo {k3s_token} > {token_file_path} && k3s certificate rotate-ca --path /tmp/tls --force"
+            ], check=True, capture_output=True, text=True)
+            
+            return {
+                "success": True,
+                "message": "Successfully replaced k3s CA certificates",
+                "output": result.stdout,
+                "certificates_replaced": ["server-ca", "client-ca"]
+            }
+            
+        except subprocess.CalledProcessError as e:
+            return {
+                "success": False,
+                "error": f"Failed to replace certificates: {e.stderr if isinstance(e.stderr, str) else e.stderr.decode() if e.stderr else str(e)}",
+                "return_code": e.returncode
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Certificate replacement failed: {str(e)}"
+            }
+    
+    async def _restart_k3s_cluster(self, cluster_name: str) -> Dict[str, Any]:
+        """Restart k3s cluster to use new certificates."""
+        try:
+            # Restart the container
+            result = subprocess.run([
+                "docker", "restart", cluster_name
+            ], check=True, capture_output=True, text=True)
+            
+            return {
+                "success": True,
+                "message": f"Successfully restarted k3s cluster '{cluster_name}'",
+                "container_id": result.stdout.strip()
+            }
+            
+        except subprocess.CalledProcessError as e:
+            return {
+                "success": False,
+                "error": f"Failed to restart cluster: {e.stderr if isinstance(e.stderr, str) else e.stderr.decode() if e.stderr else str(e)}",
+                "return_code": e.returncode
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Cluster restart failed: {str(e)}"
+            }
+    
+    async def _update_kubeconfig_with_ca(self, cluster_name: str, ca_cert_path: str, kubeconfig_path: str) -> Dict[str, Any]:
+        """Update kubeconfig with new CA certificate."""
+        try:
+            import base64
+            import os
+            
+            # Read CA certificate and encode to base64
+            with open(ca_cert_path, 'rb') as f:
+                ca_cert_data = base64.b64encode(f.read()).decode('utf-8')
+            
+            # Read kubeconfig
+            if not os.path.exists(kubeconfig_path):
+                return {
+                    "success": False,
+                    "error": f"Kubeconfig not found: {kubeconfig_path}"
+                }
+            
+            with open(kubeconfig_path, 'r') as f:
+                kubeconfig_content = f.read()
+            
+            # Replace certificate-authority-data with new CA
+            import re
+            updated_content = re.sub(
+                r'certificate-authority-data: [A-Za-z0-9+/=]+',
+                f'certificate-authority-data: {ca_cert_data}',
+                kubeconfig_content
+            )
+            
+            # Write updated kubeconfig
+            with open(kubeconfig_path, 'w') as f:
+                f.write(updated_content)
+            
+            return {
+                "success": True,
+                "message": f"Successfully updated kubeconfig with new CA certificate",
+                "kubeconfig_path": kubeconfig_path
+            }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Failed to update kubeconfig: {str(e)}"
+            }
+    
+    async def _create_cluster_with_queue(self, cluster_name: str, cluster_type: str, container_name: Optional[str], port: Optional[int], config: Optional[Dict[str, Any]]) -> SuccessResult:
+        """Create cluster using queue system to avoid timeouts."""
+        try:
+            # Use queue manager directly
+            
+            # Create task data
+            task_data = {
+                "action": "create_cluster",
+                "cluster_name": cluster_name,
+                "cluster_type": cluster_type,
+                "container_name": container_name,
+                "port": port,
+                "config": config,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Add task to queue
+            task_id = await queue_manager.push_task("k8s_cluster_creation", task_data)
+            
+            # Start background task
+            await queue_manager.start_task(task_id, self._execute_cluster_creation_task)
+            
+            return SuccessResult(data={
+                "message": f"Cluster creation task '{cluster_name}' queued successfully",
+                "task_id": task_id,
+                "cluster_name": cluster_name,
+                "cluster_type": cluster_type,
+                "status": "queued",
+                "queue_position": await queue_manager.get_task_position(task_id),
+                "estimated_wait_time": await queue_manager.get_estimated_wait_time(task_id),
+                "timestamp": datetime.now().isoformat()
+            })
+            
+        except Exception as e:
+            return ErrorResult(
+                message=f"Failed to queue cluster creation task: {str(e)}",
+                code="QUEUE_FAILED",
+                details={"exception": str(e), "cluster_name": cluster_name}
+            )
+    
+    async def _execute_cluster_creation_task(self, task_id: str, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute cluster creation task in background."""
+        try:
+            cluster_name = task_data["cluster_name"]
+            cluster_type = task_data["cluster_type"]
+            container_name = task_data.get("container_name")
+            port = task_data.get("port")
+            config = task_data.get("config")
+            
+            # Execute actual cluster creation
+            if cluster_type == "k3s":
+                result = await self._create_k3s_cluster(cluster_name, port, config)
+            elif cluster_type == "kind":
+                result = await self._create_kind_cluster(cluster_name, config)
+            elif cluster_type == "minikube":
+                result = await self._create_minikube_cluster(cluster_name, port, config)
+            else:
+                result = ErrorResult(
+                    message=f"Unsupported cluster type: {cluster_type}",
+                    code="UNSUPPORTED_CLUSTER_TYPE",
+                    details={"supported_types": self.supported_types}
+                )
+            
+            # Update task result
+            await queue_manager.update_task_result(task_id, {
+                "success": isinstance(result, SuccessResult),
+                "result": result.to_dict() if hasattr(result, 'to_dict') else str(result),
+                "completed_at": datetime.now().isoformat()
+            })
+            
+            return {
+                "success": isinstance(result, SuccessResult),
+                "task_id": task_id,
+                "result": result
+            }
+            
+        except Exception as e:
+            # Update task with error
+            await queue_manager.update_task_result(task_id, {
+                "success": False,
+                "error": str(e),
+                "completed_at": datetime.now().isoformat()
+            })
+            
+            return {
+                "success": False,
+                "task_id": task_id,
+                "error": str(e)
+            }
+    
+    async def _generate_cluster_certificates(self, cluster_name: str, port: int) -> Dict[str, Any]:
+        """Generate SSL certificates for Kubernetes cluster."""
+        try:
+            import os
+            import tempfile
+            from pathlib import Path
+            
+            # Create certificates directory
+            certs_dir = Path(f"./certs-{cluster_name}")
+            certs_dir.mkdir(exist_ok=True)
+            
+            # Generate CA certificate and key
+            ca_key_path = certs_dir / "ca.key"
+            ca_cert_path = certs_dir / "ca.crt"
+            
+            # Generate CA private key
+            subprocess.run([
+                "openssl", "genrsa", "-out", str(ca_key_path), "2048"
+            ], check=True, capture_output=True)
+            
+            # Create CA certificate with proper x509 extensions
+            ca_config_content = f"""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_ca
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = State
+L = City
+O = {cluster_name}-CA
+OU = IT
+CN = {cluster_name}-CA
+emailAddress = admin@{cluster_name}.local
+
+[v3_ca]
+basicConstraints = CA:TRUE, pathlen:0
+keyUsage = keyCertSign, cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+"""
+            
+            ca_config_path = certs_dir / "ca.cnf"
+            with open(ca_config_path, 'w') as f:
+                f.write(ca_config_content)
+            
+            subprocess.run([
+                "openssl", "req", "-new", "-x509", "-key", str(ca_key_path),
+                "-out", str(ca_cert_path), "-days", "365", "-config", str(ca_config_path),
+                "-extensions", "v3_ca"
+            ], check=True, capture_output=True)
+            
+            # Generate server certificate and key
+            server_key_path = certs_dir / "server.key"
+            server_cert_path = certs_dir / "server.crt"
+            
+            # Generate server private key
+            subprocess.run([
+                "openssl", "genrsa", "-out", str(server_key_path), "2048"
+            ], check=True, capture_output=True)
+            
+            # Create server certificate signing request with proper x509 extensions
+            server_config_content = f"""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = State
+L = City
+O = {cluster_name}
+OU = IT
+CN = {cluster_name}-server
+emailAddress = admin@{cluster_name}.local
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = @alt_names
+subjectKeyIdentifier = hash
+
+[alt_names]
+DNS.1 = {cluster_name}
+DNS.2 = localhost
+DNS.3 = kubernetes.default.svc.cluster.local
+DNS.4 = kubernetes.default.svc
+DNS.5 = *.{cluster_name}.svc.cluster.local
+IP.1 = 127.0.0.1
+IP.2 = ::1
+IP.3 = 10.0.0.1
+IP.4 = 10.43.0.1
+"""
+            
+            server_config_path = certs_dir / "server.cnf"
+            with open(server_config_path, 'w') as f:
+                f.write(server_config_content)
+            
+            server_csr_path = certs_dir / "server.csr"
+            subprocess.run([
+                "openssl", "req", "-new", "-key", str(server_key_path),
+                "-out", str(server_csr_path), "-config", str(server_config_path)
+            ], check=True, capture_output=True)
+            
+            # Sign server certificate with CA
+            subprocess.run([
+                "openssl", "x509", "-req", "-in", str(server_csr_path),
+                "-CA", str(ca_cert_path), "-CAkey", str(ca_key_path),
+                "-CAcreateserial", "-out", str(server_cert_path),
+                "-days", "365", "-extensions", "v3_req", "-extfile", str(server_config_path)
+            ], check=True, capture_output=True)
+            
+            # Generate client certificate and key
+            client_key_path = certs_dir / "client.key"
+            client_cert_path = certs_dir / "client.crt"
+            
+            # Generate client private key
+            subprocess.run([
+                "openssl", "genrsa", "-out", str(client_key_path), "2048"
+            ], check=True, capture_output=True)
+            
+            # Create client certificate signing request with proper x509 extensions
+            client_config_content = f"""[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+C = US
+ST = State
+L = City
+O = {cluster_name}
+OU = IT
+CN = {cluster_name}-client
+emailAddress = admin@{cluster_name}.local
+
+[v3_req]
+basicConstraints = CA:FALSE
+keyUsage = keyEncipherment, dataEncipherment, digitalSignature
+extendedKeyUsage = clientAuth
+subjectKeyIdentifier = hash
+"""
+            
+            client_config_path = certs_dir / "client.cnf"
+            with open(client_config_path, 'w') as f:
+                f.write(client_config_content)
+            
+            client_csr_path = certs_dir / "client.csr"
+            subprocess.run([
+                "openssl", "req", "-new", "-key", str(client_key_path),
+                "-out", str(client_csr_path), "-config", str(client_config_path)
+            ], check=True, capture_output=True)
+            
+            # Sign client certificate with CA
+            subprocess.run([
+                "openssl", "x509", "-req", "-in", str(client_csr_path),
+                "-CA", str(ca_cert_path), "-CAkey", str(ca_key_path),
+                "-CAcreateserial", "-out", str(client_cert_path),
+                "-days", "365", "-extensions", "v3_req", "-extfile", str(client_config_path)
+            ], check=True, capture_output=True)
+            
+            # Clean up temporary files
+            for temp_file in [ca_config_path, server_config_path, server_csr_path, client_config_path, client_csr_path]:
+                temp_file.unlink()
+            
+            return {
+                "success": True,
+                "certificates": {
+                    "ca_key": str(ca_key_path),
+                    "ca_cert": str(ca_cert_path),
+                    "server_key": str(server_key_path),
+                    "server_cert": str(server_cert_path),
+                    "client_key": str(client_key_path),
+                    "client_cert": str(client_cert_path),
+                    "certificates_dir": str(certs_dir)
+                }
+            }
+            
+        except subprocess.CalledProcessError as e:
+            return {
+                "success": False,
+                "error": f"OpenSSL command failed: {e.stderr.decode() if e.stderr else str(e)}",
+                "return_code": e.returncode
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Certificate generation failed: {str(e)}"
+            }
+
     @classmethod
     def get_schema(cls) -> Dict[str, Any]:
         """Get JSON schema for cluster manager command parameters."""

@@ -58,6 +58,7 @@ def custom_commands_hook(registry):
     from ai_admin.commands.docker_cp_command import DockerCpCommand
     from ai_admin.commands.docker_volume_command import DockerVolumeCommand
     from ai_admin.commands.docker_restart_command import DockerRestartCommand
+    from ai_admin.commands.argocd_init_command import ArgoCDInitCommand
     from ai_admin.commands.docker_logs_command import DockerLogsCommand
     from ai_admin.commands.docker_containers_command import DockerContainersCommand
     from ai_admin.commands.docker_exec_command import DockerExecCommand
@@ -127,6 +128,10 @@ def custom_commands_hook(registry):
     from ai_admin.commands.k8s_cluster_command import K8sClusterCommand
     from ai_admin.commands.kind_cluster_command import KindClusterCommand
     from ai_admin.commands.k8s_cluster_manager_command import K8sClusterManagerCommand
+    from ai_admin.commands.ssl_cert_generate_command import SSLCertGenerateCommand
+    from ai_admin.commands.ssl_cert_view_command import SSLCertViewCommand
+    from ai_admin.commands.ssl_cert_verify_command import SSLCertVerifyCommand
+    from ai_admin.commands.ssl_crl_command import SSLCrlCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
     from ai_admin.commands.ollama_models_command import OllamaModelsCommand
     from ai_admin.commands.ollama_run_command import OllamaRunCommand
@@ -151,6 +156,7 @@ def custom_commands_hook(registry):
         DockerCpCommand,
         DockerVolumeCommand,
         DockerRestartCommand,
+        ArgoCDInitCommand,
         DockerLogsCommand,
         DockerContainersCommand,
         DockerExecCommand,
@@ -231,7 +237,11 @@ def custom_commands_hook(registry):
         K8sResourceDeleteCommand,
         K8sClusterCommand,
         KindClusterCommand,
-        K8sClusterManagerCommand
+        K8sClusterManagerCommand,
+        SSLCertGenerateCommand,
+        SSLCertViewCommand,
+        SSLCertVerifyCommand,
+        SSLCrlCommand
     ]
     
     for command_class in commands_to_register:

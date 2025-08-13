@@ -28,6 +28,7 @@ from ai_admin.commands.docker_rm_command import DockerRmCommand
 from ai_admin.commands.docker_cp_command import DockerCpCommand
 from ai_admin.commands.docker_volume_command import DockerVolumeCommand
 from ai_admin.commands.docker_restart_command import DockerRestartCommand
+from ai_admin.commands.argocd_init_command import ArgoCDInitCommand
 from ai_admin.commands.docker_logs_command import DockerLogsCommand
 from ai_admin.commands.docker_containers_command import DockerContainersCommand
 from ai_admin.commands.docker_exec_command import DockerExecCommand
@@ -57,6 +58,12 @@ from ai_admin.commands.k8s_configmap_command import K8sConfigMapCreateCommand, K
 # Import Kind commands
 from ai_admin.commands.kind_cluster_command import KindClusterCommand
 from ai_admin.commands.k8s_cluster_manager_command import K8sClusterManagerCommand
+
+# Import SSL certificate commands
+from ai_admin.commands.ssl_cert_generate_command import SSLCertGenerateCommand
+from ai_admin.commands.ssl_cert_view_command import SSLCertViewCommand
+from ai_admin.commands.ssl_cert_verify_command import SSLCertVerifyCommand
+from ai_admin.commands.ssl_crl_command import SSLCrlCommand
 
 # Import AI/LLM commands
 from ai_admin.commands.llm_inference_command import LLMInferenceCommand

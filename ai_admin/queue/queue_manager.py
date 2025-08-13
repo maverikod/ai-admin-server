@@ -292,6 +292,93 @@ class QueueManager:
         """
         task = await self.task_queue.get_task(task_id)
         return task.logs if task else None
+    
+    async def push_task(self, queue_name: str, task_data: Dict[str, Any]) -> str:
+        """Add generic task to queue.
+        
+        Args:
+            queue_name: Name of the queue
+            task_data: Task data dictionary
+            
+        Returns:
+            Task ID
+        """
+        task = Task(
+            task_type=TaskType.CUSTOM_SCRIPT,
+            params=task_data
+        )
+        
+        return await self.task_queue.add_task(task)
+    
+    async def start_task(self, task_id: str, executor_func) -> bool:
+        """Start task execution.
+        
+        Args:
+            task_id: Task identifier
+            executor_func: Function to execute the task
+            
+        Returns:
+            True if task started successfully
+        """
+        task = await self.task_queue.get_task(task_id)
+        if task:
+            task.status = TaskStatus.RUNNING
+            # Execute task in background
+            import asyncio
+            asyncio.create_task(executor_func(task_id, task.params))
+            return True
+        return False
+    
+    async def get_task_position(self, task_id: str) -> int:
+        """Get task position in queue.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Position in queue (0 = currently running)
+        """
+        tasks = await self.task_queue.get_all_tasks()
+        for i, task in enumerate(tasks):
+            if task.id == task_id:
+                return i
+        return -1
+    
+    async def get_estimated_wait_time(self, task_id: str) -> int:
+        """Get estimated wait time for task.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Estimated wait time in seconds
+        """
+        position = await self.get_task_position(task_id)
+        if position <= 0:
+            return 0
+        
+        # Rough estimate: 30 seconds per task
+        return position * 30
+    
+    async def update_task_result(self, task_id: str, result: Dict[str, Any]) -> bool:
+        """Update task result.
+        
+        Args:
+            task_id: Task identifier
+            result: Task result data
+            
+        Returns:
+            True if updated successfully
+        """
+        task = await self.task_queue.get_task(task_id)
+        if task:
+            task.result = result
+            if result.get("success", False):
+                task.status = TaskStatus.COMPLETED
+            else:
+                task.status = TaskStatus.FAILED
+            return True
+        return False
 
 
 # Global queue manager instance
