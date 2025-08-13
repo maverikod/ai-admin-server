@@ -169,23 +169,7 @@ class GitCommitCommand(Command):
     async def _get_commit_info(self, repo_path: str) -> Dict[str, Any]:
         """Get information about the latest commit."""
         try:
-            # Validate current_directory
-            if not current_directory:
-                return ErrorResult(
-                    message="current_directory is required",
-                    code="MISSING_CURRENT_DIRECTORY",
-                    details={}
-                )
-            
-            if not os.path.exists(current_directory):
-                return ErrorResult(
-                    message=f"Directory '{current_directory}' does not exist",
-                    code="DIRECTORY_NOT_FOUND",
-                    details={"current_directory": current_directory}
-                )
-            
-
-        # Get commit hash
+            # Get commit hash
             hash_cmd = ["git", "rev-parse", "HEAD"]
             hash_result = subprocess.run(
                 hash_cmd,

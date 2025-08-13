@@ -176,23 +176,7 @@ class GitRebaseCommand(Command):
     async def _get_rebase_info(self, repo_path: str, action: str, base: Optional[str] = None) -> Dict[str, Any]:
         """Get information about the rebase operation."""
         try:
-            # Validate current_directory
-            if not current_directory:
-                return ErrorResult(
-                    message="current_directory is required",
-                    code="MISSING_CURRENT_DIRECTORY",
-                    details={}
-                )
-            
-            if not os.path.exists(current_directory):
-                return ErrorResult(
-                    message=f"Directory '{current_directory}' does not exist",
-                    code="DIRECTORY_NOT_FOUND",
-                    details={"current_directory": current_directory}
-                )
-            
-
-        # Check if rebase is in progress
+            # Check if rebase is in progress
             rebase_merge_cmd = ["git", "rev-parse", "--git-path", "rebase-merge"]
             rebase_merge_result = subprocess.run(
                 rebase_merge_cmd,

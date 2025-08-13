@@ -77,6 +77,17 @@ def custom_commands_hook(registry):
     from ai_admin.commands.git_reset_command import GitResetCommand
     from ai_admin.commands.git_rebase_command import GitRebaseCommand
     from ai_admin.commands.git_diff_command import GitDiffCommand
+    from ai_admin.commands.git_fetch_command import GitFetchCommand
+    from ai_admin.commands.git_merge_command import GitMergeCommand
+    from ai_admin.commands.git_log_command import GitLogCommand
+    from ai_admin.commands.git_show_command import GitShowCommand
+    from ai_admin.commands.git_tag_command import GitTagCommand
+    from ai_admin.commands.git_stash_command import GitStashCommand
+    from ai_admin.commands.git_clean_command import GitCleanCommand
+    from ai_admin.commands.git_config_command import GitConfigCommand
+    from ai_admin.commands.git_grep_command import GitGrepCommand
+    from ai_admin.commands.git_blame_command import GitBlameCommand
+    from ai_admin.commands.git_cherry_pick_command import GitCherryPickCommand
     from ai_admin.commands.k8s_pod_status_command import K8sPodStatusCommand
     from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
@@ -118,6 +129,17 @@ def custom_commands_hook(registry):
         GitResetCommand,
         GitRebaseCommand,
         GitDiffCommand,
+        GitFetchCommand,
+        GitMergeCommand,
+        GitLogCommand,
+        GitShowCommand,
+        GitTagCommand,
+        GitStashCommand,
+        GitCleanCommand,
+        GitConfigCommand,
+        GitGrepCommand,
+        GitBlameCommand,
+        GitCherryPickCommand,
         K8sPodStatusCommand,
         K8sDeploymentCreateCommand,
         OllamaStatusCommand,

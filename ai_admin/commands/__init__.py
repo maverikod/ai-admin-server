@@ -65,6 +65,32 @@ from ai_admin.commands.example_command import ExampleCommand
 # Import Test command
 from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
 
+# Import Git commands
+from ai_admin.commands.git_add_command import GitAddCommand
+from ai_admin.commands.git_branch_command import GitBranchCommand
+from ai_admin.commands.git_checkout_command import GitCheckoutCommand
+from ai_admin.commands.git_clone_command import GitCloneCommand
+from ai_admin.commands.git_commit_command import GitCommitCommand
+from ai_admin.commands.git_diff_command import GitDiffCommand
+from ai_admin.commands.git_init_command import GitInitCommand
+from ai_admin.commands.git_pull_command import GitPullCommand
+from ai_admin.commands.git_push_command import GitPushCommand
+from ai_admin.commands.git_rebase_command import GitRebaseCommand
+from ai_admin.commands.git_remote_command import GitRemoteCommand
+from ai_admin.commands.git_reset_command import GitResetCommand
+from ai_admin.commands.git_status_command import GitStatusCommand
+from ai_admin.commands.git_fetch_command import GitFetchCommand
+from ai_admin.commands.git_merge_command import GitMergeCommand
+from ai_admin.commands.git_log_command import GitLogCommand
+from ai_admin.commands.git_show_command import GitShowCommand
+from ai_admin.commands.git_tag_command import GitTagCommand
+from ai_admin.commands.git_stash_command import GitStashCommand
+from ai_admin.commands.git_clean_command import GitCleanCommand
+from ai_admin.commands.git_config_command import GitConfigCommand
+from ai_admin.commands.git_grep_command import GitGrepCommand
+from ai_admin.commands.git_blame_command import GitBlameCommand
+from ai_admin.commands.git_cherry_pick_command import GitCherryPickCommand
+
 __all__ = [
     "EmptyCommand", 
     "command_registry",
@@ -125,5 +151,30 @@ __all__ = [
     # Example command
     "ExampleCommand",
     # Test command
-    "TestDiscoveryCommand"
+    "TestDiscoveryCommand",
+    # Git commands
+    "GitAddCommand",
+    "GitBranchCommand", 
+    "GitCheckoutCommand",
+    "GitCloneCommand",
+    "GitCommitCommand",
+    "GitDiffCommand",
+    "GitInitCommand",
+    "GitPullCommand",
+    "GitPushCommand",
+    "GitRebaseCommand",
+    "GitRemoteCommand",
+    "GitResetCommand",
+    "GitStatusCommand",
+    "GitFetchCommand",
+    "GitMergeCommand",
+    "GitLogCommand",
+    "GitShowCommand",
+    "GitTagCommand",
+    "GitStashCommand",
+    "GitCleanCommand",
+    "GitConfigCommand",
+    "GitGrepCommand",
+    "GitBlameCommand",
+    "GitCherryPickCommand"
 ] 
