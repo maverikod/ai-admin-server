@@ -8,6 +8,7 @@ from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 from mcp_proxy_adapter.core.errors import CommandError, ValidationError
+from ai_admin.commands.git_utils import ensure_git_auth, is_github_repo
 
 
 class GitPushCommand(Command):
@@ -84,6 +85,10 @@ class GitPushCommand(Command):
                     code="NOT_GIT_REPOSITORY",
                     details={"repository_path": repository_path}
                 )
+            
+            # Setup Git authentication if it's a GitHub repository
+            if is_github_repo(repository_path):
+                ensure_git_auth(repository_path)
             
             # Build git push command
             cmd = ["git", "push"]

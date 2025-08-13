@@ -2,20 +2,34 @@
 
 import os
 import re
-import subprocess
-import yaml
 from pathlib import Path
 from typing import Optional, Dict, Any
 from datetime import datetime
+
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 
 
 class K8sPodCreateCommand(Command):
-    """Command to create Kubernetes pods for projects."""
+    """Command to create Kubernetes pods for projects using kubernetes Python library."""
     
     name = "k8s_pod_create"
+    
+    def __init__(self):
+        """Initialize Kubernetes client configuration."""
+        try:
+            # Try to load kubeconfig from default location
+            config.load_kube_config()
+        except Exception:
+            # Fallback to in-cluster config
+            try:
+                config.load_incluster_config()
+            except Exception:
+                # Use default config
+                pass
     
     def get_project_name(self, project_path: str) -> str:
         """Extract and sanitize project name from path."""
@@ -33,7 +47,7 @@ class K8sPodCreateCommand(Command):
                      memory_limit: str = "512Mi",
                      **kwargs):
         """
-        Create Kubernetes pod for project with mounted directory.
+        Create Kubernetes pod for project with mounted directory using kubernetes Python library.
         
         Args:
             project_path: Path to project directory (defaults to current working directory)
@@ -59,69 +73,73 @@ class K8sPodCreateCommand(Command):
             project_name = self.get_project_name(project_path)
             pod_name = f"ai-admin-{project_name}"
             
-            # Create pod YAML configuration
-            pod_config = {
-                "apiVersion": "v1",
-                "kind": "Pod",
-                "metadata": {
-                    "name": pod_name,
-                    "namespace": namespace,
-                    "labels": {
+            # Create Kubernetes API client
+            core_v1 = client.CoreV1Api()
+            
+            # Create pod object using kubernetes library
+            pod = client.V1Pod(
+                metadata=client.V1ObjectMeta(
+                    name=pod_name,
+                    namespace=namespace,
+                    labels={
                         "app": "ai-admin",
                         "project": project_name
                     }
-                },
-                "spec": {
-                    "containers": [{
-                        "name": "mcp-server",
-                        "image": image,
-                        "ports": [{
-                            "containerPort": port,
-                            "name": "http"
-                        }],
-                        "volumeMounts": [{
-                            "name": "project-volume",
-                            "mountPath": "/app"
-                        }],
-                        "resources": {
-                            "limits": {
-                                "cpu": cpu_limit,
-                                "memory": memory_limit
-                            },
-                            "requests": {
-                                "cpu": "100m",
-                                "memory": "128Mi"
-                            }
-                        },
-                        "env": [{
-                            "name": "PROJECT_PATH",
-                            "value": "/app"
-                        }]
-                    }],
-                    "volumes": [{
-                        "name": "project-volume",
-                        "hostPath": {
-                            "path": project_path,
-                            "type": "Directory"
-                        }
-                    }],
-                    "restartPolicy": "Always"
-                }
-            }
-            
-            # Convert to YAML
-            yaml_content = yaml.dump(pod_config, default_flow_style=False)
-            
-            # Save YAML to temporary file
-            yaml_file = f"/tmp/{pod_name}.yaml"
-            with open(yaml_file, 'w') as f:
-                f.write(yaml_content)
+                ),
+                spec=client.V1PodSpec(
+                    containers=[
+                        client.V1Container(
+                            name="mcp-server",
+                            image=image,
+                            ports=[
+                                client.V1ContainerPort(
+                                    container_port=port,
+                                    name="http"
+                                )
+                            ],
+                            volume_mounts=[
+                                client.V1VolumeMount(
+                                    name="project-volume",
+                                    mount_path="/app"
+                                )
+                            ],
+                            resources=client.V1ResourceRequirements(
+                                limits={
+                                    "cpu": cpu_limit,
+                                    "memory": memory_limit
+                                },
+                                requests={
+                                    "cpu": "100m",
+                                    "memory": "128Mi"
+                                }
+                            ),
+                            env=[
+                                client.V1EnvVar(
+                                    name="PROJECT_PATH",
+                                    value="/app"
+                                )
+                            ]
+                        )
+                    ],
+                    volumes=[
+                        client.V1Volume(
+                            name="project-volume",
+                            host_path=client.V1HostPathVolumeSource(
+                                path=project_path,
+                                type="Directory"
+                            )
+                        )
+                    ],
+                    restart_policy="Always"
+                )
+            )
             
             # Check if pod already exists
-            check_cmd = ["kubectl", "get", "pod", pod_name, "-n", namespace]
-            check_result = subprocess.run(check_cmd, capture_output=True, text=True)
-            
-            if check_result.returncode == 0:
+            try:
+                existing_pod = core_v1.read_namespaced_pod(
+                    name=pod_name,
+                    namespace=namespace
+                )
                 return SuccessResult(data={
                     "message": f"Pod {pod_name} already exists in namespace {namespace}",
                     "pod_name": pod_name,
@@ -129,51 +147,59 @@ class K8sPodCreateCommand(Command):
                     "project_path": project_path,
                     "project_name": project_name,
                     "status": "already_exists",
-                    "yaml_file": yaml_file
+                    "pod_phase": existing_pod.status.phase,
+                    "pod_ip": existing_pod.status.pod_ip
                 })
+            except ApiException as e:
+                if e.status != 404:  # Not found is expected
+                    return ErrorResult(
+                        message=f"Error checking pod existence: {str(e)}",
+                        code="POD_CHECK_FAILED",
+                        details={"api_exception": str(e)}
+                    )
             
             # Create the pod
-            create_cmd = ["kubectl", "apply", "-f", yaml_file]
-            create_result = subprocess.run(create_cmd, capture_output=True, text=True)
-            
-            if create_result.returncode != 0:
-                return ErrorResult(
-                    message=f"Failed to create pod: {create_result.stderr}",
-                    code="POD_CREATE_FAILED",
-                    details={"yaml_content": yaml_content}
+            try:
+                created_pod = core_v1.create_namespaced_pod(
+                    namespace=namespace,
+                    body=pod
                 )
-            
-            # Wait a bit and get pod status
-            import time
-            time.sleep(2)
-            
-            status_cmd = ["kubectl", "get", "pod", pod_name, "-n", namespace, "-o", "json"]
-            status_result = subprocess.run(status_cmd, capture_output=True, text=True)
-            
-            pod_status = "unknown"
-            if status_result.returncode == 0:
-                import json
-                pod_info = json.loads(status_result.stdout)
-                pod_status = pod_info.get("status", {}).get("phase", "unknown")
-            
-            return SuccessResult(data={
-                "message": f"Successfully created pod {pod_name}",
-                "pod_name": pod_name,
-                "namespace": namespace,
-                "project_path": project_path,
-                "project_name": project_name,
-                "status": pod_status,
-                "port": port,
-                "yaml_file": yaml_file,
-                "yaml_content": yaml_content,
-                "timestamp": datetime.now().isoformat()
-            })
+                
+                # Get pod status
+                pod_status = created_pod.status
+                pod_phase = pod_status.phase if pod_status.phase else "Unknown"
+                pod_ip = pod_status.pod_ip if pod_status.pod_ip else None
+                
+                return SuccessResult(data={
+                    "message": f"Successfully created pod {pod_name}",
+                    "pod_name": pod_name,
+                    "namespace": namespace,
+                    "project_path": project_path,
+                    "project_name": project_name,
+                    "port": port,
+                    "pod_phase": pod_phase,
+                    "pod_ip": pod_ip,
+                    "uid": created_pod.metadata.uid,
+                    "creation_timestamp": created_pod.metadata.creation_timestamp.isoformat() if created_pod.metadata.creation_timestamp else None,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+            except ApiException as e:
+                return ErrorResult(
+                    message=f"Failed to create pod: {str(e)}",
+                    code="POD_CREATE_FAILED",
+                    details={
+                        "api_exception": str(e),
+                        "status_code": e.status,
+                        "reason": e.reason
+                    }
+                )
             
         except Exception as e:
             return ErrorResult(
                 message=f"Unexpected error creating pod: {str(e)}",
                 code="UNEXPECTED_ERROR",
-                details={}
+                details={"exception": str(e)}
             )
     
     @classmethod
@@ -208,7 +234,7 @@ class K8sPodCreateCommand(Command):
                 },
                 "memory_limit": {
                     "type": "string",
-                    "description": "Memory limit for pod", 
+                    "description": "Memory limit for pod",
                     "default": "512Mi"
                 }
             }

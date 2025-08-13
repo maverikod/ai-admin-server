@@ -54,6 +54,9 @@ def custom_commands_hook(registry):
     from ai_admin.commands.docker_run_command import DockerRunCommand
     from ai_admin.commands.docker_start_command import DockerStartCommand
     from ai_admin.commands.docker_stop_command import DockerStopCommand
+    from ai_admin.commands.docker_rm_command import DockerRmCommand
+    from ai_admin.commands.docker_cp_command import DockerCpCommand
+    from ai_admin.commands.docker_volume_command import DockerVolumeCommand
     from ai_admin.commands.docker_restart_command import DockerRestartCommand
     from ai_admin.commands.docker_logs_command import DockerLogsCommand
     from ai_admin.commands.docker_containers_command import DockerContainersCommand
@@ -121,6 +124,9 @@ def custom_commands_hook(registry):
     from ai_admin.commands.k8s_configmap_command import K8sConfigMapCreateCommand, K8sSecretCreateCommand, K8sResourceDeleteCommand
     from ai_admin.commands.k8s_logs_command import K8sLogsCommand, K8sExecCommand, K8sPortForwardCommand
     from ai_admin.commands.k8s_namespace_command import K8sNamespaceCreateCommand, K8sNamespaceListCommand, K8sNamespaceDeleteCommand
+    from ai_admin.commands.k8s_cluster_command import K8sClusterCommand
+    from ai_admin.commands.kind_cluster_command import KindClusterCommand
+    from ai_admin.commands.k8s_cluster_manager_command import K8sClusterManagerCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
     from ai_admin.commands.ollama_models_command import OllamaModelsCommand
     from ai_admin.commands.ollama_run_command import OllamaRunCommand
@@ -141,6 +147,9 @@ def custom_commands_hook(registry):
         DockerRunCommand,
         DockerStartCommand,
         DockerStopCommand,
+        DockerRmCommand,
+        DockerCpCommand,
+        DockerVolumeCommand,
         DockerRestartCommand,
         DockerLogsCommand,
         DockerContainersCommand,
@@ -208,7 +217,21 @@ def custom_commands_hook(registry):
         OllamaMemoryCommand,
         TestDiscoveryCommand,
         QueueManageCommand,
-        ConfigCommand
+        ConfigCommand,
+        K8sPodCreateCommand,
+        K8sPodDeleteCommand,
+        K8sServiceCreateCommand,
+        K8sConfigMapCreateCommand,
+        K8sNamespaceCreateCommand,
+        K8sNamespaceListCommand,
+        K8sNamespaceDeleteCommand,  
+        K8sLogsCommand,
+        K8sExecCommand,
+        K8sPortForwardCommand,
+        K8sResourceDeleteCommand,
+        K8sClusterCommand,
+        KindClusterCommand,
+        K8sClusterManagerCommand
     ]
     
     for command_class in commands_to_register:

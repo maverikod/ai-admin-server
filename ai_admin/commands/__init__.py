@@ -24,6 +24,9 @@ from ai_admin.commands.docker_remove_command import DockerRemoveCommand
 from ai_admin.commands.docker_run_command import DockerRunCommand
 from ai_admin.commands.docker_start_command import DockerStartCommand
 from ai_admin.commands.docker_stop_command import DockerStopCommand
+from ai_admin.commands.docker_rm_command import DockerRmCommand
+from ai_admin.commands.docker_cp_command import DockerCpCommand
+from ai_admin.commands.docker_volume_command import DockerVolumeCommand
 from ai_admin.commands.docker_restart_command import DockerRestartCommand
 from ai_admin.commands.docker_logs_command import DockerLogsCommand
 from ai_admin.commands.docker_containers_command import DockerContainersCommand
@@ -50,6 +53,10 @@ from ai_admin.commands.k8s_service_create_command import K8sServiceCreateCommand
 from ai_admin.commands.k8s_logs_command import K8sLogsCommand, K8sExecCommand, K8sPortForwardCommand
 from ai_admin.commands.k8s_namespace_command import K8sNamespaceCreateCommand, K8sNamespaceListCommand, K8sNamespaceDeleteCommand
 from ai_admin.commands.k8s_configmap_command import K8sConfigMapCreateCommand, K8sSecretCreateCommand, K8sResourceDeleteCommand
+
+# Import Kind commands
+from ai_admin.commands.kind_cluster_command import KindClusterCommand
+from ai_admin.commands.k8s_cluster_manager_command import K8sClusterManagerCommand
 
 # Import AI/LLM commands
 from ai_admin.commands.llm_inference_command import LLMInferenceCommand
@@ -132,6 +139,8 @@ __all__ = [
     "DockerRunCommand",
     "DockerStartCommand",
     "DockerStopCommand",
+    "DockerRmCommand",
+    "DockerVolumeCommand",
     "DockerRestartCommand",
     "DockerLogsCommand",
     "DockerLoginCommand",
@@ -155,6 +164,10 @@ __all__ = [
     "K8sSecretCreateCommand",
     "K8sResourceDeleteCommand",
     "K8sPortForwardCommand",
+    # Kind commands
+    "KindClusterCommand",
+    # Cluster Manager commands
+    "K8sClusterManagerCommand",
     # AI/LLM commands
     "LLMInferenceCommand",
     "OllamaModelsCommand",

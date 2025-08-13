@@ -54,6 +54,20 @@ class TaskType(Enum):
     K8S_GET = "k8s_get"
     K8S_LOGS = "k8s_logs"
     K8S_EXEC = "k8s_exec"
+    K8S_DEPLOYMENT_CREATE = "k8s_deployment_create"
+    K8S_POD_CREATE = "k8s_pod_create"
+    K8S_POD_STATUS = "k8s_pod_status"
+    K8S_POD_DELETE = "k8s_pod_delete"
+    K8S_SERVICE_CREATE = "k8s_service_create"
+    K8S_CONFIGMAP_CREATE = "k8s_configmap_create"
+    K8S_NAMESPACE_CREATE = "k8s_namespace_create"
+    
+    # Kind operations
+    KIND_CLUSTER_CREATE = "kind_cluster_create"
+    KIND_CLUSTER_DELETE = "kind_cluster_delete"
+    KIND_CLUSTER_LIST = "kind_cluster_list"
+    KIND_CLUSTER_GET_NODES = "kind_cluster_get_nodes"
+    KIND_LOAD_IMAGE = "kind_load_image"
     
     # Vast.ai operations
     VAST_CREATE = "vast_create"
@@ -122,6 +136,16 @@ class TaskErrorCode(Enum):
     K8S_SERVICE_FAILED = "K8S_SERVICE_FAILED"
     K8S_CONFIGMAP_FAILED = "K8S_CONFIGMAP_FAILED"
     K8S_SECRET_FAILED = "K8S_SECRET_FAILED"
+    K8S_API_ERROR = "K8S_API_ERROR"
+    K8S_CONFIG_ERROR = "K8S_CONFIG_ERROR"
+    
+    # Kind errors
+    KIND_CLUSTER_NOT_FOUND = "KIND_CLUSTER_NOT_FOUND"
+    KIND_CLUSTER_CREATE_FAILED = "KIND_CLUSTER_CREATE_FAILED"
+    KIND_CLUSTER_DELETE_FAILED = "KIND_CLUSTER_DELETE_FAILED"
+    KIND_LOAD_IMAGE_FAILED = "KIND_LOAD_IMAGE_FAILED"
+    KIND_TIMEOUT = "KIND_TIMEOUT"
+    KIND_CONFIG_ERROR = "KIND_CONFIG_ERROR"
     
     # Vast.ai errors
     VAST_API_ERROR = "VAST_API_ERROR"
@@ -780,6 +804,33 @@ class TaskQueue:
             elif task.task_type == TaskType.FTP_DELETE:
                 logger.info(f"Executing FTP_DELETE task {task.id}")
                 await self._execute_ftp_delete_task(task)
+            elif task.task_type == TaskType.K8S_DEPLOYMENT_CREATE:
+                logger.info(f"Executing K8S_DEPLOYMENT_CREATE task {task.id}")
+                await self._execute_k8s_deployment_create_task(task)
+            elif task.task_type == TaskType.K8S_POD_CREATE:
+                logger.info(f"Executing K8S_POD_CREATE task {task.id}")
+                await self._execute_k8s_pod_create_task(task)
+            elif task.task_type == TaskType.K8S_POD_STATUS:
+                logger.info(f"Executing K8S_POD_STATUS task {task.id}")
+                await self._execute_k8s_pod_status_task(task)
+            elif task.task_type == TaskType.K8S_POD_DELETE:
+                logger.info(f"Executing K8S_POD_DELETE task {task.id}")
+                await self._execute_k8s_pod_delete_task(task)
+            elif task.task_type == TaskType.KIND_CLUSTER_CREATE:
+                logger.info(f"Executing KIND_CLUSTER_CREATE task {task.id}")
+                await self._execute_kind_cluster_create_task(task)
+            elif task.task_type == TaskType.KIND_CLUSTER_DELETE:
+                logger.info(f"Executing KIND_CLUSTER_DELETE task {task.id}")
+                await self._execute_kind_cluster_delete_task(task)
+            elif task.task_type == TaskType.KIND_CLUSTER_LIST:
+                logger.info(f"Executing KIND_CLUSTER_LIST task {task.id}")
+                await self._execute_kind_cluster_list_task(task)
+            elif task.task_type == TaskType.KIND_CLUSTER_GET_NODES:
+                logger.info(f"Executing KIND_CLUSTER_GET_NODES task {task.id}")
+                await self._execute_kind_cluster_get_nodes_task(task)
+            elif task.task_type == TaskType.KIND_LOAD_IMAGE:
+                logger.info(f"Executing KIND_LOAD_IMAGE task {task.id}")
+                await self._execute_kind_load_image_task(task)
             else:
                 logger.warning(f"Task type {task.task_type} not implemented, using generic executor")
                 await self._execute_generic_task(task)
@@ -2066,4 +2117,507 @@ class TaskQueue:
                 f"Generic task failed: {str(e)}",
                 TaskErrorCode.UNKNOWN_ERROR,
                 {"exception": str(e), "task_type": task_type}
-            ) 
+            )
+    
+    async def _execute_k8s_deployment_create_task(self, task: Task) -> None:
+        """Execute Kubernetes deployment creation task using kubernetes Python library."""
+        import logging
+        from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting K8S deployment create task {task.id} ===")
+        
+        params = task.params
+        project_path = params.get("project_path")
+        image = params.get("image", "ai-admin-server:latest")
+        port = params.get("port", 8060)
+        namespace = params.get("namespace", "default")
+        replicas = params.get("replicas", 1)
+        cpu_limit = params.get("cpu_limit", "500m")
+        memory_limit = params.get("memory_limit", "512Mi")
+        cpu_request = params.get("cpu_request", "100m")
+        memory_request = params.get("memory_request", "128Mi")
+        
+        logger.info(f"Deployment parameters: project_path={project_path}, image={image}, namespace={namespace}")
+        
+        task.update_progress(10, f"Creating Kubernetes deployment")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = K8sDeploymentCreateCommand()
+            
+            # Execute deployment creation
+            result = await command.execute(
+                project_path=project_path,
+                image=image,
+                port=port,
+                namespace=namespace,
+                replicas=replicas,
+                cpu_limit=cpu_limit,
+                memory_limit=memory_limit,
+                cpu_request=cpu_request,
+                memory_request=memory_request
+            )
+            
+            if result.success:
+                task.update_progress(90, "Deployment created successfully")
+                task.complete({
+                    "message": "Kubernetes deployment created successfully",
+                    "deployment_name": result.data.get("deployment_name"),
+                    "namespace": result.data.get("namespace"),
+                    "available_replicas": result.data.get("available_replicas"),
+                    "replicas": result.data.get("replicas"),
+                    "uid": result.data.get("uid"),
+                    "creation_timestamp": result.data.get("creation_timestamp")
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.K8S_DEPLOYMENT_FAILED,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"K8S deployment creation failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.K8S_DEPLOYMENT_FAILED, {"exception": str(e)})
+    
+    async def _execute_k8s_pod_create_task(self, task: Task) -> None:
+        """Execute Kubernetes pod creation task using kubernetes Python library."""
+        import logging
+        from ai_admin.commands.k8s_pod_create_command import K8sPodCreateCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting K8S pod create task {task.id} ===")
+        
+        params = task.params
+        project_path = params.get("project_path")
+        image = params.get("image", "ai-admin-server:latest")
+        port = params.get("port", 8060)
+        namespace = params.get("namespace", "default")
+        cpu_limit = params.get("cpu_limit", "500m")
+        memory_limit = params.get("memory_limit", "512Mi")
+        
+        logger.info(f"Pod parameters: project_path={project_path}, image={image}, namespace={namespace}")
+        
+        task.update_progress(10, f"Creating Kubernetes pod")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = K8sPodCreateCommand()
+            
+            # Execute pod creation
+            result = await command.execute(
+                project_path=project_path,
+                image=image,
+                port=port,
+                namespace=namespace,
+                cpu_limit=cpu_limit,
+                memory_limit=memory_limit
+            )
+            
+            if result.success:
+                task.update_progress(90, "Pod created successfully")
+                task.complete({
+                    "message": "Kubernetes pod created successfully",
+                    "pod_name": result.data.get("pod_name"),
+                    "namespace": result.data.get("namespace"),
+                    "pod_phase": result.data.get("pod_phase"),
+                    "pod_ip": result.data.get("pod_ip"),
+                    "uid": result.data.get("uid"),
+                    "creation_timestamp": result.data.get("creation_timestamp")
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.K8S_POD_FAILED,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"K8S pod creation failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.K8S_POD_FAILED, {"exception": str(e)})
+    
+    async def _execute_k8s_pod_status_task(self, task: Task) -> None:
+        """Execute Kubernetes pod status task using kubernetes Python library."""
+        import logging
+        from kubernetes import client, config
+        from kubernetes.client.rest import ApiException
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting K8S pod status task {task.id} ===")
+        
+        params = task.params
+        pod_name = params.get("pod_name")
+        namespace = params.get("namespace", "default")
+        
+        logger.info(f"Pod status parameters: pod_name={pod_name}, namespace={namespace}")
+        
+        task.update_progress(10, f"Getting pod status")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Load kubeconfig
+            try:
+                config.load_kube_config()
+            except Exception:
+                config.load_incluster_config()
+            
+            # Create API client
+            core_v1 = client.CoreV1Api()
+            
+            # Get pod status
+            pod = core_v1.read_namespaced_pod(name=pod_name, namespace=namespace)
+            
+            task.update_progress(90, "Pod status retrieved successfully")
+            task.complete({
+                "message": "Kubernetes pod status retrieved successfully",
+                "pod_name": pod_name,
+                "namespace": namespace,
+                "phase": pod.status.phase,
+                "pod_ip": pod.status.pod_ip,
+                "host_ip": pod.status.host_ip,
+                "start_time": pod.status.start_time.isoformat() if pod.status.start_time else None,
+                "container_statuses": [
+                    {
+                        "name": container.name,
+                        "ready": container.ready,
+                        "restart_count": container.restart_count,
+                        "state": str(container.state)
+                    }
+                    for container in pod.status.container_statuses or []
+                ]
+            })
+                
+        except ApiException as e:
+            if e.status == 404:
+                task.fail(
+                    f"Pod {pod_name} not found in namespace {namespace}",
+                    TaskErrorCode.K8S_RESOURCE_NOT_FOUND,
+                    {"pod_name": pod_name, "namespace": namespace}
+                )
+            else:
+                task.fail(
+                    f"Failed to get pod status: {str(e)}",
+                    TaskErrorCode.K8S_API_ERROR,
+                    {"api_exception": str(e), "status_code": e.status}
+                )
+        except Exception as e:
+            error_msg = f"K8S pod status failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.K8S_API_ERROR, {"exception": str(e)})
+    
+    async def _execute_k8s_pod_delete_task(self, task: Task) -> None:
+        """Execute Kubernetes pod deletion task using kubernetes Python library."""
+        import logging
+        from kubernetes import client, config
+        from kubernetes.client.rest import ApiException
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting K8S pod delete task {task.id} ===")
+        
+        params = task.params
+        pod_name = params.get("pod_name")
+        namespace = params.get("namespace", "default")
+        
+        logger.info(f"Pod delete parameters: pod_name={pod_name}, namespace={namespace}")
+        
+        task.update_progress(10, f"Deleting pod")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Load kubeconfig
+            try:
+                config.load_kube_config()
+            except Exception:
+                config.load_incluster_config()
+            
+            # Create API client
+            core_v1 = client.CoreV1Api()
+            
+            # Delete pod
+            core_v1.delete_namespaced_pod(name=pod_name, namespace=namespace)
+            
+            task.update_progress(90, "Pod deleted successfully")
+            task.complete({
+                "message": "Kubernetes pod deleted successfully",
+                "pod_name": pod_name,
+                "namespace": namespace
+            })
+                
+        except ApiException as e:
+            if e.status == 404:
+                task.fail(
+                    f"Pod {pod_name} not found in namespace {namespace}",
+                    TaskErrorCode.K8S_RESOURCE_NOT_FOUND,
+                    {"pod_name": pod_name, "namespace": namespace}
+                )
+            else:
+                task.fail(
+                    f"Failed to delete pod: {str(e)}",
+                    TaskErrorCode.K8S_API_ERROR,
+                    {"api_exception": str(e), "status_code": e.status}
+                )
+        except Exception as e:
+            error_msg = f"K8S pod deletion failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.K8S_API_ERROR, {"exception": str(e)})
+    
+    async def _execute_kind_cluster_create_task(self, task: Task) -> None:
+        """Execute Kind cluster creation task."""
+        import logging
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Kind cluster create task {task.id} ===")
+        
+        params = task.params
+        cluster_name = params.get("cluster_name")
+        config_file = params.get("config_file")
+        image = params.get("image")
+        wait = params.get("wait", 60)
+        
+        logger.info(f"Kind cluster create parameters: cluster_name={cluster_name}, config_file={config_file}")
+        
+        task.update_progress(10, f"Creating Kind cluster: {cluster_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = KindClusterCommand()
+            
+            # Execute cluster creation
+            result = await command.execute(
+                action="create",
+                cluster_name=cluster_name,
+                config_file=config_file,
+                image=image,
+                wait=wait
+            )
+            
+            if result.success:
+                task.update_progress(90, "Kind cluster created successfully")
+                task.complete({
+                    "message": "Kind cluster created successfully",
+                    "cluster_name": cluster_name,
+                    "config_file": config_file,
+                    "image": image,
+                    "wait_time": wait,
+                    "stdout": result.data.get("stdout")
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.KIND_CLUSTER_CREATE_FAILED,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"Kind cluster creation failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.KIND_CLUSTER_CREATE_FAILED, {"exception": str(e)})
+    
+    async def _execute_kind_cluster_delete_task(self, task: Task) -> None:
+        """Execute Kind cluster deletion task."""
+        import logging
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Kind cluster delete task {task.id} ===")
+        
+        params = task.params
+        cluster_name = params.get("cluster_name")
+        
+        logger.info(f"Kind cluster delete parameters: cluster_name={cluster_name}")
+        
+        task.update_progress(10, f"Deleting Kind cluster: {cluster_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = KindClusterCommand()
+            
+            # Execute cluster deletion
+            result = await command.execute(
+                action="delete",
+                cluster_name=cluster_name
+            )
+            
+            if result.success:
+                task.update_progress(90, "Kind cluster deleted successfully")
+                task.complete({
+                    "message": "Kind cluster deleted successfully",
+                    "cluster_name": cluster_name,
+                    "stdout": result.data.get("stdout")
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.KIND_CLUSTER_DELETE_FAILED,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"Kind cluster deletion failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.KIND_CLUSTER_DELETE_FAILED, {"exception": str(e)})
+    
+    async def _execute_kind_cluster_list_task(self, task: Task) -> None:
+        """Execute Kind cluster list task."""
+        import logging
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Kind cluster list task {task.id} ===")
+        
+        task.update_progress(10, "Listing Kind clusters")
+        
+        try:
+            # Create command instance
+            command = KindClusterCommand()
+            
+            # Execute cluster listing
+            result = await command.execute(action="list")
+            
+            if result.success:
+                task.update_progress(90, "Kind clusters listed successfully")
+                task.complete({
+                    "message": "Kind clusters listed successfully",
+                    "clusters": result.data.get("clusters", []),
+                    "count": result.data.get("count", 0)
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.KIND_CLUSTER_NOT_FOUND,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"Kind cluster listing failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.KIND_CLUSTER_NOT_FOUND, {"exception": str(e)})
+    
+    async def _execute_kind_cluster_get_nodes_task(self, task: Task) -> None:
+        """Execute Kind cluster get nodes task."""
+        import logging
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Kind cluster get nodes task {task.id} ===")
+        
+        params = task.params
+        cluster_name = params.get("cluster_name")
+        
+        logger.info(f"Kind cluster get nodes parameters: cluster_name={cluster_name}")
+        
+        task.update_progress(10, f"Getting nodes for Kind cluster: {cluster_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = KindClusterCommand()
+            
+            # Execute get nodes
+            result = await command.execute(
+                action="get-nodes",
+                cluster_name=cluster_name
+            )
+            
+            if result.success:
+                task.update_progress(90, "Kind cluster nodes retrieved successfully")
+                task.complete({
+                    "message": "Kind cluster nodes retrieved successfully",
+                    "cluster_name": cluster_name,
+                    "nodes": result.data.get("nodes", []),
+                    "count": result.data.get("count", 0)
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.KIND_CLUSTER_NOT_FOUND,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"Kind cluster get nodes failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.KIND_CLUSTER_NOT_FOUND, {"exception": str(e)})
+    
+    async def _execute_kind_load_image_task(self, task: Task) -> None:
+        """Execute Kind load image task."""
+        import logging
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Kind load image task {task.id} ===")
+        
+        params = task.params
+        cluster_name = params.get("cluster_name")
+        image = params.get("image")
+        
+        logger.info(f"Kind load image parameters: cluster_name={cluster_name}, image={image}")
+        
+        task.update_progress(10, f"Loading image into Kind cluster: {cluster_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        try:
+            # Create command instance
+            command = KindClusterCommand()
+            
+            # Execute load image
+            result = await command.execute(
+                action="load-image",
+                cluster_name=cluster_name,
+                image=image
+            )
+            
+            if result.success:
+                task.update_progress(90, "Image loaded into Kind cluster successfully")
+                task.complete({
+                    "message": "Image loaded into Kind cluster successfully",
+                    "cluster_name": cluster_name,
+                    "image": image,
+                    "stdout": result.data.get("stdout")
+                })
+            else:
+                task.fail(
+                    result.message,
+                    TaskErrorCode.KIND_LOAD_IMAGE_FAILED,
+                    result.details
+                )
+                
+        except Exception as e:
+            error_msg = f"Kind load image failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, TaskErrorCode.KIND_LOAD_IMAGE_FAILED, {"exception": str(e)}) 

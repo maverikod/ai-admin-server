@@ -1,280 +1,264 @@
 """Kubernetes namespace management commands for MCP server."""
 
-import subprocess
-import yaml
-import os
+import re
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 
 
 class K8sNamespaceCreateCommand(Command):
-    """Command to create Kubernetes namespaces."""
+    """Command to create Kubernetes namespaces using Python kubernetes library."""
     
     name = "k8s_namespace_create"
     
+    def __init__(self):
+        """Initialize Kubernetes client."""
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            # Try in-cluster config
+            config.load_incluster_config()
+        
+        self.core_v1 = client.CoreV1Api()
+    
+    def get_project_name(self, project_path: str) -> str:
+        """Extract and sanitize project name from path."""
+        project_name = Path(project_path).name
+        # Convert to kubernetes-compatible name (lowercase, no special chars)
+        sanitized = re.sub(r'[^a-z0-9]', '-', project_name.lower())
+        return sanitized.strip('-')
+    
     async def execute(self, 
                      namespace: str,
+                     project_path: Optional[str] = None,
                      labels: Optional[Dict[str, str]] = None,
                      **kwargs):
         """
-        Create Kubernetes namespace.
+        Create Kubernetes namespace using Python kubernetes library.
         
         Args:
-            namespace: Name of namespace to create
-            labels: Labels to add to namespace
+            namespace: Name of the namespace to create
+            project_path: Path to project directory (used for default labels)
+            labels: Labels to apply to the namespace
         """
         try:
-            # Create namespace YAML configuration
-            namespace_config = {
-                "apiVersion": "v1",
-                "kind": "Namespace",
-                "metadata": {
-                    "name": namespace
-                }
-            }
-            
-            if labels:
-                namespace_config["metadata"]["labels"] = labels
-            
-            # Convert to YAML
-            yaml_content = yaml.dump(namespace_config, default_flow_style=False)
-            
-            # Save YAML to temporary file
-            yaml_file = f"/tmp/namespace-{namespace}.yaml"
-            with open(yaml_file, 'w') as f:
-                f.write(yaml_content)
+            # Set default labels if not provided
+            if not labels:
+                if project_path:
+                    project_name = self.get_project_name(project_path)
+                    labels = {
+                        "app": "ai-admin",
+                        "project": project_name,
+                        "managed-by": "ai-admin"
+                    }
+                else:
+                    labels = {
+                        "app": "ai-admin",
+                        "managed-by": "ai-admin"
+                    }
             
             # Check if namespace already exists
-            check_cmd = ["kubectl", "get", "namespace", namespace]
-            env = os.environ.copy()
-            if "KUBECONFIG" in env:
-                check_cmd.extend(["--kubeconfig", env["KUBECONFIG"]])
-            check_result = subprocess.run(check_cmd, capture_output=True, text=True, env=env)
-            
-            if check_result.returncode == 0:
+            try:
+                existing_namespace = self.core_v1.read_namespace(name=namespace)
+                
                 return SuccessResult(data={
                     "message": f"Namespace {namespace} already exists",
                     "namespace": namespace,
-                    "status": "already_exists",
-                    "yaml_file": yaml_file
+                    "namespace_info": {
+                        "name": existing_namespace.metadata.name,
+                        "status": existing_namespace.status.phase,
+                        "labels": existing_namespace.metadata.labels or {},
+                        "annotations": existing_namespace.metadata.annotations or {}
+                    },
+                    "timestamp": datetime.now().isoformat()
                 })
+                
+            except ApiException as e:
+                if e.status != 404:
+                    return ErrorResult(
+                        message=f"Failed to check namespace existence: {e}",
+                        code="K8S_API_ERROR",
+                        details={"status": e.status, "reason": e.reason}
+                    )
             
-            # Create the namespace
-            create_cmd = ["kubectl", "apply", "-f", yaml_file]
-            env = os.environ.copy()
-            if "KUBECONFIG" in env:
-                create_cmd.extend(["--kubeconfig", env["KUBECONFIG"]])
-            create_result = subprocess.run(create_cmd, capture_output=True, text=True, env=env)
-            
-            if create_result.returncode != 0:
-                return ErrorResult(
-                    message=f"Failed to create namespace: {create_result.stderr}",
-                    code="NAMESPACE_CREATE_FAILED",
-                    details={"yaml_content": yaml_content}
+            # Create namespace
+            try:
+                # Create namespace metadata
+                namespace_metadata = client.V1ObjectMeta(
+                    name=namespace,
+                    labels=labels
                 )
-            
-            return SuccessResult(data={
-                "message": f"Successfully created namespace {namespace}",
-                "namespace": namespace,
-                "labels": labels or {},
-                "yaml_file": yaml_file,
-                "yaml_content": yaml_content,
-                "timestamp": datetime.now().isoformat()
-            })
-            
+                
+                # Create namespace object
+                namespace_obj = client.V1Namespace(
+                    api_version="v1",
+                    kind="Namespace",
+                    metadata=namespace_metadata
+                )
+                
+                # Create the namespace
+                created_namespace = self.core_v1.create_namespace(body=namespace_obj)
+                
+                return SuccessResult(data={
+                    "message": f"Namespace {namespace} created successfully",
+                    "namespace": namespace,
+                    "namespace_info": {
+                        "name": created_namespace.metadata.name,
+                        "status": created_namespace.status.phase,
+                        "labels": created_namespace.metadata.labels or {},
+                        "annotations": created_namespace.metadata.annotations or {}
+                    },
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+            except ApiException as e:
+                return ErrorResult(
+                    message=f"Failed to create namespace: {e}",
+                    code="K8S_API_ERROR",
+                    details={"status": e.status, "reason": e.reason}
+                )
+                
         except Exception as e:
             return ErrorResult(
-                message=f"Unexpected error creating namespace: {str(e)}",
+                message=f"Unexpected error creating namespace: {e}",
                 code="UNEXPECTED_ERROR",
-                details={}
+                details={"exception": str(e)}
             )
-    
-    @classmethod
-    def get_schema(cls) -> Dict[str, Any]:
-        """Get JSON schema for k8s namespace create command parameters."""
-        return {
-            "type": "object",
-            "properties": {
-                "namespace": {
-                    "type": "string",
-                    "description": "Name of namespace to create"
-                },
-                "labels": {
-                    "type": "object",
-                    "description": "Labels to add to namespace",
-                    "additionalProperties": {"type": "string"}
-                }
-            },
-            "required": ["namespace"]
-        }
 
 
 class K8sNamespaceListCommand(Command):
-    """Command to list Kubernetes namespaces."""
+    """Command to list Kubernetes namespaces using Python kubernetes library."""
     
     name = "k8s_namespace_list"
     
-    async def execute(self, **kwargs):
-        """List all Kubernetes namespaces."""
+    def __init__(self):
+        """Initialize Kubernetes client."""
         try:
-            # Get all namespaces
-            cmd = ["kubectl", "get", "namespaces", "-o", "json"]
-            env = os.environ.copy()
-            if "KUBECONFIG" in env:
-                cmd.extend(["--kubeconfig", env["KUBECONFIG"]])
-            result = subprocess.run(cmd, capture_output=True, text=True, env=env)
-            
-            if result.returncode != 0:
-                return ErrorResult(
-                    message=f"Failed to list namespaces: {result.stderr}",
-                    code="KUBECTL_FAILED",
-                    details={}
-                )
-            
-            import json
-            namespaces_data = json.loads(result.stdout)
-            namespaces = []
-            
-            for ns in namespaces_data.get("items", []):
-                metadata = ns.get("metadata", {})
-                status = ns.get("status", {})
+            config.load_kube_config()
+        except config.ConfigException:
+            # Try in-cluster config
+            config.load_incluster_config()
+        
+        self.core_v1 = client.CoreV1Api()
+    
+    async def execute(self, **kwargs):
+        """
+        List Kubernetes namespaces using Python kubernetes library.
+        """
+        try:
+            try:
+                namespaces = self.core_v1.list_namespace()
                 
-                ns_info = {
-                    "name": metadata.get("name"),
-                    "labels": metadata.get("labels", {}),
-                    "annotations": metadata.get("annotations", {}),
-                    "creation_timestamp": metadata.get("creationTimestamp"),
-                    "phase": status.get("phase"),
-                    "age": self._calculate_age(metadata.get("creationTimestamp"))
-                }
-                namespaces.append(ns_info)
-            
-            return SuccessResult(data={
-                "message": f"Found {len(namespaces)} namespaces",
-                "namespaces": namespaces,
-                "timestamp": datetime.now().isoformat()
-            })
-            
+                namespace_list = []
+                for namespace in namespaces.items:
+                    namespace_info = {
+                        "name": namespace.metadata.name,
+                        "status": namespace.status.phase,
+                        "labels": namespace.metadata.labels or {},
+                        "annotations": namespace.metadata.annotations or {},
+                        "created": namespace.metadata.creation_timestamp.isoformat() if namespace.metadata.creation_timestamp else None
+                    }
+                    namespace_list.append(namespace_info)
+                
+                return SuccessResult(data={
+                    "message": f"Found {len(namespace_list)} namespaces",
+                    "namespaces": namespace_list,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+            except ApiException as e:
+                return ErrorResult(
+                    message=f"Failed to list namespaces: {e}",
+                    code="K8S_API_ERROR",
+                    details={"status": e.status, "reason": e.reason}
+                )
+                
         except Exception as e:
             return ErrorResult(
-                message=f"Unexpected error listing namespaces: {str(e)}",
+                message=f"Unexpected error listing namespaces: {e}",
                 code="UNEXPECTED_ERROR",
-                details={}
+                details={"exception": str(e)}
             )
-    
-    def _calculate_age(self, creation_timestamp: str) -> str:
-        """Calculate age of namespace from creation timestamp."""
-        try:
-            from datetime import datetime
-            import dateutil.parser
-            
-            created = dateutil.parser.parse(creation_timestamp)
-            now = datetime.now(created.tzinfo)
-            age = now - created
-            
-            days = age.days
-            hours, remainder = divmod(age.seconds, 3600)
-            minutes, _ = divmod(remainder, 60)
-            
-            if days > 0:
-                return f"{days}d{hours}h"
-            elif hours > 0:
-                return f"{hours}h{minutes}m"
-            else:
-                return f"{minutes}m"
-                
-        except Exception:
-            return "unknown"
-    
-    @classmethod
-    def get_schema(cls) -> Dict[str, Any]:
-        """Get JSON schema for k8s namespace list command parameters."""
-        return {
-            "type": "object",
-            "properties": {}
-        }
 
 
 class K8sNamespaceDeleteCommand(Command):
-    """Command to delete Kubernetes namespaces."""
+    """Command to delete Kubernetes namespaces using Python kubernetes library."""
     
     name = "k8s_namespace_delete"
+    
+    def __init__(self):
+        """Initialize Kubernetes client."""
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            # Try in-cluster config
+            config.load_incluster_config()
+        
+        self.core_v1 = client.CoreV1Api()
     
     async def execute(self, 
                      namespace: str,
                      force: bool = False,
                      **kwargs):
         """
-        Delete Kubernetes namespace.
+        Delete Kubernetes namespace using Python kubernetes library.
         
         Args:
-            namespace: Name of namespace to delete
-            force: Force delete namespace immediately
+            namespace: Name of the namespace to delete
+            force: Force deletion even if namespace contains resources
         """
         try:
             # Check if namespace exists
-            check_cmd = ["kubectl", "get", "namespace", namespace]
-            env = os.environ.copy()
-            if "KUBECONFIG" in env:
-                check_cmd.extend(["--kubeconfig", env["KUBECONFIG"]])
-            check_result = subprocess.run(check_cmd, capture_output=True, text=True, env=env)
+            try:
+                existing_namespace = self.core_v1.read_namespace(name=namespace)
+            except ApiException as e:
+                if e.status == 404:
+                    return ErrorResult(
+                        message=f"Namespace {namespace} not found",
+                        code="NAMESPACE_NOT_FOUND",
+                        details={"status": e.status, "reason": e.reason}
+                    )
+                else:
+                    return ErrorResult(
+                        message=f"Failed to check namespace existence: {e}",
+                        code="K8S_API_ERROR",
+                        details={"status": e.status, "reason": e.reason}
+                    )
             
-            if check_result.returncode != 0:
-                return ErrorResult(
-                    message=f"Namespace {namespace} not found",
-                    code="NAMESPACE_NOT_FOUND",
-                    details={}
+            # Delete namespace
+            try:
+                delete_options = client.V1DeleteOptions()
+                if force:
+                    delete_options.grace_period_seconds = 0
+                
+                self.core_v1.delete_namespace(
+                    name=namespace,
+                    body=delete_options
                 )
-            
-            # Delete the namespace
-            delete_cmd = ["kubectl", "delete", "namespace", namespace]
-            if force:
-                delete_cmd.extend(["--force", "--grace-period=0"])
-            
-            env = os.environ.copy()
-            if "KUBECONFIG" in env:
-                delete_cmd.extend(["--kubeconfig", env["KUBECONFIG"]])
-            delete_result = subprocess.run(delete_cmd, capture_output=True, text=True, env=env)
-            
-            if delete_result.returncode != 0:
+                
+                return SuccessResult(data={
+                    "message": f"Namespace {namespace} deleted successfully",
+                    "namespace": namespace,
+                    "force": force,
+                    "timestamp": datetime.now().isoformat()
+                })
+                
+            except ApiException as e:
                 return ErrorResult(
-                    message=f"Failed to delete namespace: {delete_result.stderr}",
-                    code="NAMESPACE_DELETE_FAILED",
-                    details={}
+                    message=f"Failed to delete namespace: {e}",
+                    code="K8S_API_ERROR",
+                    details={"status": e.status, "reason": e.reason}
                 )
-            
-            return SuccessResult(data={
-                "message": f"Successfully deleted namespace {namespace}",
-                "namespace": namespace,
-                "force": force,
-                "timestamp": datetime.now().isoformat()
-            })
-            
+                
         except Exception as e:
             return ErrorResult(
-                message=f"Unexpected error deleting namespace: {str(e)}",
+                message=f"Unexpected error deleting namespace: {e}",
                 code="UNEXPECTED_ERROR",
-                details={}
-            )
-    
-    @classmethod
-    def get_schema(cls) -> Dict[str, Any]:
-        """Get JSON schema for k8s namespace delete command parameters."""
-        return {
-            "type": "object",
-            "properties": {
-                "namespace": {
-                    "type": "string",
-                    "description": "Name of namespace to delete"
-                },
-                "force": {
-                    "type": "boolean",
-                    "description": "Force delete namespace immediately",
-                    "default": False
-                }
-            },
-            "required": ["namespace"]
-        } 
+                details={"exception": str(e)}
+            ) 

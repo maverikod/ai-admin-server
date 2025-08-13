@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  k3s-cluster2:
+    image: rancher/k3s:latest
+    container_name: k3s-cluster2
+    privileged: true
+    ports:
+      - "6444:6443"
+      - "10251:10250"
+    environment:
+      - K3S_TOKEN=mysecret2
+      - K3S_KUBECONFIG_OUTPUT=/output/kubeconfig-cluster2.yaml
+      - K3S_KUBECONFIG_MODE=666
+    volumes:
+      - k3s-cluster2-data:/var/lib/rancher/k3s
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./kubeconfig-cluster2:/output
+    command: server --disable traefik --disable servicelb --disable-cloud-controller --disable-network-policy --disable local-storage
+    networks:
+      - smart-assistant
+
+networks:
+  smart-assistant:
+    external: true
+
+volumes:
+  k3s-cluster2-data: 

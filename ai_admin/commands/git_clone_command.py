@@ -10,6 +10,7 @@ from pathlib import Path
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 from mcp_proxy_adapter.core.errors import CommandError, ValidationError
+from ai_admin.commands.git_utils import get_github_token
 
 
 class GitCloneCommand(Command):
@@ -67,6 +68,13 @@ class GitCloneCommand(Command):
             # Validate repository URL
             if not repository_url:
                 raise ValidationError("Repository URL is required")
+            
+            # Add GitHub token to URL if it's a GitHub repository
+            if 'github.com' in repository_url and not repository_url.startswith('git@'):
+                token = get_github_token()
+                if token and token not in repository_url:
+                    if repository_url.startswith('https://github.com/'):
+                        repository_url = repository_url.replace('https://github.com/', f'https://{token}@github.com/')
             
             # Determine target directory
             if not target_directory:

@@ -1,20 +1,32 @@
 """Kubernetes pod status command for MCP server."""
 
 import re
-import subprocess
 import json
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
+
+from kubernetes import client, config
+from kubernetes.client.rest import ApiException
 
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 
 
 class K8sPodStatusCommand(Command):
-    """Command to get status of Kubernetes pods."""
+    """Command to get status of Kubernetes pods using Python kubernetes library."""
     
     name = "k8s_pod_status"
+    
+    def __init__(self):
+        """Initialize Kubernetes client."""
+        try:
+            config.load_kube_config()
+        except config.ConfigException:
+            # Try in-cluster config
+            config.load_incluster_config()
+        
+        self.core_v1 = client.CoreV1Api()
     
     def get_project_name(self, project_path: str) -> str:
         """Extract and sanitize project name from path."""
@@ -23,6 +35,23 @@ class K8sPodStatusCommand(Command):
         sanitized = re.sub(r'[^a-z0-9]', '-', project_name.lower())
         return sanitized.strip('-')
     
+    def _extract_pod_info(self, pod) -> Dict[str, Any]:
+        """Extract relevant pod information from Kubernetes API response."""
+        metadata = pod.metadata
+        status = pod.status
+        
+        return {
+            "name": metadata.name,
+            "namespace": metadata.namespace,
+            "phase": status.phase,
+            "ready": status.ready if status.ready else False,
+            "restart_count": status.container_statuses[0].restart_count if status.container_statuses else 0,
+            "image": status.container_statuses[0].image if status.container_statuses else None,
+            "created": metadata.creation_timestamp.isoformat() if metadata.creation_timestamp else None,
+            "labels": metadata.labels or {},
+            "annotations": metadata.annotations or {}
+        }
+    
     async def execute(self, 
                      pod_name: Optional[str] = None,
                      project_path: Optional[str] = None,
@@ -30,7 +59,7 @@ class K8sPodStatusCommand(Command):
                      all_ai_admin: bool = False,
                      **kwargs):
         """
-        Get status of Kubernetes pods.
+        Get status of Kubernetes pods using Python kubernetes library.
         
         Args:
             pod_name: Name of specific pod to check (if not provided, derived from project_path)
@@ -41,33 +70,30 @@ class K8sPodStatusCommand(Command):
         try:
             if all_ai_admin:
                 # Get all ai-admin pods
-                cmd = [
-                    "kubectl", "get", "pods", "-n", namespace,
-                    "-l", "app=ai-admin",
-                    "-o", "json"
-                ]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode != 0:
-                    return ErrorResult(
-                        message=f"Failed to get pods: {result.stderr}",
-                        code="KUBECTL_FAILED",
-                        details={}
+                try:
+                    pods = self.core_v1.list_namespaced_pod(
+                        namespace=namespace,
+                        label_selector="app=ai-admin"
                     )
-                
-                pods_data = json.loads(result.stdout)
-                pods_info = []
-                
-                for pod in pods_data.get("items", []):
-                    pod_info = self._extract_pod_info(pod)
-                    pods_info.append(pod_info)
-                
-                return SuccessResult(data={
-                    "message": f"Found {len(pods_info)} ai-admin pods",
-                    "namespace": namespace,
-                    "pods": pods_info,
-                    "timestamp": datetime.now().isoformat()
-                })
+                    
+                    pods_info = []
+                    for pod in pods.items:
+                        pod_info = self._extract_pod_info(pod)
+                        pods_info.append(pod_info)
+                    
+                    return SuccessResult(data={
+                        "message": f"Found {len(pods_info)} ai-admin pods",
+                        "namespace": namespace,
+                        "pods": pods_info,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
+                except ApiException as e:
+                    return ErrorResult(
+                        message=f"Failed to get pods: {e}",
+                        code="K8S_API_ERROR",
+                        details={"status": e.status, "reason": e.reason}
+                    )
             
             else:
                 # Get specific pod
@@ -79,98 +105,38 @@ class K8sPodStatusCommand(Command):
                     project_name = self.get_project_name(project_path)
                     pod_name = f"ai-admin-{project_name}"
                 
-                cmd = ["kubectl", "get", "pod", pod_name, "-n", namespace, "-o", "json"]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode != 0:
-                    return ErrorResult(
-                        message=f"Pod {pod_name} not found in namespace {namespace}",
-                        code="POD_NOT_FOUND",
-                        details={}
+                try:
+                    pod = self.core_v1.read_namespaced_pod(
+                        name=pod_name,
+                        namespace=namespace
                     )
-                
-                pod_data = json.loads(result.stdout)
-                pod_info = self._extract_pod_info(pod_data)
-                
-                return SuccessResult(data={
-                    "message": f"Pod {pod_name} status retrieved",
-                    "namespace": namespace,
-                    "pod": pod_info,
-                    "timestamp": datetime.now().isoformat()
-                })
-            
+                    
+                    pod_info = self._extract_pod_info(pod)
+                    
+                    return SuccessResult(data={
+                        "message": f"Pod {pod_name} status retrieved",
+                        "namespace": namespace,
+                        "pod": pod_info,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
+                except ApiException as e:
+                    if e.status == 404:
+                        return ErrorResult(
+                            message=f"Pod {pod_name} not found in namespace {namespace}",
+                            code="POD_NOT_FOUND",
+                            details={"status": e.status, "reason": e.reason}
+                        )
+                    else:
+                        return ErrorResult(
+                            message=f"Failed to get pod status: {e}",
+                            code="K8S_API_ERROR",
+                            details={"status": e.status, "reason": e.reason}
+                        )
+                        
         except Exception as e:
             return ErrorResult(
-                message=f"Unexpected error getting pod status: {str(e)}",
+                message=f"Unexpected error getting pod status: {e}",
                 code="UNEXPECTED_ERROR",
-                details={}
-            )
-    
-    def _extract_pod_info(self, pod_data: Dict) -> Dict:
-        """Extract useful information from pod JSON data."""
-        metadata = pod_data.get("metadata", {})
-        status = pod_data.get("status", {})
-        spec = pod_data.get("spec", {})
-        
-        # Get container statuses
-        container_statuses = []
-        for container_status in status.get("containerStatuses", []):
-            container_info = {
-                "name": container_status.get("name"),
-                "ready": container_status.get("ready", False),
-                "restart_count": container_status.get("restartCount", 0),
-                "image": container_status.get("image"),
-                "state": container_status.get("state", {})
-            }
-            container_statuses.append(container_info)
-        
-        # Get mounted volumes info
-        volumes = []
-        for volume in spec.get("volumes", []):
-            if "hostPath" in volume:
-                volumes.append({
-                    "name": volume.get("name"),
-                    "type": "hostPath",
-                    "path": volume.get("hostPath", {}).get("path")
-                })
-        
-        return {
-            "name": metadata.get("name"),
-            "namespace": metadata.get("namespace"),
-            "labels": metadata.get("labels", {}),
-            "creation_timestamp": metadata.get("creationTimestamp"),
-            "phase": status.get("phase"),
-            "pod_ip": status.get("podIP"),
-            "host_ip": status.get("hostIP"),
-            "node_name": spec.get("nodeName"),
-            "containers": container_statuses,
-            "volumes": volumes,
-            "restart_policy": spec.get("restartPolicy")
-        }
-    
-    @classmethod
-    def get_schema(cls) -> Dict[str, Any]:
-        """Get JSON schema for k8s pod status command parameters."""
-        return {
-            "type": "object",
-            "properties": {
-                "pod_name": {
-                    "type": "string",
-                    "description": "Name of specific pod to check (if not provided, derived from project_path)"
-                },
-                "project_path": {
-                    "type": "string",
-                    "description": "Path to project directory (used to derive pod name)"
-                },
-                "namespace": {
-                    "type": "string",
-                    "description": "Kubernetes namespace",
-                    "default": "default"
-                },
-                            "all_ai_admin": {
-                "type": "boolean",
-                "description": "Get status of all ai-admin pods",
-                    "default": False
-                }
-            }
-        } 
+                details={"exception": str(e)}
+            ) 
