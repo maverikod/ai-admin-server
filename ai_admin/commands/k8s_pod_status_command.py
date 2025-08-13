@@ -11,6 +11,8 @@ from kubernetes.client.rest import ApiException
 
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from ai_admin.commands.k8s_utils import KubernetesConfigManager
+from ai_admin.settings_manager import get_settings_manager
 
 
 class K8sPodStatusCommand(Command):
@@ -20,13 +22,38 @@ class K8sPodStatusCommand(Command):
     
     def __init__(self):
         """Initialize Kubernetes client."""
+        self.config_manager = None
+        self.core_v1 = None
+    
+    def _init_client(self, cluster_name: Optional[str] = None):
+        """Initialize Kubernetes client for specific cluster."""
         try:
-            config.load_kube_config()
-        except config.ConfigException:
-            # Try in-cluster config
-            config.load_incluster_config()
-        
-        self.core_v1 = client.CoreV1Api()
+            # Get settings and create config manager
+            settings_manager = get_settings_manager()
+            config_data = settings_manager.get_all_settings()
+            self.config_manager = KubernetesConfigManager(config_data)
+            
+            # Load kubeconfig for the cluster
+            if self.config_manager.load_kubeconfig(cluster_name):
+                self.core_v1 = client.CoreV1Api()
+            else:
+                # Fallback to default config
+                try:
+                    config.load_kube_config()
+                    self.core_v1 = client.CoreV1Api()
+                except config.ConfigException:
+                    config.load_incluster_config()
+                    self.core_v1 = client.CoreV1Api()
+                    
+        except Exception as e:
+            print(f"Failed to initialize Kubernetes client: {e}")
+            # Fallback to default config
+            try:
+                config.load_kube_config()
+                self.core_v1 = client.CoreV1Api()
+            except config.ConfigException:
+                config.load_incluster_config()
+                self.core_v1 = client.CoreV1Api()
     
     def get_project_name(self, project_path: str) -> str:
         """Extract and sanitize project name from path."""
@@ -57,6 +84,7 @@ class K8sPodStatusCommand(Command):
                      project_path: Optional[str] = None,
                      namespace: str = "default",
                      all_ai_admin: bool = False,
+                     cluster_name: Optional[str] = None,
                      **kwargs):
         """
         Get status of Kubernetes pods using Python kubernetes library.
@@ -68,6 +96,9 @@ class K8sPodStatusCommand(Command):
             all_ai_admin: Get status of all ai-admin pods
         """
         try:
+            # Initialize client for the specified cluster
+            self._init_client(cluster_name)
+            
             if all_ai_admin:
                 # Get all ai-admin pods
                 try:

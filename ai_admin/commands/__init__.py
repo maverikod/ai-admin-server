@@ -65,6 +65,13 @@ from ai_admin.commands.ssl_cert_view_command import SSLCertViewCommand
 from ai_admin.commands.ssl_cert_verify_command import SSLCertVerifyCommand
 from ai_admin.commands.ssl_crl_command import SSLCrlCommand
 
+# Import Kubernetes certificates and cluster setup commands
+from ai_admin.commands.k8s_certificates_command import K8sCertificatesCommand
+from ai_admin.commands.k8s_cluster_setup_command import K8sClusterSetupCommand
+
+# Import Vector Store deployment command
+from ai_admin.commands.vector_store_deploy_command import VectorStoreDeployCommand
+
 # Import AI/LLM commands
 from ai_admin.commands.llm_inference_command import LLMInferenceCommand
 from ai_admin.commands.ollama_models_command import OllamaModelsCommand
@@ -175,6 +182,11 @@ __all__ = [
     "KindClusterCommand",
     # Cluster Manager commands
     "K8sClusterManagerCommand",
+    # Kubernetes certificates and cluster setup commands
+    "K8sCertificatesCommand",
+    "K8sClusterSetupCommand",
+    # Vector Store deployment command
+    "VectorStoreDeployCommand",
     # AI/LLM commands
     "LLMInferenceCommand",
     "OllamaModelsCommand",
