@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class OllamaConfig:
     """Configuration manager for Ollama settings."""
@@ -54,6 +54,30 @@ class OllamaConfig:
         host = self.get_ollama_host()
         port = self.get_ollama_port()
         return f"http://{host}:{port}"
+    
+    def get_ollama_servers(self) -> Dict[str, Dict[str, Any]]:
+        """Get available Ollama servers configuration."""
+        config = self.get_ollama_config()
+        return config.get('servers', {})
+    
+    def get_server_config(self, server_name: str) -> Optional[Dict[str, Any]]:
+        """Get configuration for specific server."""
+        servers = self.get_ollama_servers()
+        return servers.get(server_name)
+    
+    def get_server_url(self, server_name: str) -> Optional[str]:
+        """Get URL for specific server."""
+        server_config = self.get_server_config(server_name)
+        if server_config:
+            host = server_config.get('host', 'localhost')
+            port = server_config.get('port', 11434)
+            return f"http://{host}:{port}"
+        return None
+    
+    def list_available_servers(self) -> List[str]:
+        """List all available server names."""
+        servers = self.get_ollama_servers()
+        return list(servers.keys())
 
 # Global config instance
 ollama_config = OllamaConfig() 

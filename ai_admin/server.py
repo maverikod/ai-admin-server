@@ -50,6 +50,24 @@ def custom_commands_hook(registry):
     from ai_admin.commands.docker_images_command import DockerImagesCommand
     from ai_admin.commands.docker_search_command import DockerSearchCommand
     from ai_admin.commands.docker_pull_command import DockerPullCommand
+    from ai_admin.commands.docker_remove_command import DockerRemoveCommand
+    from ai_admin.commands.docker_run_command import DockerRunCommand
+    from ai_admin.commands.docker_start_command import DockerStartCommand
+    from ai_admin.commands.docker_stop_command import DockerStopCommand
+    from ai_admin.commands.docker_restart_command import DockerRestartCommand
+    from ai_admin.commands.docker_logs_command import DockerLogsCommand
+    from ai_admin.commands.docker_tag_command import DockerTagCommand
+    from ai_admin.commands.docker_login_command import DockerLoginCommand
+    from ai_admin.commands.docker_hub_images_command import DockerHubImagesCommand
+    from ai_admin.commands.docker_hub_image_info_command import DockerHubImageInfoCommand
+    from ai_admin.commands.docker_images_compare_command import DockerImagesCompareCommand
+    from ai_admin.commands.docker_search_cli_command import DockerSearchCLICommand
+    from ai_admin.commands.docker_network_ls_command import DockerNetworkLsCommand
+    from ai_admin.commands.docker_network_inspect_command import DockerNetworkInspectCommand
+    from ai_admin.commands.docker_network_create_command import DockerNetworkCreateCommand
+    from ai_admin.commands.docker_network_connect_command import DockerNetworkConnectCommand
+    from ai_admin.commands.docker_network_disconnect_command import DockerNetworkDisconnectCommand
+    from ai_admin.commands.docker_network_rm_command import DockerNetworkRmCommand
     from ai_admin.commands.vast_search_command import VastSearchCommand
     from ai_admin.commands.vast_create_command import VastCreateCommand
     from ai_admin.commands.vast_destroy_command import VastDestroyCommand
@@ -92,6 +110,8 @@ def custom_commands_hook(registry):
     from ai_admin.commands.k8s_deployment_create_command import K8sDeploymentCreateCommand
     from ai_admin.commands.ollama_status_command import OllamaStatusCommand
     from ai_admin.commands.ollama_models_command import OllamaModelsCommand
+    from ai_admin.commands.ollama_run_command import OllamaRunCommand
+    from ai_admin.commands.ollama_memory_command import OllamaMemoryCommand
     from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
     
     # Register AI Admin commands
@@ -102,6 +122,24 @@ def custom_commands_hook(registry):
         DockerImagesCommand,
         DockerSearchCommand,
         DockerPullCommand,
+        DockerRemoveCommand,
+        DockerRunCommand,
+        DockerStartCommand,
+        DockerStopCommand,
+        DockerRestartCommand,
+        DockerLogsCommand,
+        DockerTagCommand,
+        DockerLoginCommand,
+        DockerHubImagesCommand,
+        DockerHubImageInfoCommand,
+        DockerImagesCompareCommand,
+        DockerSearchCLICommand,
+        DockerNetworkLsCommand,
+        DockerNetworkInspectCommand,
+        DockerNetworkCreateCommand,
+        DockerNetworkConnectCommand,
+        DockerNetworkDisconnectCommand,
+        DockerNetworkRmCommand,
         VastSearchCommand,
         VastCreateCommand,
         VastDestroyCommand,
@@ -144,6 +182,8 @@ def custom_commands_hook(registry):
         K8sDeploymentCreateCommand,
         OllamaStatusCommand,
         OllamaModelsCommand,
+        OllamaRunCommand,
+        OllamaMemoryCommand,
         TestDiscoveryCommand
     ]
     

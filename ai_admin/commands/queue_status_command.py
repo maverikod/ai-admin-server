@@ -38,19 +38,12 @@ class QueueStatusCommand(Command):
             # Get all tasks
             all_tasks = await queue_manager.get_all_tasks()
             
-            # Get running tasks
-            running_tasks = [task for task in all_tasks if task.status.value == "running"]
-            
             # Build queue status
             queue_status = {
                 "statistics": queue_stats,
-                "recent_tasks": [task.to_dict() for task in all_tasks[:10]],
-                "running_tasks": [task.to_dict() for task in running_tasks]
+                "recent_tasks": all_tasks[:10],
+                "running_tasks": [task for task in all_tasks if task.get('status') == 'running']
             }
-            
-            # Add all tasks with logs if requested
-            if include_logs:
-                queue_status["all_tasks_with_logs"] = [task.to_dict() for task in all_tasks]
             
             # Add status descriptions
             if detailed:

@@ -112,47 +112,146 @@ class LLMInferenceCommand(Command):
                     details={"backend": "vast"}
                 )
             
-            # This would connect to the Vast.ai instance and run inference
-            # Implementation depends on how the Vast.ai instance is set up
+            # Get Vast.ai instance connection details
+            from ai_admin.commands.vast_instances_command import VastInstancesCommand
+            vast_cmd = VastInstancesCommand()
             
-            # For now, return a placeholder
-            return SuccessResult(data={
-                "message": "Vast.ai inference (placeholder)",
+            # Get instance info
+            instance_info = await vast_cmd._get_instance_info(instance_id)
+            if not instance_info:
+                return ErrorResult(
+                    message=f"Vast.ai instance {instance_id} not found",
+                    code="VAST_INSTANCE_NOT_FOUND",
+                    details={"instance_id": instance_id}
+                )
+            
+            # Connect to instance and run Ollama inference
+            import subprocess
+            import json
+            
+            # Build curl command for Ollama API
+            ollama_url = f"http://{instance_info['ip']}:11434/api/generate"
+            
+            request_data = {
                 "model": model,
-                "backend": "vast",
-                "instance_id": instance_id,
-                "generated_text": f"[Vast.ai inference for: {prompt[:50]}...]",
-                "note": "Implementation requires Vast.ai instance setup with Ollama",
-                "timestamp": datetime.now().isoformat()
-            })
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": max_tokens,
+                    "temperature": temperature
+                }
+            }
+            
+            cmd = [
+                "curl", "-s", "-X", "POST",
+                ollama_url,
+                "-H", "Content-Type: application/json",
+                "-d", json.dumps(request_data)
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                response_data = json.loads(stdout.decode('utf-8'))
+                generated_text = response_data.get('response', '')
+                
+                return SuccessResult(data={
+                    "message": "Vast.ai inference completed successfully",
+                    "model": model,
+                    "backend": "vast",
+                    "instance_id": instance_id,
+                    "generated_text": generated_text,
+                    "prompt": prompt,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "timestamp": datetime.now().isoformat()
+                })
+            else:
+                error_msg = stderr.decode('utf-8')
+                return ErrorResult(
+                    message=f"Vast.ai inference failed: {error_msg}",
+                    code="VAST_INFERENCE_FAILED",
+                    details={"instance_id": instance_id, "model": model, "error": error_msg}
+                )
             
         except Exception as e:
             return ErrorResult(
                 message=f"Vast.ai inference failed: {str(e)}",
                 code="VAST_INFERENCE_FAILED",
-                details={"instance_id": instance_id, "model": model}
+                details={"instance_id": instance_id, "model": model, "exception": str(e)}
             )
     
     async def _openai_inference(self, prompt: str, model: str, max_tokens: int, temperature: float) -> SuccessResult:
         """Execute inference using OpenAI API."""
         try:
-            # This would use OpenAI API
-            # Implementation requires OpenAI API key configuration
+            import os
+            import aiohttp
+            import json
             
-            return SuccessResult(data={
-                "message": "OpenAI inference (placeholder)",
+            # Get OpenAI API key from environment
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                return ErrorResult(
+                    message="OpenAI API key not configured. Set OPENAI_API_KEY environment variable.",
+                    code="OPENAI_API_KEY_MISSING",
+                    details={"model": model}
+                )
+            
+            # OpenAI API endpoint
+            api_url = "https://api.openai.com/v1/chat/completions"
+            
+            # Prepare request data
+            request_data = {
                 "model": model,
-                "backend": "openai",
-                "generated_text": f"[OpenAI inference for: {prompt[:50]}...]",
-                "note": "Implementation requires OpenAI API key configuration",
-                "timestamp": datetime.now().isoformat()
-            })
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": max_tokens,
+                "temperature": temperature
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            
+            # Make API request
+            async with aiohttp.ClientSession() as session:
+                async with session.post(api_url, json=request_data, headers=headers) as response:
+                    if response.status == 200:
+                        response_data = await response.json()
+                        generated_text = response_data['choices'][0]['message']['content']
+                        
+                        return SuccessResult(data={
+                            "message": "OpenAI inference completed successfully",
+                            "model": model,
+                            "backend": "openai",
+                            "generated_text": generated_text,
+                            "prompt": prompt,
+                            "max_tokens": max_tokens,
+                            "temperature": temperature,
+                            "usage": response_data.get('usage', {}),
+                            "timestamp": datetime.now().isoformat()
+                        })
+                    else:
+                        error_text = await response.text()
+                        return ErrorResult(
+                            message=f"OpenAI API request failed: {response.status} - {error_text}",
+                            code="OPENAI_API_ERROR",
+                            details={"model": model, "status": response.status, "error": error_text}
+                        )
             
         except Exception as e:
             return ErrorResult(
                 message=f"OpenAI inference failed: {str(e)}",
                 code="OPENAI_INFERENCE_FAILED",
-                details={"model": model}
+                details={"model": model, "exception": str(e)}
             )
     
     @classmethod

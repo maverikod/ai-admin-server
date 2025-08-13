@@ -7,6 +7,7 @@ from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
 from mcp_proxy_adapter.core.errors import CommandError, ValidationError
+from mcp_proxy_adapter.config import config
 
 
 class DockerPushCommand(Command):
@@ -44,6 +45,21 @@ class DockerPushCommand(Command):
             # Validate inputs
             if not image_name:
                 raise ValidationError("Image name is required")
+            
+            # Auto-login if enabled in config
+            auto_login = config.get("docker.auto_login", False)
+            if auto_login:
+                try:
+                    from ai_admin.commands.docker_login_command import DockerLoginCommand
+                    login_cmd = DockerLoginCommand()
+                    login_result = await login_cmd.execute()
+                    
+                    if not login_result.success:
+                        # Continue without login if it fails
+                        pass
+                except Exception as e:
+                    # Continue without login if it fails
+                    pass
             
             # Use queue for long-running operations
             if use_queue:

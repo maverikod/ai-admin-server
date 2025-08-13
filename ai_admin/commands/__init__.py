@@ -13,8 +13,19 @@ from ai_admin.commands.docker_push_command import DockerPushCommand
 from ai_admin.commands.docker_pull_command import DockerPullCommand
 from ai_admin.commands.docker_search_command import DockerSearchCommand
 from ai_admin.commands.docker_search_cli_command import DockerSearchCLICommand
+from ai_admin.commands.docker_network_ls_command import DockerNetworkLsCommand
+from ai_admin.commands.docker_network_inspect_command import DockerNetworkInspectCommand
+from ai_admin.commands.docker_network_create_command import DockerNetworkCreateCommand
+from ai_admin.commands.docker_network_connect_command import DockerNetworkConnectCommand
+from ai_admin.commands.docker_network_disconnect_command import DockerNetworkDisconnectCommand
+from ai_admin.commands.docker_network_rm_command import DockerNetworkRmCommand
 from ai_admin.commands.docker_tag_command import DockerTagCommand
 from ai_admin.commands.docker_remove_command import DockerRemoveCommand
+from ai_admin.commands.docker_run_command import DockerRunCommand
+from ai_admin.commands.docker_start_command import DockerStartCommand
+from ai_admin.commands.docker_stop_command import DockerStopCommand
+from ai_admin.commands.docker_restart_command import DockerRestartCommand
+from ai_admin.commands.docker_logs_command import DockerLogsCommand
 from ai_admin.commands.docker_login_command import DockerLoginCommand
 
 # Import Vast.ai commands
@@ -104,8 +115,19 @@ __all__ = [
     "DockerPullCommand",
     "DockerSearchCommand",
     "DockerSearchCLICommand",
+    "DockerNetworkLsCommand",
+    "DockerNetworkInspectCommand",
+    "DockerNetworkCreateCommand",
+    "DockerNetworkConnectCommand",
+    "DockerNetworkDisconnectCommand",
+    "DockerNetworkRmCommand",
     "DockerTagCommand",
     "DockerRemoveCommand",
+    "DockerRunCommand",
+    "DockerStartCommand",
+    "DockerStopCommand",
+    "DockerRestartCommand",
+    "DockerLogsCommand",
     "DockerLoginCommand",
     # Vast.ai commands
     "VastCreateCommand",

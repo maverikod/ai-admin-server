@@ -1471,41 +1471,209 @@ class TaskQueue:
     
     async def _execute_docker_build_task(self, task: Task) -> None:
         """Execute Docker build task."""
-        # Similar implementation for build operations
+        import subprocess
+        import logging
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Docker build task {task.id} ===")
+        
         params = task.params
-        tag = params.get("tag", "")
+        context_path = params.get("context_path", ".")
+        dockerfile = params.get("dockerfile", "Dockerfile")
+        tag = params.get("tag", "latest")
+        image_name = params.get("image_name", "")
+        no_cache = params.get("no_cache", False)
+        build_args = params.get("build_args", {})
         
-        task.update_progress(10, f"Starting build of {tag}")
+        full_image_name = f"{image_name}:{tag}" if image_name else tag
         
-        # Implementation would be similar to push but for build
-        # For now, just simulate
-        await asyncio.sleep(5)  # Simulate build time
+        logger.info(f"Build parameters: context={context_path}, dockerfile={dockerfile}, tag={full_image_name}")
         
-        result = {
-            "status": "success",
-            "message": "Docker image built successfully",
-            "tag": tag
-        }
-        task.complete(result)
+        task.update_progress(10, f"Starting build of {full_image_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
+        
+        # Build command
+        cmd = ["docker", "build"]
+        
+        # Add options
+        if no_cache:
+            cmd.append("--no-cache")
+        
+        if build_args:
+            for key, value in build_args.items():
+                cmd.extend(["--build-arg", f"{key}={value}"])
+        
+        cmd.extend(["-t", full_image_name, "-f", dockerfile, context_path])
+        task.command = " ".join(cmd)
+        
+        logger.info(f"Executing command: {' '.join(cmd)}")
+        task.add_log(f"DEBUG: Executing command: {' '.join(cmd)}")
+        
+        try:
+            # Execute build command
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=context_path
+            )
+            
+            task.update_progress(25, "Building image layers...")
+            
+            stdout, stderr = await process.communicate()
+            
+            logger.info(f"Process completed with return code: {process.returncode}")
+            task.add_log(f"DEBUG: Process completed with return code: {process.returncode}")
+            
+            if process.returncode == 0:
+                task.update_progress(90, "Finalizing build...")
+                
+                # Parse output for build info
+                output_lines = stdout.decode('utf-8').splitlines()
+                build_info = []
+                
+                for line in output_lines:
+                    if "Successfully built" in line:
+                        build_info.append(line.strip())
+                    elif "Step" in line and ":" in line:
+                        build_info.append(line.strip())
+                
+                logger.info(f"Build completed successfully")
+                task.add_log(f"DEBUG: STDOUT: {stdout.decode('utf-8')}")
+                
+                result = {
+                    "status": "success",
+                    "message": "Docker image built successfully",
+                    "image_name": full_image_name,
+                    "context_path": context_path,
+                    "dockerfile": dockerfile,
+                    "build_info": build_info,
+                    "command": " ".join(cmd)
+                }
+                
+                task.update_progress(100, "Build completed successfully")
+                task.complete(result)
+                
+            else:
+                error_output = stderr.decode('utf-8')
+                logger.error(f"Build failed: {error_output}")
+                task.add_log(f"DEBUG: STDERR: {error_output}")
+                
+                task.fail(f"Docker build failed: {error_output}", "DOCKER_BUILD_FAILED", {
+                    "exit_code": process.returncode,
+                    "stderr": error_output,
+                    "command": " ".join(cmd)
+                })
+                    
+        except Exception as e:
+            error_msg = f"Docker build failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, "DOCKER_BUILD_FAILED", {"error": str(e)})
     
     async def _execute_docker_pull_task(self, task: Task) -> None:
         """Execute Docker pull task."""
-        # Similar implementation for pull operations
+        import subprocess
+        import logging
+        
+        # Setup logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"=== Starting Docker pull task {task.id} ===")
+        
         params = task.params
         image_name = params.get("image_name", "")
+        tag = params.get("tag", "latest")
+        full_image_name = f"{image_name}:{tag}"
         
-        task.update_progress(10, f"Starting pull of {image_name}")
+        logger.info(f"Pull parameters: image_name={image_name}, tag={tag}, full_name={full_image_name}")
         
-        # Implementation would be similar to push but for pull
-        # For now, just simulate
-        await asyncio.sleep(3)  # Simulate pull time
+        task.update_progress(10, f"Starting pull of {full_image_name}")
+        task.add_log(f"DEBUG: Task parameters: {params}")
         
-        result = {
-            "status": "success",
-            "message": "Docker image pulled successfully",
-            "image_name": image_name
-        }
-        task.complete(result)
+        # Build command
+        cmd = ["docker", "pull", full_image_name]
+        task.command = " ".join(cmd)
+        
+        logger.info(f"Executing command: {' '.join(cmd)}")
+        task.add_log(f"DEBUG: Executing command: {' '.join(cmd)}")
+        
+        try:
+            # Execute pull command
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            task.update_progress(25, "Downloading layers...")
+            
+            stdout, stderr = await process.communicate()
+            
+            logger.info(f"Process completed with return code: {process.returncode}")
+            task.add_log(f"DEBUG: Process completed with return code: {process.returncode}")
+            
+            if process.returncode == 0:
+                task.update_progress(90, "Finalizing pull...")
+                
+                # Parse output for digest and size information
+                output_lines = stdout.decode('utf-8').splitlines()
+                digest = None
+                size_info = []
+                
+                for line in output_lines:
+                    if "digest:" in line:
+                        digest = line.split("digest: ")[-1].strip()
+                    elif "Pulled" in line or "Mounted" in line:
+                        size_info.append(line.strip())
+                
+                logger.info(f"Pull completed successfully: {digest}")
+                task.add_log(f"DEBUG: STDOUT: {stdout.decode('utf-8')}")
+                
+                result = {
+                    "status": "success",
+                    "message": "Docker image pulled successfully",
+                    "image_name": image_name,
+                    "tag": tag,
+                    "full_image_name": full_image_name,
+                    "digest": digest,
+                    "size_info": size_info,
+                    "command": " ".join(cmd)
+                }
+                
+                task.update_progress(100, "Pull completed successfully")
+                task.complete(result)
+                
+            else:
+                error_output = stderr.decode('utf-8')
+                logger.error(f"Pull failed: {error_output}")
+                task.add_log(f"DEBUG: STDERR: {error_output}")
+                
+                # Check if image already exists (this is not an error)
+                if "already up to date" in error_output.lower() or "image is up to date" in error_output.lower():
+                    result = {
+                        "status": "success",
+                        "message": "Docker image already up to date",
+                        "image_name": image_name,
+                        "tag": tag,
+                        "full_image_name": full_image_name,
+                        "command": " ".join(cmd)
+                    }
+                    task.complete(result)
+                else:
+                    task.fail(f"Docker pull failed: {error_output}", "DOCKER_PULL_FAILED", {
+                        "exit_code": process.returncode,
+                        "stderr": error_output,
+                        "command": " ".join(cmd)
+                    })
+                    
+        except Exception as e:
+            error_msg = f"Docker pull failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            task.fail(error_msg, "DOCKER_PULL_FAILED", {"error": str(e)})
     
     async def _execute_ollama_pull_task(self, task: Task) -> None:
         """Execute Ollama model pull task."""
@@ -1843,17 +2011,49 @@ class TaskQueue:
                 )
                 return
             
-            # Simulate task execution
-            task.update_progress(50, "Processing generic task...")
-            await asyncio.sleep(1)  # Simulate work
+            # Execute based on task type
+            task.update_progress(25, f"Processing {task_type} task...")
             
-            result = {
-                "status": "success",
-                "message": f"Generic task {task_type} completed",
-                "task_type": task_type,
-                "params": params
-            }
+            if task_type == "custom_script":
+                # Handle custom script execution
+                script_path = params.get("script_path", "")
+                if not script_path:
+                    task.fail("Script path not provided", TaskErrorCode.VALIDATION_MISSING_REQUIRED)
+                    return
+                
+                result = {
+                    "status": "success",
+                    "message": f"Custom script task completed",
+                    "task_type": task_type,
+                    "script_path": script_path,
+                    "note": "Script execution handled by _execute_custom_script_task"
+                }
+                
+            elif task_type == "custom_command":
+                # Handle custom command execution
+                command = params.get("command", "")
+                if not command:
+                    task.fail("Command not provided", TaskErrorCode.VALIDATION_MISSING_REQUIRED)
+                    return
+                
+                result = {
+                    "status": "success",
+                    "message": f"Custom command task completed",
+                    "task_type": task_type,
+                    "command": command,
+                    "note": "Command execution handled by _execute_custom_command_task"
+                }
+                
+            else:
+                # Unknown task type
+                task.fail(
+                    f"Unknown task type: {task_type}",
+                    TaskErrorCode.VALIDATION_INVALID_PARAMS,
+                    {"task_type": task_type}
+                )
+                return
             
+            task.update_progress(100, f"{task_type} task completed")
             task.complete(result)
             
         except Exception as e:

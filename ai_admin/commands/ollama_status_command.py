@@ -2,7 +2,7 @@ import subprocess
 import json
 import psutil
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 from mcp_proxy_adapter.commands.base import Command
 from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
@@ -13,29 +13,46 @@ class OllamaStatusCommand(Command):
     
     name = "ollama_status"
     
-    async def execute(self, **kwargs):
+    async def execute(self, server: Optional[str] = None, **kwargs):
         """Execute Ollama status check.
         
+        Args:
+            server: Server name to connect to (optional, uses default if not specified)
+            
         Returns:
             Success or error result with status information
         """
         try:
-            return await self._get_status()
+            return await self._get_status(server)
         except Exception as e:
             return ErrorResult(
                 message=f"Ollama status check failed: {str(e)}",
                 code="OLLAMA_STATUS_ERROR",
-                details={"error": str(e)}
+                details={"error": str(e), "server": server}
             )
     
-    async def _get_status(self) -> SuccessResult:
+    async def _get_status(self, server: Optional[str] = None) -> SuccessResult:
         """Get comprehensive Ollama status."""
         try:
+            # Get server configuration
+            if server:
+                server_config = ollama_config.get_server_config(server)
+                if not server_config:
+                    return ErrorResult(
+                        message=f"Server '{server}' not found in configuration",
+                        code="SERVER_NOT_FOUND",
+                        details={"available_servers": ollama_config.list_available_servers()}
+                    )
+                server_url = ollama_config.get_server_url(server)
+            else:
+                server_url = ollama_config.get_ollama_url()
+                server_config = None
+            
             # Check if Ollama service is running
-            service_status = await self._check_service_status()
+            service_status = await self._check_service_status(server)
             
             # Get models list
-            models_status = await self._get_models_status()
+            models_status = await self._get_models_status(server)
             
             # Get memory usage
             memory_status = await self._get_memory_status()
@@ -45,6 +62,11 @@ class OllamaStatusCommand(Command):
             
             return SuccessResult(data={
                 "message": "Ollama status retrieved successfully",
+                "server": {
+                    "name": server or "default",
+                    "url": server_url,
+                    "config": server_config
+                },
                 "service": service_status,
                 "models": models_status,
                 "memory": memory_status,

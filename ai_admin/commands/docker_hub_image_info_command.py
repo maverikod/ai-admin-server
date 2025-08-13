@@ -233,16 +233,43 @@ class DockerHubImageInfoCommand(Command):
     async def _get_usage_info(self, image_name: str) -> Optional[Dict[str, Any]]:
         """Get usage statistics for the image."""
         try:
-            # Note: Docker Hub doesn't provide public API for detailed usage stats
-            # This is a placeholder for future implementation
-            return {
-                "note": "Detailed usage statistics are not available via public API",
-                "pull_count": "Available in repository info",
-                "star_count": "Available in repository info"
+            # Get repository info which includes basic usage stats
+            api_url = f"https://hub.docker.com/v2/repositories/{image_name}/"
+            
+            headers = {
+                "Accept": "application/json",
+                "User-Agent": "AI-Admin-Server/1.0"
             }
             
-        except Exception:
-            return None
+            response = requests.get(api_url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                return {
+                    "pull_count": data.get("pull_count", 0),
+                    "star_count": data.get("star_count", 0),
+                    "last_updated": data.get("last_updated", ""),
+                    "description": data.get("description", ""),
+                    "is_automated": data.get("is_automated", False),
+                    "is_official": data.get("is_official", False),
+                    "repository_type": data.get("repository_type", ""),
+                    "status": data.get("status", ""),
+                    "note": "Basic usage statistics from repository info"
+                }
+            else:
+                return {
+                    "note": f"Could not fetch repository info: {response.status_code}",
+                    "pull_count": None,
+                    "star_count": None
+                }
+            
+        except Exception as e:
+            return {
+                "note": f"Error fetching usage info: {str(e)}",
+                "pull_count": None,
+                "star_count": None
+            }
     
     @classmethod
     def get_schema(cls) -> Dict[str, Any]:

@@ -45,11 +45,11 @@ class DockerLoginCommand(Command):
         try:
             # Read from config if parameters not provided
             if not username:
-                username = config.get("docker.username")
+                username = config.get("docker", {}).get("username")
             if not token and not password:
-                token = config.get("docker.token")
+                token = config.get("docker", {}).get("token")
             if not registry:
-                registry = config.get("docker.registry", "docker.io")
+                registry = config.get("docker", {}).get("registry", "docker.io")
             
             # Validate inputs
             if not username:
