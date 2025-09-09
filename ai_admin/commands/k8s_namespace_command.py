@@ -21,6 +21,12 @@ class K8sNamespaceCreateCommand(Command):
         """Initialize Kubernetes client."""
         try:
             config.load_kube_config()
+            
+            # Configure client with SSL verification disabled for self-signed certs
+            configuration = client.Configuration()
+            configuration.verify_ssl = False
+            client.Configuration.set_default(configuration)
+            
         except config.ConfigException:
             # Try in-cluster config
             config.load_incluster_config()

@@ -245,7 +245,7 @@ class K8sClusterManagerCommand(Command):
                         except Exception:
                             pass
                     
-                    return ErrorResult(
+                return ErrorResult(
                         message=f"K3s cluster '{cluster_name}' already exists",
                         code="CLUSTER_ALREADY_EXISTS",
                         details={"container_name": existing_container.name, "status": existing_container.status}
@@ -394,7 +394,7 @@ class K8sClusterManagerCommand(Command):
                                     
                                     if process.returncode == 0 and "Ready" in stdout.decode():
                                         k3s_ready = True
-                                        break
+                                break
                             except Exception:
                                 pass
                             
@@ -479,7 +479,7 @@ class K8sClusterManagerCommand(Command):
                         if container.status == "running":
                             # Wait a bit more for container to fully initialize
                             await asyncio.sleep(10)
-                            
+            
                             # Now try a simple exec to see if container is ready for commands
                             process = await asyncio.create_subprocess_exec(
                                 "docker", "exec", container.name, "echo", "ready",
@@ -555,7 +555,7 @@ class K8sClusterManagerCommand(Command):
                     "port": port,
                     "status": "running",
                     "timestamp": datetime.now().isoformat()
-                 })
+                })
             
             except Exception as e:
                 return ErrorResult(
@@ -967,12 +967,12 @@ class K8sClusterManagerCommand(Command):
             task = Task(
                 task_type=task_type,
                 params={
-                    "cluster_name": cluster_name,
-                    "cluster_type": cluster_type,
-                    "container_name": container_name,
-                    "port": port,
+                "cluster_name": cluster_name,
+                "cluster_type": cluster_type,
+                "container_name": container_name,
+                "port": port,
                     "config": config
-                }
+            }
             )
             
             print(f"DEBUG: Task created, adding to queue...")

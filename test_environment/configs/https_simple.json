@@ -1,0 +1,35 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 20002
+  },
+  "ssl": {
+    "enabled": true,
+    "cert_file": "certs/localhost_server.crt",
+    "key_file": "keys/localhost_server.key"
+  },
+  "security": {
+    "enabled": false
+  },
+  "registration": {
+    "enabled": true,
+    "url": "http://127.0.0.1:3004/proxy",
+    "name": "https_simple_adapter",
+    "capabilities": [
+      "https"
+    ],
+    "retry_count": 3,
+    "retry_delay": 5,
+    "heartbeat": {
+      "enabled": true,
+      "interval": 30
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http",
+      "https"
+    ]
+  }
+}

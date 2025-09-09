@@ -1,0 +1,60 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 20005
+  },
+  "ssl": {
+    "enabled": true,
+    "cert_file": "certs/localhost_server.crt",
+    "key_file": "keys/localhost_server.key",
+    "ca_cert": "certs/mcp_proxy_adapter_ca_ca.crt",
+    "verify_client": true
+  },
+  "registration": {
+    "enabled": true,
+    "auth_method": "token",
+    "server_url": "http://127.0.0.1:3004/proxy",
+    "token": {
+      "enabled": true,
+      "token": "proxy_registration_token_123"
+    },
+    "proxy_info": {
+      "name": "mcp_example_server",
+      "capabilities": [
+        "jsonrpc",
+        "rest",
+        "security",
+        "proxy_registration"
+      ],
+      "endpoints": {
+        "jsonrpc": "/api/jsonrpc",
+        "rest": "/cmd",
+        "health": "/health"
+      }
+    },
+    "heartbeat": {
+      "enabled": true,
+      "interval": 30
+    }
+  },
+  "security": {
+    "enabled": true,
+    "auth": {
+      "enabled": true,
+      "methods": [
+        "certificate"
+      ]
+    },
+    "permissions": {
+      "enabled": true,
+      "roles_file": "configs/roles.json"
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "https",
+      "mtls"
+    ]
+  }
+}

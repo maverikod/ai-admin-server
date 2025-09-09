@@ -128,6 +128,8 @@ def custom_commands_hook(registry):
     from ai_admin.commands.k8s_cluster_command import K8sClusterCommand
     from ai_admin.commands.kind_cluster_command import KindClusterCommand
     from ai_admin.commands.k8s_cluster_manager_command import K8sClusterManagerCommand
+    from ai_admin.commands.vector_store_deploy_command import VectorStoreDeployCommand
+    from ai_admin.commands.k8s_mtls_setup_command import K8sMtlsSetupCommand
     from ai_admin.commands.ssl_cert_generate_command import SSLCertGenerateCommand
     from ai_admin.commands.ssl_cert_view_command import SSLCertViewCommand
     from ai_admin.commands.ssl_cert_verify_command import SSLCertVerifyCommand
@@ -238,6 +240,8 @@ def custom_commands_hook(registry):
         K8sClusterCommand,
         KindClusterCommand,
         K8sClusterManagerCommand,
+        VectorStoreDeployCommand,
+        K8sMtlsSetupCommand,
         SSLCertGenerateCommand,
         SSLCertViewCommand,
         SSLCertVerifyCommand,

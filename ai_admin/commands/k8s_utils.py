@@ -169,6 +169,9 @@ class KubernetesConfigManager:
             # Load configuration
             config.load_kube_config(config_file=temp_config_path)
             
+            # The kubeconfig already contains the CA certificate and client certificates
+            # So SSL verification should work correctly with self-signed certificates
+            
             # Clean up
             os.unlink(temp_config_path)
             
@@ -209,6 +212,9 @@ class KubernetesConfigManager:
             
             # Load configuration
             config.load_kube_config(config_file=temp_config_path)
+            
+            # The kubeconfig already contains the CA certificate and client certificates
+            # So SSL verification should work correctly with self-signed certificates
             
             # Clean up
             os.unlink(temp_config_path)
