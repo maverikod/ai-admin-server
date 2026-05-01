@@ -1,0 +1,18 @@
+"""Find register symbols in mcp_proxy_adapter."""
+from __future__ import annotations
+
+import importlib
+import pkgutil
+
+import mcp_proxy_adapter
+
+for info in pkgutil.walk_packages(
+    mcp_proxy_adapter.__path__, mcp_proxy_adapter.__name__ + "."
+):
+    try:
+        m = importlib.import_module(info.name)
+    except Exception:
+        continue
+    for n in dir(m):
+        if "egister" in n.lower() and not n.startswith("_"):
+            print(f"{info.name}.{n}")

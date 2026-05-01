@@ -1,0 +1,190 @@
+"""
+Configuration validator for AI Admin server.
+
+Uses mcp_proxy_adapter's validators as a library
+to validate configuration files.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import json
+import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from mcp_proxy_adapter.core.config.simple_config import SimpleConfig, SimpleConfigModel
+from mcp_proxy_adapter.core.config.simple_config_validator import SimpleConfigValidator
+
+logger = logging.getLogger(__name__)
+
+
+class ConfigValidator:
+    """
+    Configuration validator for AI Admin server.
+
+    Uses mcp_proxy_adapter's validators as a library
+    and extends validation with project-specific checks.
+    """
+
+    def __init__(self, config_path: Optional[str] = None):
+        """
+        Initialize configuration validator.
+
+        Args:
+            config_path: Path to configuration file (optional)
+        """
+        self.config_path = config_path
+        self.simple_validator = SimpleConfigValidator(config_path)
+
+    def validate_file(self, config_path: str) -> Tuple[bool, List[str]]:
+        """
+        Validate configuration file.
+
+        Args:
+            config_path: Path to configuration file
+
+        Returns:
+            Tuple of (is_valid, list_of_errors)
+        """
+        try:
+            # Load configuration
+            config = SimpleConfig(config_path)
+            config_model = config.load()
+
+            # Validate using SimpleConfigValidator
+            errors = self.simple_validator.validate(config_model)
+
+            if errors:
+                error_messages = [str(e) for e in errors]
+                logger.warning(f"Configuration validation found {len(errors)} errors")
+                return False, error_messages
+
+            # Project-specific validation
+            project_errors = self._validate_project_specific(config_model)
+            if project_errors:
+                logger.warning(
+                    f"Project-specific validation found {len(project_errors)} errors"
+                )
+                return False, project_errors
+
+            logger.info("✅ Configuration validation passed")
+            return True, []
+
+        except Exception as e:
+            error_msg = f"Validation error: {str(e)}"
+            logger.error(error_msg)
+            return False, [error_msg]
+
+    def validate_dict(self, config_dict: Dict[str, Any]) -> Tuple[bool, List[str]]:
+        """
+        Validate configuration dictionary.
+
+        Args:
+            config_dict: Configuration dictionary
+
+        Returns:
+            Tuple of (is_valid, list_of_errors)
+        """
+        try:
+            # Save dict to temporary file and load as SimpleConfig
+            import tempfile
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            ) as f:
+                json.dump(config_dict, f, indent=2)
+                temp_path = f.name
+
+            try:
+                # Load configuration
+                config = SimpleConfig(temp_path)
+                config_model = config.load()
+
+                # Validate using SimpleConfigValidator
+                errors = self.simple_validator.validate(config_model)
+
+                if errors:
+                    error_messages = [str(e) for e in errors]
+                    return False, error_messages
+
+                # Project-specific validation
+                project_errors = self._validate_project_specific(config_model)
+                if project_errors:
+                    return False, project_errors
+
+                return True, []
+
+            finally:
+                # Clean up temporary file
+                try:
+                    Path(temp_path).unlink()
+                except Exception:
+                    pass
+
+        except Exception as e:
+            error_msg = f"Validation error: {str(e)}"
+            logger.error(error_msg)
+            return False, [error_msg]
+
+    def _validate_project_specific(self, config_model: SimpleConfigModel) -> List[str]:
+        """
+        Validate project-specific configuration requirements.
+
+        Args:
+            config_model: Configuration model
+
+        Returns:
+            List of error messages (empty if valid)
+        """
+        errors: List[str] = []
+
+        # Validate queue_manager configuration
+        if config_model.queue_manager:
+            queue_manager = config_model.queue_manager
+            if queue_manager.enabled:
+                if queue_manager.max_concurrent_jobs < 1:
+                    errors.append("queue_manager.max_concurrent_jobs must be >= 1")
+                if queue_manager.max_concurrent_jobs > 100:
+                    errors.append("queue_manager.max_concurrent_jobs should be <= 100")
+
+        # Validate server configuration
+        if config_model.server:
+            server = config_model.server
+            if server.port < 1 or server.port > 65535:
+                errors.append("server.port must be between 1 and 65535")
+
+            if server.protocol not in ["http", "https", "mtls"]:
+                errors.append(
+                    f"server.protocol must be one of: http, https, mtls (got: {server.protocol})"
+                )
+
+            # Validate SSL configuration for https/mtls
+            if server.protocol in ["https", "mtls"]:
+                if not server.ssl:
+                    errors.append(
+                        f"server.ssl is required for protocol '{server.protocol}'"
+                    )
+                elif server.protocol == "mtls":
+                    if not server.ssl.ca:
+                        errors.append("server.ssl.ca is required for mtls protocol")
+
+        return errors
+
+    def get_validation_summary(self, config_path: str) -> Dict[str, Any]:
+        """
+        Get validation summary for configuration file.
+
+        Args:
+            config_path: Path to configuration file
+
+        Returns:
+            Dictionary with validation summary
+        """
+        is_valid, errors = self.validate_file(config_path)
+
+        return {
+            "is_valid": is_valid,
+            "error_count": len(errors),
+            "errors": errors,
+        }

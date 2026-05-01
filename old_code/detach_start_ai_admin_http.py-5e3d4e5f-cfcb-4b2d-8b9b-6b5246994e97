@@ -1,0 +1,12 @@
+"""Spawn ai_admin HTTP server (python -m ai_admin) detached via subprocess.Popen(..., start_new_session=True). Logs to logs/vast_srv_http.log under project root. Parent exits immediately with child PID on stdout."""
+
+# cst-node-ids: begin
+# cst-node-ids: version=1
+# cst-node-id 0 Module 48cd81df-4489-4f63-9c8c-ee9ede28c20e
+# cst-node-id 0.0 SimpleStatementLine 1e0c9836-a3a8-4d6a-bd40-bca2edd0e080
+# cst-node-id 0.0.0 Expr 24f03f9b-cf83-441c-8ef3-2870a37c7205
+# cst-node-id 0.0.0.0 SimpleString ff06afea-0768-47a3-859f-2d635497a588
+# cst-node-id 0.0.1 TrailingWhitespace 1677a02d-53be-41d6-a83d-ed50f74c458d
+# cst-node-id 0.0.1.0 SimpleWhitespace fcf17186-8e67-467d-a187-07864dd4e3d4
+# cst-node-id 0.0.1.1 Newline 32d0ed42-9c7e-429d-b143-c6735d7f08f6
+# cst-node-ids: end

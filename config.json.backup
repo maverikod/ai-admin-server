@@ -1,0 +1,38 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 20000
+  },
+  "ssl": {
+    "enabled": false
+  },
+  "security": {
+    "enabled": false
+  },
+  "registration": {
+    "enabled": false,
+    "proxy_url": "http://127.0.0.1:3004/proxy",
+    "name": "ai_admin_server",
+    "capabilities": [
+      "http"
+    ],
+    "retry_count": 3,
+    "retry_delay": 5,
+    "heartbeat": {
+      "enabled": true,
+      "interval": 30
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http"
+    ]
+  },
+  "queue_manager": {
+    "enabled": true,
+    "in_memory": true,
+    "max_concurrent_jobs": 10,
+    "completed_job_retention_seconds": 3600
+  }
+}

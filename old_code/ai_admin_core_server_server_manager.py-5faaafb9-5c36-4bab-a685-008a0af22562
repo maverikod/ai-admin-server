@@ -1,0 +1,822 @@
+"""Module server_manager."""
+
+from ai_admin.core.custom_exceptions import AuthenticationError, ConfigurationError, CustomError, SSLError, ValidationError
+from typing import Dict, Any, Optional, List
+from fastapi import FastAPI
+import logging
+from .app_factory import AppFactory
+from ai_admin.core.factory_exceptions import AppCreationError
+from ai_admin.core.ssl_context_manager import SSLContextManager, SSLContextType
+from ai_admin.core.mtls_auth_manager import MTLSAuthManager
+from ai_admin.core.token_auth_manager import TokenAuthManager
+from .factory import create_server, run_ai_admin_server
+
+class ServerManager:
+    """Manager for AI Admin server configuration and lifecycle."""
+
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        workers: int = 1,
+        reload: bool = False,
+        log_level: str = "info",
+    ):
+        """
+        Initialize server manager.
+
+        Args:
+            config_path: Path to configuration file
+            host: Server host address
+            port: Server port
+            workers: Number of worker processes
+            reload: Whether to enable auto-reload
+            log_level: Logging level
+        """
+        self.config_path = config_path
+        self.host = host
+        self.port = port
+        self.workers = workers
+        self.reload = reload
+        self.log_level = log_level
+        self.logger = logging.getLogger("ai_admin.server")
+
+        # Initialize app factory
+        self.app_factory = AppFactory(config_path=config_path)
+        self.app: Optional[FastAPI] = None
+        self.ssl_context_manager: Optional[SSLContextManager] = None
+        self.mtls_auth_manager: Optional[MTLSAuthManager] = None
+        self.token_auth_manager: Optional[TokenAuthManager] = None
+
+    async def create_app(
+        self,
+        app_name: str = "AI Admin",
+        app_version: str = "1.0.0",
+        description: str = "AI Admin API Server",
+        custom_commands: Optional[List] = None,
+        custom_middleware: Optional[List] = None,
+        enable_ssl: bool = True,
+        enable_mtls: bool = True,
+        enable_cors: bool = True,
+        enable_token_auth: bool = True,
+    ) -> FastAPI:
+        """
+        Create and configure FastAPI application.
+
+        Args:
+            app_name: Application name
+            app_version: Application version
+            description: Application description
+            custom_commands: List of custom command classes
+            custom_middleware: List of custom middleware functions
+            enable_ssl: Whether to enable SSL support
+            enable_mtls: Whether to enable mTLS support
+            enable_cors: Whether to enable CORS support
+            enable_token_auth: Whether to enable token-based authentication
+
+        Returns:
+            Configured FastAPI application
+
+        Raises:
+            AppCreationError: If application creation fails
+        """
+        try:
+            self.logger.info(f"Creating AI Admin application: {app_name}")
+
+            # Create application using factory
+            self.app = await self.app_factory.create_app(
+                app_name=app_name,
+                app_version=app_version,
+                description=description,
+                custom_commands=custom_commands,
+                custom_middleware=custom_middleware,
+                enable_ssl=enable_ssl,
+                enable_mtls=enable_mtls,
+                enable_cors=enable_cors,
+                enable_token_auth=enable_token_auth,
+            )
+
+            # Get SSL context manager and auth managers from app factory
+            self.ssl_context_manager = self.app_factory.ssl_context_manager
+            self.mtls_auth_manager = self.app_factory.mtls_auth_manager
+            self.token_auth_manager = self.app_factory.token_auth_manager
+
+            self.logger.info("AI Admin application created successfully")
+            return self.app
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to create AI Admin application: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"name": app_name, "version": app_version},
+                details={"exception": str(e)},
+            )
+
+    async def run_server(self, app: Optional[FastAPI] = None) -> None:
+        """
+        Run the server with the specified configuration.
+
+        Args:
+            app: FastAPI application to run (uses self.app if not provided)
+
+        Raises:
+            AppCreationError: If server startup fails
+        """
+        try:
+            if app is None:
+                app = self.app
+
+            if app is None:
+                raise AppCreationError(
+                    "No application to run. Create application first.",
+                    app_config={"host": self.host, "port": self.port},
+                )
+
+            self.logger.info(f"Starting AI Admin server on {self.host}:{self.port}")
+
+            # Run server using app factory
+            await self.app_factory.run_server(
+                app=app,
+                host=self.host,
+                port=self.port,
+                workers=self.workers,
+                reload=self.reload,
+                log_level=self.log_level,
+            )
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to run AI Admin server: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"host": self.host, "port": self.port},
+                details={"exception": str(e)},
+            )
+
+    def get_server_config(self) -> Dict[str, Any]:
+        """
+        Get current server configuration.
+
+        Returns:
+            Server configuration dictionary
+        """
+        return {
+            "config_path": self.config_path,
+            "host": self.host,
+            "port": self.port,
+            "workers": self.workers,
+            "reload": self.reload,
+            "log_level": self.log_level,
+            "app_created": self.app is not None,
+        }
+
+    def update_config(
+        self,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
+        workers: Optional[int] = None,
+        reload: Optional[bool] = None,
+        log_level: Optional[str] = None,
+    ) -> None:
+        """
+        Update server configuration.
+
+        Args:
+            host: New host address
+            port: New port
+            workers: New number of workers
+            reload: New reload setting
+            log_level: New log level
+        """
+        if host is not None:
+            self.host = host
+        if port is not None:
+            self.port = port
+        if workers is not None:
+            self.workers = workers
+        if reload is not None:
+            self.reload = reload
+        if log_level is not None:
+            self.log_level = log_level
+
+        self.logger.info("Server configuration updated")
+
+    async def initialize(self) -> None:
+        """
+        Initialize server manager.
+
+        This method performs any necessary initialization tasks
+        before creating and running the server.
+        """
+        try:
+            self.logger.info("Initializing server manager")
+
+            # Initialize any required components
+            # The actual initialization is handled by AppFactory
+            # when create_app is called
+
+            self.logger.info("Server manager initialized successfully")
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to initialize server manager: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"host": self.host, "port": self.port},
+                details={"exception": str(e)},
+            )
+
+    async def get_ssl_context(
+        self, context_type: Optional[SSLContextType] = None
+    ) -> Optional[Any]:
+        """
+        Get SSL context from SSL context manager.
+
+        Args:
+            context_type: Type of SSL context to retrieve. If None, returns based
+                on SSL mode.
+
+        Returns:
+            SSL context if available, None otherwise
+        """
+        if not self.ssl_context_manager:
+            return None
+
+        if context_type is None:
+            return None
+        return await self.ssl_context_manager.get_ssl_context(context_type)
+
+    async def get_ssl_context_summary(self) -> Dict[str, Any]:
+        """
+        Get SSL context manager summary.
+
+        Returns:
+            SSL context summary information
+        """
+        if not self.ssl_context_manager:
+            return {"ssl_context_manager": None}
+
+        return await self.ssl_context_manager.get_context_summary()
+
+    async def create_ssl_context(
+        self, context_type: SSLContextType, force_recreate: bool = False
+    ) -> Optional[Any]:
+        """
+        Create SSL context for specified type.
+
+        Args:
+            context_type: Type of SSL context to create
+            force_recreate: Whether to force recreation of existing context
+
+        Returns:
+            SSL context if created successfully, None otherwise
+        """
+        if not self.ssl_context_manager:
+            self.logger.warning("SSL context manager not available")
+            return None
+
+        try:
+            return await self.ssl_context_manager.create_ssl_context(
+                context_type, force_recreate
+            )
+        except CustomError as e:
+            self.logger.error(f"Failed to create SSL context: {e}")
+            return None
+
+    async def clear_ssl_context(self, context_type: SSLContextType) -> None:
+        """
+        Clear SSL context for specified type.
+
+        Args:
+            context_type: Type of SSL context to clear
+        """
+        if not self.ssl_context_manager:
+            self.logger.warning("SSL context manager not available")
+            return
+
+        await self.ssl_context_manager.clear_context(context_type)
+        self.logger.info(f"SSL context cleared for {context_type.value}")
+
+    async def clear_all_ssl_contexts(self) -> None:
+        """Clear all SSL contexts."""
+        if not self.ssl_context_manager:
+            self.logger.warning("SSL context manager not available")
+            return
+
+        await self.ssl_context_manager.clear_all_contexts()
+        self.logger.info("All SSL contexts cleared")
+
+    async def get_mtls_auth_manager(self) -> Optional[MTLSAuthManager]:
+        """
+        Get mTLS authentication manager.
+
+        Returns:
+            mTLS authentication manager if available, None otherwise
+        """
+        return self.mtls_auth_manager
+
+    async def get_mtls_auth_summary(self) -> Dict[str, Any]:
+        """
+        Get mTLS authentication manager summary.
+
+        Returns:
+            mTLS authentication summary information
+        """
+        if not self.mtls_auth_manager:
+            return {"mtls_auth_manager": None}
+
+        return {
+            "mtls_auth_manager": "available",
+            "cache_stats": self.mtls_auth_manager.get_cache_stats(),
+            "security_settings": self.mtls_auth_manager.get_security_settings(),
+        }
+
+    async def authenticate_client_mtls(
+        self,
+        certificate_data: bytes,
+        certificate_chain: Optional[List[bytes]] = None,
+        required_permissions: Optional[List[str]] = None,
+        resource: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Authenticate client using mTLS.
+
+        Args:
+            certificate_data: Client certificate data in DER format
+            certificate_chain: Optional certificate chain for validation
+            required_permissions: Optional list of required permissions
+            resource: Optional resource identifier
+
+        Returns:
+            Authentication result dictionary
+
+        Raises:
+            AppCreationError: If mTLS authentication fails
+        """
+        if not self.mtls_auth_manager:
+            raise AppCreationError(
+                "mTLS authentication manager not available",
+                app_config={"mtls_enabled": False},
+            )
+
+        try:
+            return await self.mtls_auth_manager.authenticate_client(
+                certificate_data=certificate_data,
+                certificate_chain=certificate_chain,
+                required_permissions=required_permissions,
+                resource=resource,
+            )
+        except SSLError as e:
+            error_msg = f"mTLS client authentication failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"mtls_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def validate_client_certificate_mtls(
+        self, certificate_data: bytes, certificate_chain: Optional[List[bytes]] = None
+    ) -> Any:
+        """
+        Validate client certificate using mTLS.
+
+        Args:
+            certificate_data: Client certificate data in DER format
+            certificate_chain: Optional certificate chain for validation
+
+        Returns:
+            Validated certificate object
+
+        Raises:
+            AppCreationError: If certificate validation fails
+        """
+        if not self.mtls_auth_manager:
+            raise AppCreationError(
+                "mTLS authentication manager not available",
+                app_config={"mtls_enabled": False},
+            )
+
+        try:
+            return await self.mtls_auth_manager.validate_client_certificate(
+                certificate_data=certificate_data,
+                certificate_chain=certificate_chain,
+            )
+        except SSLError as e:
+            error_msg = f"mTLS certificate validation failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"mtls_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def extract_client_roles_mtls(self, certificate: Any) -> List[str]:
+        """
+        Extract client roles from certificate using mTLS.
+
+        Args:
+            certificate: X.509 certificate object
+
+        Returns:
+            List of client roles
+
+        Raises:
+            AppCreationError: If role extraction fails
+        """
+        if not self.mtls_auth_manager:
+            raise AppCreationError(
+                "mTLS authentication manager not available",
+                app_config={"mtls_enabled": False},
+            )
+
+        try:
+            return await self.mtls_auth_manager.extract_roles_from_certificate(
+                certificate
+            )
+        except SSLError as e:
+            error_msg = f"mTLS role extraction failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"mtls_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def check_client_permissions_mtls(
+        self,
+        client_roles: List[str],
+        required_permissions: List[str],
+        resource: Optional[str] = None,
+    ) -> bool:
+        """
+        Check client permissions using mTLS.
+
+        Args:
+            client_roles: List of client roles
+            required_permissions: List of required permissions
+            resource: Optional resource identifier
+
+        Returns:
+            True if client has required permissions, False otherwise
+
+        Raises:
+            AppCreationError: If permission check fails
+        """
+        if not self.mtls_auth_manager:
+            raise AppCreationError(
+                "mTLS authentication manager not available",
+                app_config={"mtls_enabled": False},
+            )
+
+        try:
+            return await self.mtls_auth_manager.check_permissions(
+                client_roles=client_roles,
+                required_permissions=required_permissions,
+                resource=resource,
+            )
+        except SSLError as e:
+            error_msg = f"mTLS permission check failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"mtls_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    def clear_mtls_cache(self) -> None:
+        """Clear mTLS authentication cache."""
+        if self.mtls_auth_manager:
+            self.mtls_auth_manager.clear_cache()
+            self.logger.info("mTLS authentication cache cleared")
+        else:
+            self.logger.warning(
+                "mTLS authentication manager not available for cache clearing"
+            )
+
+    def update_mtls_security_settings(
+        self,
+        require_certificate: Optional[bool] = None,
+        validate_certificate_chain: Optional[bool] = None,
+        check_certificate_expiry: Optional[bool] = None,
+        check_certificate_revocation: Optional[bool] = None,
+        max_certificate_age_days: Optional[int] = None,
+    ) -> None:
+        """Update mTLS security settings."""
+        if not self.mtls_auth_manager:
+            self.logger.warning(
+                "mTLS authentication manager not available for settings update"
+            )
+            return
+
+        self.mtls_auth_manager.update_security_settings(
+            require_certificate=require_certificate,
+            validate_certificate_chain=validate_certificate_chain,
+            check_certificate_expiry=check_certificate_expiry,
+            check_certificate_revocation=check_certificate_revocation,
+            max_certificate_age_days=max_certificate_age_days,
+        )
+        self.logger.info("mTLS security settings updated")
+
+    async def get_token_auth_manager(self) -> Optional[TokenAuthManager]:
+        """
+        Get token authentication manager.
+
+        Returns:
+            Token authentication manager if available, None otherwise
+        """
+        return self.token_auth_manager
+
+    async def get_token_auth_summary(self) -> Dict[str, Any]:
+        """
+        Get token authentication manager summary.
+
+        Returns:
+            Token authentication summary information
+        """
+        if not self.token_auth_manager:
+            return {"token_auth_manager": None}
+
+        return {
+            "token_auth_manager": "available",
+            "cache_stats": self.token_auth_manager.get_cache_stats(),
+            "security_settings": self.token_auth_manager.get_security_settings(),
+        }
+
+    async def authenticate_client_token(
+        self,
+        token: str,
+        required_permissions: Optional[List[str]] = None,
+        resource: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Authenticate client using token.
+
+        Args:
+            token: Token to authenticate with
+            required_permissions: Optional list of required permissions
+            resource: Optional resource identifier
+
+        Returns:
+            Authentication result dictionary
+
+        Raises:
+            AppCreationError: If token authentication fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            auth_result = await self.token_auth_manager.authenticate_client(
+                token=token,
+                required_permissions=required_permissions,
+                resource=resource,
+            )
+
+            return {
+                "authenticated": auth_result.authenticated,
+                "user_id": auth_result.user_id,
+                "roles": auth_result.roles,
+                "permissions": auth_result.permissions,
+                "token_info": auth_result.token_info,
+                "error_message": auth_result.error_message,
+                "error_code": auth_result.error_code,
+            }
+
+        except AuthenticationError as e:
+            error_msg = f"Token client authentication failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def validate_token(self, token: str) -> Dict[str, Any]:
+        """
+        Validate token.
+
+        Args:
+            token: Token to validate
+
+        Returns:
+            Token validation result dictionary
+
+        Raises:
+            AppCreationError: If token validation fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            validation_result = await self.token_auth_manager.validate_token(token)
+
+            return {
+                "valid": validation_result.authenticated,
+                "user_id": validation_result.user_id,
+                "roles": validation_result.roles,
+                "permissions": validation_result.permissions,
+                "token_info": validation_result.token_info,
+                "error_message": validation_result.error_message,
+                "error_code": validation_result.error_code,
+            }
+
+        except ValidationError as e:
+            error_msg = f"Token validation failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def extract_client_roles_token(self, token: str) -> List[str]:
+        """
+        Extract client roles from token.
+
+        Args:
+            token: Token to extract roles from
+
+        Returns:
+            List of client roles
+
+        Raises:
+            AppCreationError: If role extraction fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            return await self.token_auth_manager.extract_roles_from_token(token)
+        except AuthenticationError as e:
+            error_msg = f"Token role extraction failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def check_client_permissions_token(
+        self,
+        token: str,
+        required_permissions: List[str],
+        resource: Optional[str] = None,
+    ) -> bool:
+        """
+        Check client permissions using token.
+
+        Args:
+            token: Token to check permissions for
+            required_permissions: List of required permissions
+            resource: Optional resource identifier
+
+        Returns:
+            True if client has required permissions, False otherwise
+
+        Raises:
+            AppCreationError: If permission check fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            return await self.token_auth_manager.check_permissions(
+                token=token,
+                required_permissions=required_permissions,
+                resource=resource,
+            )
+        except AuthenticationError as e:
+            error_msg = f"Token permission check failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def generate_token(
+        self,
+        user_id: str,
+        roles: Optional[List[str]] = None,
+        permissions: Optional[List[str]] = None,
+        expires_minutes: Optional[int] = None,
+        additional_claims: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """
+        Generate JWT token for user.
+
+        Args:
+            user_id: User identifier
+            roles: List of user roles
+            permissions: List of user permissions
+            expires_minutes: Token expiration time in minutes
+            additional_claims: Additional claims to include in token
+
+        Returns:
+            Generated JWT token
+
+        Raises:
+            AppCreationError: If token generation fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            return await self.token_auth_manager.generate_token(
+                user_id=user_id,
+                roles=roles,
+                permissions=permissions,
+                expires_minutes=expires_minutes,
+                additional_claims=additional_claims,
+            )
+        except AuthenticationError as e:
+            error_msg = f"Token generation failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    async def refresh_token(self, token: str) -> str:
+        """
+        Refresh JWT token.
+
+        Args:
+            token: Current JWT token
+
+        Returns:
+            New JWT token
+
+        Raises:
+            AppCreationError: If token refresh fails
+        """
+        if not self.token_auth_manager:
+            raise AppCreationError(
+                "Token authentication manager not available",
+                app_config={"token_auth_enabled": False},
+            )
+
+        try:
+            return await self.token_auth_manager.refresh_token(token)
+        except AuthenticationError as e:
+            error_msg = f"Token refresh failed: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": True},
+                details={"exception": str(e)},
+            )
+
+    def clear_token_cache(self) -> None:
+        """Clear token authentication cache."""
+        if self.token_auth_manager:
+            self.token_auth_manager.clear_cache()
+            self.logger.info("Token authentication cache cleared")
+        else:
+            self.logger.warning(
+                "Token authentication manager not available for cache clearing"
+            )
+
+    def update_token_security_settings(
+        self,
+        require_token: Optional[bool] = None,
+        validate_token_expiry: Optional[bool] = None,
+        check_token_revocation: Optional[bool] = None,
+        max_token_age_hours: Optional[int] = None,
+    ) -> None:
+        """Update token security settings."""
+        if not self.token_auth_manager:
+            self.logger.warning(
+                "Token authentication manager not available for settings update"
+            )
+            return
+
+        self.token_auth_manager.update_security_settings(
+            require_token=require_token,
+            validate_token_expiry=validate_token_expiry,
+            check_token_revocation=check_token_revocation,
+            max_token_age_hours=max_token_age_hours,
+        )
+        self.logger.info("Token security settings updated")
+
+
+

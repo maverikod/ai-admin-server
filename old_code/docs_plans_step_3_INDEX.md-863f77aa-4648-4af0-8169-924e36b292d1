@@ -1,0 +1,26 @@
+# Step 3: Wire QueueManagerIntegration — Replace Singleton QueueManager
+
+## Goal
+Introduce `QueueManagerIntegration` as the single queue backend.
+Remove the Singleton pattern from `QueueManager`. Wire startup/shutdown
+into `AIAdminServer` lifespan.
+
+## Tactical Steps
+
+| # | Task | Detail |
+|---|------|---------|
+| 3.1 | Add `queuemgr` to project dependencies (`requirements.txt`) | [3_1/](3_1/INDEX.md) |
+| 3.2 | Create `ai_admin/queue/integration.py` — thin wrapper around `QueueManagerIntegration` | [3_2/](3_2/INDEX.md) |
+| 3.3 | Add `get_queue_integration()` singleton accessor (replaces `QueueManager()`) | [3_3/](3_3/INDEX.md) |
+| 3.4 | Wire `integration.start()` into `AIAdminServer` startup lifespan | [3_4/](3_4/INDEX.md) |
+| 3.5 | Wire `integration.stop()` into `AIAdminServer` shutdown lifespan | [3_5/](3_5/INDEX.md) |
+| 3.6 | Configure limits: `max_concurrent_jobs`, `max_queue_size`, `per_job_type_limits` | [3_6/](3_6/INDEX.md) |
+| 3.7 | Configure `completed_job_retention_seconds` (default 6h) | [3_7/](3_7/INDEX.md) |
+| 3.8 | Add `queue` section to `AIAdminSettingsManager` config | [3_8/](3_8/INDEX.md) |
+| 3.9 | Add health check endpoint using `integration.get_queue_health()` | [3_9/](3_9/INDEX.md) |
+| 3.10 | Smoke-test: submit a `SystemJob` manually and verify status flow | [3_10/](3_10/INDEX.md) |
+
+## Notes
+- `QueueManagerIntegration` already has full IPC, job lifecycle, cleanup
+- Do NOT delete old `QueueManager` yet — commands still use it until Step 4
+- `in_memory=True` default is fine for dev; configure path for prod

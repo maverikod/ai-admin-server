@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""
+Script to add fallback logic to all Docker commands.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+import re
+import glob
+def add_fallback_logic_to_file(file_path: str) -> bool:
+    """Add fallback logic to a Docker command file."""
+    print(f"Processing {file_path}...")
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Check if file already has fallback logic
+    if "fallback from direct execution" in content:
+        print(f"  ✅ Already has fallback logic")
+        return False
+
+    # Find the direct execution section
+    direct_exec_pattern = r'# Direct execution without queue\\n\\n'
+    fallback_pattern = r'# Direct execution without queue - try first, fallback to queue on error\\n            try:\\n'
+
+    if direct_exec_pattern in content:
+        # Replace the comment
+        content = content.replace(direct_exec_pattern, fallback_pattern)
+
+        # Find the end of direct execution and wrap it in try-except
+        # Look for the return statement in direct execution
+        return_pattern = r'(\\s+return \\{[^}]+\\})\\n\\n\\s+except docker\\.errors\\.DockerException as e:'
+
+        def replace_return(match: re.Match[str]) -> str:
+            return_statement = match.group(1)
+            return f"""{return_statement}
+                
+            except Exception as direct_error:
+                # If direct execution fails, automatically fallback to queue
+                self.logger.warning(f"Direct execution failed: {direct_error}. Falling back to queue.")
+                
+                from ai_admin.task_queue.queue_manager import queue_manager
+                from ai_admin.task_queue.task_queue import TaskType, Task
+                
+                # Determine task type based on command
+                task_type_map = {
+                    'docker_build': TaskType.DOCKER_BUILD,
+                    'docker_pull': TaskType.DOCKER_PULL,
+                    'docker_push': TaskType.DOCKER_PUSH,
+                    'docker_run': TaskType.DOCKER_RUN,
+                    'docker_stop': TaskType.DOCKER_STOP,
+                    'docker_remove': TaskType.DOCKER_REMOVE,
+                    'docker_tag': TaskType.DOCKER_TAG,
+                }
+                
+                task_type = task_type_map.get(self.name, TaskType.DOCKER_RUN)
+                
+                # Add task to queue
+                task_id = await queue_manager.add_task(Task(
+                    task_type=task_type,
+                    params=kwargs
+                ))
+                
+                return {
+                    "message": f"{self.name} task queued successfully (fallback from direct execution)",
+                    "task_id": task_id,
+                    "use_queue": True,
+                    "status": "queued",
+                    "command": self.name,
+                    "fallback_reason": str(direct_error),
+                }
+
+        except docker.errors.DockerException as e:"""
+
+        content = re.sub(return_pattern, replace_return, content, flags=re.DOTALL)
+
+        # Write back to file
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        print(f"  ✅ Added fallback logic")
+        return True
+    else:
+        print(f"  ⚠️  No direct execution section found")
+        return False
+def main() -> None:
+    """Main function to process all Docker command files."""
+    print("Adding fallback logic to Docker commands...")
+
+    # Find all Docker command files
+    docker_files = glob.glob("ai_admin/commands/docker_*.py")
+
+    processed = 0
+    for file_path in docker_files:
+        if add_fallback_logic_to_file(file_path):
+            processed += 1
+
+    print(f"\n✅ Processed {processed} files with fallback logic")
+
+if __name__ == "__main__":
+    main()

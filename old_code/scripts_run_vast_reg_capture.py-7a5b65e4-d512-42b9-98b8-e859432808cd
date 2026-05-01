@@ -1,0 +1,25 @@
+"""Run vast server briefly and capture stdout/stderr for registration diagnostics."""
+import subprocess
+import sys
+
+
+def main() -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ai_admin.server",
+            "--config",
+            "config/http_reg.json",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=28,
+    )
+    sys.stdout.write(proc.stdout)
+    sys.stderr.write(proc.stderr)
+    print("--- returncode", proc.returncode, flush=True)
+
+
+if __name__ == "__main__":
+    main()

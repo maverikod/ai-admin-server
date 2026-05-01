@@ -1,0 +1,184 @@
+# 2.2 TASKS — Atomic Instructions for Haiku
+## Subject: DockerJob
+
+## TASK 1
+**Action:** Read DockerExecutor file location
+```
+get_code_entity_info(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  entity_type="class",
+  entity_name="DockerExecutor"
+)
+```
+**Save:** `exec_path` = entities[0]["file_path"] (make relative to project root)
+
+## TASK 2
+**Action:** Read DockerExecutor full body
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<exec_path>
+)
+```
+**Extract:** push(), pull(), build() method bodies verbatim
+
+## TASK 3
+**Action:** Read add_push_task, add_pull_task, add_build_task from queue_manager_impl.py
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/task_queue/queue_manager/queue_manager_impl.py",
+  start_line=30,
+  end_line=200
+)
+```
+**Extract:** params each method receives (image_name, tag, dockerfile_path, etc.)
+
+## TASK 4
+**Action:** Write docker_job.py
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/docker_job.py",
+  content="""\
+\"\"\"DockerJob — queuemgr job for Docker operations.\"\"\"
+
+from queuemgr.jobs.base_core import QueueJobBase
+
+
+class DockerJob(QueueJobBase):
+    \"\"\"Execute Docker build/push/pull operations as a queue job.
+
+    Params keys:
+        op (str): 'build' | 'push' | 'pull'
+        image_name (str): Docker image name
+        tag (str): Image tag
+        dockerfile_path (str, optional): Path to Dockerfile (for build)
+        context_path (str, optional): Build context path (for build)
+    \"\"\"
+
+    def run(self) -> dict:
+        \"\"\"Execute the Docker operation.
+
+        Returns:
+            dict with keys: success (bool), output (str), error (str)
+        \"\"\"
+        op = self.params.get('op')
+        if op == 'push':
+            return self._push()
+        elif op == 'pull':
+            return self._pull()
+        elif op == 'build':
+            return self._build()
+        else:
+            raise ValueError(f'Unknown Docker op: {op}')
+
+    def _push(self) -> dict:
+        \"\"\"Push Docker image.\"\"\"
+        # PORT FROM: DockerExecutor.push()
+        image_name = self.params['image_name']
+        tag = self.params['tag']
+        # <paste exact subprocess logic from DockerExecutor.push() here>
+        raise NotImplementedError('Port from DockerExecutor.push()')
+
+    def _pull(self) -> dict:
+        \"\"\"Pull Docker image.\"\"\"
+        # PORT FROM: DockerExecutor.pull()
+        raise NotImplementedError('Port from DockerExecutor.pull()')
+
+    def _build(self) -> dict:
+        \"\"\"Build Docker image.\"\"\"
+        # PORT FROM: DockerExecutor.build()
+        raise NotImplementedError('Port from DockerExecutor.build()')
+"""
+)
+```
+**Note:** File is created with NotImplementedError stubs. Real logic ported in TASK 5.
+
+## TASK 5
+**Action:** Load docker_job.py into CST tree
+```
+cst_load_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/docker_job.py"
+)
+```
+**Save:** `tree_id`
+
+## TASK 6
+**Action:** Find _push node
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="simple",
+  node_type="FunctionDef",
+  name="_push"
+)
+```
+**Save:** `push_node_id`
+
+## TASK 7
+**Action:** Replace _push with real logic from DockerExecutor.push()
+```
+cst_modify_tree(
+  tree_id=<tree_id>,
+  operations=[{
+    "action": "replace",
+    "node_id": <push_node_id>,
+    "code_lines": [
+      "def _push(self) -> dict:",
+      "    \\"\\"\\"Push Docker image.\\"\\"\\"",
+      "    image_name = self.params['image_name']",
+      "    tag = self.params['tag']",
+      # <paste actual lines from DockerExecutor.push() body>
+    ]
+  }]
+)
+```
+
+## TASK 8
+**Action:** Same for _pull — find node, replace with DockerExecutor.pull() logic
+
+## TASK 9
+**Action:** Same for _build — find node, replace with DockerExecutor.build() logic
+
+## TASK 10
+**Action:** Save tree
+```
+cst_save_tree(
+  tree_id=<tree_id>,
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/docker_job.py",
+  backup=True,
+  validate=True
+)
+```
+**Expected:** success=True, no validation errors
+
+## TASK 11
+**Action:** Run lint
+```
+lint_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/docker_job.py"
+)
+```
+**Expected:** error_count=0
+
+## TASK 12
+**Action:** Run type check
+```
+type_check_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/docker_job.py"
+)
+```
+**Expected:** 0 mypy errors (or document known issues)
+
+## DONE CHECK
+- [ ] File created
+- [ ] _push ported (no NotImplementedError)
+- [ ] _pull ported
+- [ ] _build ported
+- [ ] lint passes
+- [ ] typecheck passes or issues documented

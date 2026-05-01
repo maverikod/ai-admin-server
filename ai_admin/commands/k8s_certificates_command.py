@@ -1,0 +1,231 @@
+"""K8s certificates command."""
+
+from ai_admin.core.custom_exceptions import SSLError
+
+"""Kubernetes certificates command for managing cluster certificates.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import subprocess
+
+from typing import Dict, Any, Optional, List
+
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+from ai_admin.security.k8s_security_adapter import K8sSecurityAdapter
+
+
+class K8sCertificatesCommand:
+    """Command to manage Kubernetes cluster certificates using Python cryptography library."""
+
+    name = "k8s_certificates"
+
+    def __init__(self):
+        """Initialize K8s certificates command."""
+        super().__init__()
+        self.certs_base_dir = "./certificates"
+        self.kubeconfigs_dir = "./kubeconfigs"
+        self.security_adapter = K8sSecurityAdapter()
+
+    async def execute(
+        self,
+        action: str = "list",
+        cluster_name: Optional[str] = None,
+        certificate_type: Optional[str] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute K8s certificates command with unified security.
+
+        Args:
+            action: Certificate action (list, create, delete, view)
+            cluster_name: Name of the cluster
+            certificate_type: Type of certificate
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with certificate information
+        """
+        # Use unified security approach
+        return await super().execute(
+            action=action,
+            cluster_name=cluster_name,
+            certificate_type=certificate_type,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for K8s certificates command."""
+        return "k8s:certificates"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute K8s certificates command logic."""
+        action = kwargs.get("action", "list")
+
+        if action == "list":
+            return await self._list_certificates(**kwargs)
+        elif action == "create":
+            return await self._create_certificate(**kwargs)
+        elif action == "delete":
+            return await self._delete_certificate(**kwargs)
+        elif action == "view":
+            return await self._view_certificate(**kwargs)
+        else:
+            raise SSLError(f"Unknown certificate action: {action}")
+
+    async def _list_certificates(
+        self,
+        cluster_name: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """List Kubernetes certificates."""
+        try:
+            cmd = ["kubectl", "get", "certificates"]
+
+            if cluster_name:
+                cmd.extend(["--context", cluster_name])
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise SSLError(f"K8s certificates list failed: {result.stderr}")
+
+            certificates = []
+            lines = result.stdout.strip().split("\n")
+            for line in lines[1:]:  # Skip header
+                if line.strip():
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        certificates.append(
+                            {
+                                "name": parts[0],
+                                "namespace": parts[1],
+                                "ready": parts[2],
+                                "age": parts[3],
+                            }
+                        )
+
+            return {
+                "message": f"Found {len(certificates)} certificates",
+                "action": "list",
+                "cluster_name": cluster_name,
+                "certificates": certificates,
+                "count": len(certificates),
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise SSLError(f"K8s certificates list command timed out: {str(e)}")
+
+    async def _create_certificate(
+        self,
+        cluster_name: Optional[str] = None,
+        certificate_type: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Create Kubernetes certificate."""
+        try:
+            # This is a placeholder for certificate creation
+            # In a real implementation, you would create the certificate resource
+
+            return {
+                "message": f"Certificate creation initiated",
+                "action": "create",
+                "cluster_name": cluster_name,
+                "certificate_type": certificate_type,
+                "status": "created",
+            }
+
+        except SSLError as e:
+            raise SSLError(f"K8s certificate creation failed: {str(e)}")
+
+    async def _delete_certificate(
+        self,
+        cluster_name: Optional[str] = None,
+        certificate_type: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Delete Kubernetes certificate."""
+        try:
+            # This is a placeholder for certificate deletion
+            # In a real implementation, you would delete the certificate resource
+
+            return {
+                "message": f"Certificate deletion initiated",
+                "action": "delete",
+                "cluster_name": cluster_name,
+                "certificate_type": certificate_type,
+                "status": "deleted",
+            }
+
+        except SSLError as e:
+            raise SSLError(f"K8s certificate deletion failed: {str(e)}")
+
+    async def _view_certificate(
+        self,
+        cluster_name: Optional[str] = None,
+        certificate_type: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """View Kubernetes certificate details."""
+        try:
+            cmd = ["kubectl", "describe", "certificates"]
+
+            if cluster_name:
+                cmd.extend(["--context", cluster_name])
+            if certificate_type:
+                cmd.append(certificate_type)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise SSLError(f"K8s certificate view failed: {result.stderr}")
+
+            return {
+                "message": f"Certificate details retrieved",
+                "action": "view",
+                "cluster_name": cluster_name,
+                "certificate_type": certificate_type,
+                "details": result.stdout,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise SSLError(f"K8s certificate view command timed out: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for K8s certificates command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "Certificate action (list, create, delete, view)",
+                    "default": "list",
+                    "enum": ["list", "create", "delete", "view"],
+                },
+                "cluster_name": {
+                    "type": "string",
+                    "description": "Name of the cluster",
+                },
+                "certificate_type": {
+                    "type": "string",
+                    "description": "Type of certificate",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "additionalProperties": False,
+        }

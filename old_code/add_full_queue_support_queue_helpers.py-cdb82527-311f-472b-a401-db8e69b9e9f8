@@ -1,0 +1,23 @@
+"""
+Script to add full queue support to Docker commands with proper queue logic.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+import re
+from typing import List, Dict, Any
+
+def get_docker_commands() -> List[str]:
+    """Get list of all Docker command files."""
+    commands_dir = 'ai_admin/commands'
+    docker_commands = []
+    
+    for file in os.listdir(commands_dir):
+        if file.startswith('docker_') and file.endswith('_command.py'):
+            docker_commands.append(file)
+    
+    return sorted(docker_commands)
+
+

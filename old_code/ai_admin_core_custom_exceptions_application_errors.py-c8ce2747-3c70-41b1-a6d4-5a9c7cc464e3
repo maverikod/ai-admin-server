@@ -1,0 +1,48 @@
+"""
+Custom exception classes for the AI Admin system.
+
+This module consolidates all custom exception types used throughout the system,
+replacing generic Exception usage with specific, meaningful exceptions.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+from typing import Any, Dict, Optional
+from .base import AIAdminBaseException
+
+class ApplicationError(AIAdminBaseException):
+    """Base application error."""
+    pass
+
+
+
+class ServiceError(ApplicationError):
+    """Service related error."""
+    pass
+
+
+
+class BusinessLogicError(ApplicationError):
+    """Business logic error."""
+    pass
+
+
+
+class IntegrationError(ApplicationError):
+    """Integration error."""
+    pass
+
+
+# Generic fallback exceptions
+
+class CustomError(AIAdminBaseException):
+    """Custom error for specific use cases."""
+    pass
+
+
+
+class UnexpectedError(AIAdminBaseException):
+    """Unexpected error that doesn't fit other categories."""
+    pass
+

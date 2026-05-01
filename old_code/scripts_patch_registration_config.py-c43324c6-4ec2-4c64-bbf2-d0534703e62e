@@ -1,0 +1,12 @@
+"""Patch registration: merge mTLS proxy settings into config/config.json. See module body for env overrides."""
+
+# cst-node-ids: begin
+# cst-node-ids: version=1
+# cst-node-id 0 Module c34240d6-8a0b-44dc-82b5-28e2035bcc9c
+# cst-node-id 0.0 SimpleStatementLine 12e8bfb2-a6a5-4659-b8fa-a7e70c12ab3c
+# cst-node-id 0.0.0 Expr a5ea975f-66b8-42f3-91b0-06ad6ae194cd
+# cst-node-id 0.0.0.0 SimpleString a8522e9f-e8b3-49ab-aa5e-4a478d817f9b
+# cst-node-id 0.0.1 TrailingWhitespace e3781184-333a-4b77-8335-67f10b6b28ed
+# cst-node-id 0.0.1.0 SimpleWhitespace 76941488-5b7c-45bb-94ab-1a87984a3fcc
+# cst-node-id 0.0.1.1 Newline 5d367b89-f39d-4294-b9e8-c8789c5bc858
+# cst-node-ids: end

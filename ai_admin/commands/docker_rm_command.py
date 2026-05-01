@@ -1,0 +1,146 @@
+from ai_admin.core.custom_exceptions import CustomError
+
+"""Docker rm command for removing containers.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import subprocess
+
+from typing import Dict, Any, Optional, List
+
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+
+class DockerRmCommand:
+    """Remove Docker containers."""
+
+    name = "docker_rm"
+
+    def __init__(self):
+        """Initialize Docker rm command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        container_name: str,
+        force: bool = False,
+        volumes: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker rm command with unified security.
+
+        Args:
+            container_name: Name or ID of the container to remove
+            force: Force removal of running container
+            volumes: Remove associated volumes
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with removal information
+        """
+        # Validate inputs
+        if not container_name:
+            return ErrorResult(
+                message="Container name is required", code="VALIDATION_ERROR"
+            )
+
+        # Use unified security approach
+        return await super().execute(
+            container_name=container_name,
+            force=force,
+            volumes=volumes,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker rm command."""
+        return "docker:rm"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker rm command logic."""
+        return await self._remove_container(**kwargs)
+
+    async def _remove_container(
+        self,
+        container_name: str,
+        force: bool = False,
+        volumes: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Remove Docker container."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "rm"]
+
+            # Add options
+            if force:
+                cmd.append("--force")
+
+            if volumes:
+                cmd.append("-v")
+
+            # Add container name
+            cmd.append(container_name)
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to remove Docker container: {result.stderr}")
+
+            return {
+                "message": f"Successfully removed container '{container_name}'",
+                "container_name": container_name,
+                "force": force,
+                "volumes": volumes,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker rm command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker rm failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker rm command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "container_name": {
+                    "type": "string",
+                    "description": "Name or ID of the container to remove",
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": "Force removal of running container",
+                    "default": False,
+                },
+                "volumes": {
+                    "type": "boolean",
+                    "description": "Remove associated volumes",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["container_name"],
+            "additionalProperties": False,
+        }
+
+
+"""Docker rm command implementation."""

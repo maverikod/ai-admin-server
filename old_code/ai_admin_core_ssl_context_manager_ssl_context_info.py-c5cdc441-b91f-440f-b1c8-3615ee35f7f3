@@ -1,0 +1,40 @@
+"""SSL Context Manager for AI Admin Server.
+
+This module provides SSL context management functionality for the AI Admin server,
+including creation, configuration, and validation of SSL contexts for different
+authentication modes (HTTPS, mTLS, Token Auth, Mixed).
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import ssl
+import os
+from ai_admin.config.ssl_config import SSLConfig, SecurityParams, CertificatePaths
+from enum import Enum
+from dataclasses import dataclass
+from ai_admin.core.custom_exceptions import SSLError
+import logging
+from ai_admin.config.ssl_config import SSLConfig, SecurityParams, CertificatePaths
+
+from ai_admin.core.ssl_error_handler import SSLErrorHandler
+
+from .ssl_context_type import SSLContextType
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .manager import SSLContextManager
+
+class SSLContextInfo:
+    """Information about an SSL context."""
+
+    context_type: SSLContextType
+    ssl_context: ssl.SSLContext
+    certificate_paths: CertificatePaths
+    security_params: SecurityParams
+    created_at: str
+    is_valid: bool
+    validation_errors: List[str]
+
+
+

@@ -1,0 +1,404 @@
+"""Module mixin_impl."""
+
+from ai_admin.core.custom_exceptions import ConfigurationError, CustomError, PermissionError, SSLError, SecurityError, ValidationError
+from typing import Dict, Any, Optional, List, Tuple, Type
+from datetime import datetime
+import logging
+from ai_admin.settings_manager import get_settings_manager
+from ai_admin.config.roles_config import RolesConfig
+from ai_admin.security.base_security_adapter import SecurityAdapter, SecurityError
+from ai_admin.security.default_security_adapter import DefaultSecurityAdapter
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+from .k8s_security_adapter import K8sSecurityAdapter
+from .ftp_security_adapter import FtpSecurityAdapter
+from .git_security_adapter import GitSecurityAdapter
+from .vast_ai_security_adapter import VastAiSecurityAdapter
+from .github_security_adapter import GitHubSecurityAdapter
+from .system_security_adapter import SystemSecurityAdapter
+from .queue_security_adapter import QueueSecurityAdapter
+from .ssl_security_adapter import SSLSecurityAdapter
+from .vector_store_security_adapter import VectorStoreSecurityAdapter
+from .llm_security_adapter import LLMSecurityAdapter
+from .test_security_adapter import TestSecurityAdapter
+from .kind_security_adapter import KindSecurityAdapter
+from .argocd_security_adapter import ArgoCDSecurityAdapter
+
+class CommandSecurityMixin:
+    """Mixin for adding security to commands.
+
+    This mixin provides security functionality to all commands,
+    ensuring consistent security implementation across the system.
+    """
+
+    def __init__(self):
+        """Initialize Command Security Mixin."""
+        self.settings_manager = get_settings_manager()
+        self.roles_config = RolesConfig()
+        self.logger = logging.getLogger(f"ai_admin.{self.__class__.__name__.lower()}_security")
+
+        # Security adapter mapping
+        self._security_adapter = None
+        self._security_adapter_class = self._get_security_adapter_class()
+
+    def _get_security_adapter_class(self) -> Type[SecurityAdapter]:
+        """
+        Get appropriate security adapter class for command type.
+
+        Returns:
+            Security adapter class
+        """
+        try:
+            # Map command types to security adapter classes
+            command_type = self._get_command_type()
+
+            adapter_mapping = {
+                "docker": DockerSecurityAdapter,
+                "k8s": K8sSecurityAdapter,
+                "kubernetes": K8sSecurityAdapter,
+                "ftp": FtpSecurityAdapter,
+                "git": GitSecurityAdapter,
+                "github": GitHubSecurityAdapter,
+                "vast": VastAiSecurityAdapter,
+                "vast_ai": VastAiSecurityAdapter,
+                "system": SystemSecurityAdapter,
+                "queue": QueueSecurityAdapter,
+                "ssl": SSLSecurityAdapter,
+                "vector_store": VectorStoreSecurityAdapter,
+                "llm": LLMSecurityAdapter,
+                "test": TestSecurityAdapter,
+                "kind": KindSecurityAdapter,
+                "argocd": ArgoCDSecurityAdapter,
+            }
+
+            adapter_class = adapter_mapping.get(command_type, DefaultSecurityAdapter)
+            self.logger.debug(f"Using security adapter: {adapter_class.__name__}")
+
+            return adapter_class
+
+        except CustomError as e:
+            self.logger.error(f"Error getting security adapter class: {str(e)}")
+            return DefaultSecurityAdapter
+
+    def _get_security_adapter(self) -> SecurityAdapter:
+        """
+        Get security adapter instance.
+
+        Returns:
+            Security adapter instance
+        """
+        try:
+            if self._security_adapter is None:
+                self._security_adapter = self._security_adapter_class(self.settings_manager, self.roles_config)
+
+            return self._security_adapter
+
+        except ConfigurationError as e:
+            self.logger.error(f"Error getting security adapter: {str(e)}")
+            # Return default adapter as fallback
+            return DefaultSecurityAdapter(self.settings_manager, self.roles_config)
+
+    def _get_command_type(self) -> str:
+        """
+        Get command type from class name.
+
+        Returns:
+            Command type string
+        """
+        try:
+            class_name = self.__class__.__name__.lower()
+
+            # Remove common suffixes
+            suffixes_to_remove = ["command", "cmd", "handler"]
+            for suffix in suffixes_to_remove:
+                if class_name.endswith(suffix):
+                    class_name = class_name[: -len(suffix)]
+                    break
+
+            # Handle special cases
+            if "k8s" in class_name or "kubernetes" in class_name:
+                return "k8s"
+            elif "vast" in class_name:
+                return "vast"
+            elif "vector" in class_name:
+                return "vector_store"
+            elif "llm" in class_name:
+                return "llm"
+            elif "argocd" in class_name:
+                return "argocd"
+
+            return class_name
+
+        except CustomError as e:
+            self.logger.error(f"Error getting command type: {str(e)}")
+            return "unknown"
+
+    async def _validate_security(self, operation: str, params: Dict[str, Any]) -> Tuple[bool, str]:
+        """
+        Validate security for command execution.
+
+        Args:
+            operation: Operation to validate
+            params: Operation parameters
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            self.logger.info(f"Validating security for operation: {operation}")
+
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Validate operation
+            is_valid, error_msg = await security_adapter.validate_operation(operation, params)
+
+            if not is_valid:
+                self.logger.warning(f"Security validation failed: {error_msg}")
+                return False, error_msg
+
+            self.logger.info("Security validation passed")
+            return True, ""
+
+        except SecurityError as e:
+            self.logger.error(f"Security error: {str(e)}")
+            return False, str(e)
+
+        except ValidationError as e:
+            error_msg = f"Error validating security: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            return False, error_msg
+
+    async def _audit_operation(self, operation: str, params: Dict[str, Any], result: Any) -> None:
+        """
+        Audit command operation.
+
+        Args:
+            operation: Operation that was performed
+            params: Operation parameters
+            result: Operation result
+        """
+        try:
+            self.logger.info(f"Auditing operation: {operation}")
+
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Audit operation
+            await security_adapter.audit_operation(operation, params, result)
+
+            self.logger.info("Operation audited successfully")
+
+        except CustomError as e:
+            self.logger.error(f"Error auditing operation: {str(e)}", exc_info=True)
+
+    async def _check_permissions(self, user_roles: List[str], operation: str) -> Tuple[bool, List[str]]:
+        """
+        Check if user has permissions for operation.
+
+        Args:
+            user_roles: List of user roles
+            operation: Operation to check
+
+        Returns:
+            Tuple of (has_permission, missing_permissions)
+        """
+        try:
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Check permissions
+            has_permission, missing_permissions = await security_adapter.check_permissions(user_roles, operation)
+
+            return has_permission, missing_permissions
+
+        except PermissionError as e:
+            self.logger.error(f"Error checking permissions: {str(e)}")
+            return False, [operation]
+
+    async def _get_user_roles(self, context: Dict[str, Any]) -> List[str]:
+        """
+        Get user roles from context.
+
+        Args:
+            context: Security context
+
+        Returns:
+            List of user roles
+        """
+        try:
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Get user roles
+            user_roles = await security_adapter.get_user_roles(context)
+
+            return user_roles
+
+        except CustomError as e:
+            self.logger.error(f"Error getting user roles: {str(e)}")
+            return []
+
+    async def _validate_access(self, resource: str, operation: str) -> bool:
+        """
+        Validate access to specific resource.
+
+        Args:
+            resource: Resource to access
+            operation: Operation to perform
+
+        Returns:
+            True if access is allowed
+        """
+        try:
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Validate access
+            has_access = await security_adapter.validate_access(resource, operation)
+
+            return has_access
+
+        except ValidationError as e:
+            self.logger.error(f"Error validating access: {str(e)}")
+            return False
+
+    async def _manage_certificates(self, operation: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Manage certificates for operation.
+
+        Args:
+            operation: Certificate operation
+            params: Operation parameters
+
+        Returns:
+            Operation result
+        """
+        try:
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Manage certificates
+            result = await security_adapter.manage_certificates(operation, params)
+
+            return result
+
+        except SSLError as e:
+            self.logger.error(f"Error managing certificates: {str(e)}")
+            raise
+
+    async def _setup_ssl(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Setup SSL configuration for operation.
+
+        Args:
+            config: SSL configuration
+
+        Returns:
+            SSL setup result
+        """
+        try:
+            # Get security adapter
+            security_adapter = self._get_security_adapter()
+
+            # Setup SSL
+            result = await security_adapter.setup_ssl(config)
+
+            return result
+
+        except ConfigurationError as e:
+            self.logger.error(f"Error setting up SSL: {str(e)}")
+            raise
+
+    def _create_security_error(self, message: str, code: str = "SECURITY_ERROR") -> SecurityError:
+        """
+        Create security error.
+
+        Args:
+            message: Error message
+            code: Error code
+
+        Returns:
+            Security error instance
+        """
+        return SecurityError(message, code)
+
+    def _log_security_event(
+        self,
+        event_type: str,
+        operation: str,
+        params: Dict[str, Any],
+        result: Any = None,
+        error: Optional[Exception] = None,
+    ) -> None:
+        """
+        Log security event.
+
+        Args:
+            event_type: Type of security event
+            operation: Operation that triggered the event
+            params: Operation parameters
+            result: Operation result (if successful)
+            error: Error (if failed)
+        """
+        try:
+            event_data = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "event_type": event_type,
+                "operation": operation,
+                "params": params,
+                "result": result,
+                "error": str(error) if error else None,
+                "command_type": self._get_command_type(),
+            }
+
+            if error:
+                self.logger.error(f"Security event: {event_data}")
+            else:
+                self.logger.info(f"Security event: {event_data}")
+
+        except CustomError as e:
+            self.logger.error(f"Error logging security event: {str(e)}")
+
+    async def _execute_with_security(self, operation: str, params: Dict[str, Any], command_func: callable) -> Any:
+        """
+        Execute command with security validation and auditing.
+
+        Args:
+            operation: Operation name
+            params: Operation parameters
+            command_func: Command function to execute
+
+        Returns:
+            Command execution result
+        """
+        try:
+            # 1. Validate security
+            is_valid, error_msg = await self._validate_security(operation, params)
+            if not is_valid:
+                self._log_security_event(
+                    "validation_failed",
+                    operation,
+                    params,
+                    error=SecurityError(error_msg),
+                )
+                return self._create_security_error(error_msg, "VALIDATION_FAILED")
+
+            # 2. Execute command
+            result = await command_func(**params)
+
+            # 3. Audit operation
+            await self._audit_operation(operation, params, result)
+
+            # 4. Log successful execution
+            self._log_security_event("execution_success", operation, params, result)
+
+            return result
+
+        except SecurityError as e:
+            self._log_security_event("security_error", operation, params, error=e)
+            raise
+
+        except CustomError as e:
+            self._log_security_event("execution_error", operation, params, error=e)
+            raise
+

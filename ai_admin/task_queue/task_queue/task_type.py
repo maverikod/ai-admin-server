@@ -1,0 +1,211 @@
+"""Module task_type."""
+
+from ai_admin.core.custom_exceptions import ConfigurationError, CustomError, NetworkError
+import asyncio
+import json
+import uuid
+import ssl
+import socket
+import ftplib
+from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, field
+from .enums import TaskStatus
+from .task_error_code import TaskErrorCode
+from .task import Task
+
+class TaskType(Enum):
+    """Universal task types for any operations."""
+
+    # Docker operations
+    DOCKER_PUSH = "docker_push"
+    DOCKER_BUILD = "docker_build"
+    DOCKER_PULL = "docker_pull"
+    DOCKER_RUN = "docker_run"
+    DOCKER_STOP = "docker_stop"
+    DOCKER_REMOVE = "docker_remove"
+    DOCKER_TAG = "docker_tag"
+
+    # Ollama operations
+    OLLAMA_PULL = "ollama_pull"
+    OLLAMA_RUN = "ollama_run"
+    OLLAMA_LIST = "ollama_list"
+
+    # Vast.ai operations
+    VAST_CREATE = "vast_create"
+    VAST_DESTROY = "vast_destroy"
+    VAST_SEARCH = "vast_search"
+    VAST_INSTANCES = "vast_instances"
+
+    # Git operations
+    GIT_OPERATION = "git_operation"
+
+    # GitHub operations
+    GITHUB_OPERATION = "github_operation"
+    OLLAMA_STATUS = "ollama_status"
+
+    # Kubernetes operations
+    K8S_DEPLOY = "k8s_deploy"
+    K8S_SCALE = "k8s_scale"
+    K8S_DELETE = "k8s_delete"
+    K8S_GET = "k8s_get"
+    K8S_LOGS = "k8s_logs"
+    K8S_EXEC = "k8s_exec"
+    K8S_DEPLOYMENT_CREATE = "k8s_deployment_create"
+    K8S_POD_CREATE = "k8s_pod_create"
+    K8S_POD_STATUS = "k8s_pod_status"
+    K8S_POD_DELETE = "k8s_pod_delete"
+    K8S_SERVICE_CREATE = "k8s_service_create"
+    K8S_CONFIGMAP_CREATE = "k8s_configmap_create"
+    K8S_NAMESPACE_CREATE = "k8s_namespace_create"
+    K8S_CLUSTER_CREATE = "k8s_cluster_create"
+    K8S_CLUSTER_DELETE = "k8s_cluster_delete"
+    K8S_CLUSTER_STATUS = "k8s_cluster_status"
+    K8S_CERTIFICATE_CREATE = "k8s_certificate_create"
+    K8S_CERTIFICATE_DELETE = "k8s_certificate_delete"
+    K8S_MTLS_SETUP = "k8s_mtls_setup"
+
+    # Kind operations
+    KIND_CLUSTER_CREATE = "kind_cluster_create"
+    KIND_CLUSTER_DELETE = "kind_cluster_delete"
+    KIND_CLUSTER_LIST = "kind_cluster_list"
+    KIND_CLUSTER_GET_NODES = "kind_cluster_get_nodes"
+    KIND_LOAD_IMAGE = "kind_load_image"
+
+    # GitHub operations
+    GITHUB_CREATE_REPO = "github_create_repo"
+    GITHUB_LIST_REPOS = "github_list_repos"
+    GITHUB_CLONE = "github_clone"
+    GITHUB_PUSH = "github_push"
+
+    # System operations
+    SYSTEM_MONITOR = "system_monitor"
+    SYSTEM_BACKUP = "system_backup"
+    SYSTEM_UPDATE = "system_update"
+    SYSTEM_CLEANUP = "system_cleanup"
+
+    # Custom operations
+    CUSTOM_SCRIPT = "custom_script"
+    CUSTOM_COMMAND = "custom_command"
+    CUSTOM_WEBHOOK = "custom_webhook"
+
+    # Data operations
+    DATA_PROCESS = "data_process"
+    DATA_ANALYZE = "data_analyze"
+    DATA_EXPORT = "data_export"
+    DATA_IMPORT = "data_import"
+
+    # Network operations
+    NETWORK_TEST = "network_test"
+    NETWORK_SCAN = "network_scan"
+    NETWORK_MONITOR = "network_monitor"
+
+    # FTP operations
+    FTP_UPLOAD = "ftp_upload"
+    FTP_DOWNLOAD = "ftp_download"
+    FTP_LIST = "ftp_list"
+    FTP_DELETE = "ftp_delete"
+    FTP_MKDIR = "ftp_mkdir"
+    FTP_RMDIR = "ftp_rmdir"
+    FTP_RENAME = "ftp_rename"
+    FTP_INFO = "ftp_info"
+    FTP_TEST = "ftp_test"
+
+    # SSL operations
+    SSL_OPERATION = "ssl_operation"
+
+    # Vector Store operations
+    VECTOR_STORE_DEPLOY = "vector_store_deploy"
+    VECTOR_STORE_CONFIGURE = "vector_store_configure"
+    VECTOR_STORE_SCALE = "vector_store_scale"
+    VECTOR_STORE_UPDATE = "vector_store_update"
+    VECTOR_STORE_DELETE = "vector_store_delete"
+    VECTOR_STORE_STATUS = "vector_store_status"
+    VECTOR_STORE_LOGS = "vector_store_logs"
+    VECTOR_STORE_BACKUP = "vector_store_backup"
+    VECTOR_STORE_RESTORE = "vector_store_restore"
+    VECTOR_STORE_MONITOR = "vector_store_monitor"
+
+    # LLM operations
+    LLM_INFERENCE = "llm_inference"
+    LLM_TRAIN = "llm_train"
+    LLM_FINE_TUNE = "llm_fine_tune"
+    LLM_EVALUATE = "llm_evaluate"
+    LLM_DEPLOY = "llm_deploy"
+    LLM_SCALE = "llm_scale"
+    LLM_MONITOR = "llm_monitor"
+    LLM_LOGS = "llm_logs"
+    LLM_BACKUP = "llm_backup"
+    LLM_RESTORE = "llm_restore"
+    LLM_CONFIGURE = "llm_configure"
+    LLM_DELETE = "llm_delete"
+
+    # Test operations
+    TEST_DISCOVERY = "test_discovery"
+    TEST_RUN = "test_run"
+    TEST_DEBUG = "test_debug"
+    TEST_COVERAGE = "test_coverage"
+    TEST_LINT = "test_lint"
+    TEST_SECURITY = "test_security"
+    TEST_PERFORMANCE = "test_performance"
+    TEST_INTEGRATION = "test_integration"
+    TEST_UNIT = "test_unit"
+    TEST_E2E = "test_e2e"
+    TEST_CONFIGURE = "test_configure"
+    TEST_REPORT = "test_report"
+
+    # Kind operations (additional)
+    KIND_CLUSTER_CONFIGURE = "kind_cluster_configure"
+    KIND_CLUSTER_START = "kind_cluster_start"
+    KIND_CLUSTER_STOP = "kind_cluster_stop"
+    KIND_CLUSTER_RESTART = "kind_cluster_restart"
+    KIND_CLUSTER_STATUS = "kind_cluster_status"
+    KIND_CLUSTER_LOGS = "kind_cluster_logs"
+    KIND_CLUSTER_BACKUP = "kind_cluster_backup"
+    KIND_CLUSTER_RESTORE = "kind_cluster_restore"
+
+    # ArgoCD operations
+    ARGOCD_INIT = "argocd_init"
+    ARGOCD_DEPLOY = "argocd_deploy"
+    ARGOCD_SYNC = "argocd_sync"
+    ARGOCD_ROLLBACK = "argocd_rollback"
+    ARGOCD_DELETE = "argocd_delete"
+    ARGOCD_STATUS = "argocd_status"
+    ARGOCD_LOGS = "argocd_logs"
+    ARGOCD_CONFIGURE = "argocd_configure"
+    ARGOCD_UPDATE = "argocd_update"
+    ARGOCD_SCALE = "argocd_scale"
+    ARGOCD_MONITOR = "argocd_monitor"
+    ARGOCD_BACKUP = "argocd_backup"
+    ARGOCD_RESTORE = "argocd_restore"
+
+    # Docker Hub operations
+    DOCKER_HUB_IMAGES = "docker_hub_images"
+    DOCKER_HUB_IMAGE_INFO = "docker_hub_image_info"
+    DOCKER_HUB_SEARCH = "docker_hub_search"
+
+    # Docker Network operations
+    DOCKER_NETWORK_LS = "docker_network_ls"
+    DOCKER_NETWORK_INSPECT = "docker_network_inspect"
+    DOCKER_NETWORK_CREATE = "docker_network_create"
+    DOCKER_NETWORK_CONNECT = "docker_network_connect"
+    DOCKER_NETWORK_DISCONNECT = "docker_network_disconnect"
+    DOCKER_NETWORK_RM = "docker_network_rm"
+
+    # Docker Volume operations
+    DOCKER_VOLUME_LS = "docker_volume_ls"
+    DOCKER_VOLUME_CREATE = "docker_volume_create"
+    DOCKER_VOLUME_INSPECT = "docker_volume_inspect"
+    DOCKER_VOLUME_RM = "docker_volume_rm"
+    DOCKER_VOLUME_PRUNE = "docker_volume_prune"
+
+    # Docker Search operations
+    DOCKER_SEARCH_CLI = "docker_search_cli"
+
+    # SSH operations
+    SSH_CONNECT = "ssh_connect"
+    SSH_EXEC = "ssh_exec"
+
+
+

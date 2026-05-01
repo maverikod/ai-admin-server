@@ -1,0 +1,37 @@
+"""Probe: load mcp_proxy_adapter config after patch."""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CFG = ROOT / "config" / "config.json"
+
+
+def main() -> None:
+    os.environ.setdefault(
+        "PYTHONPATH", str(ROOT / ".venv" / "lib" / "python3.12" / "site-packages")
+    )
+    # Import adapter config from the project venv
+    from mcp_proxy_adapter.config import get_config
+
+    cfg = get_config()
+    cfg.config_path = str(CFG)
+    cfg.load_config()
+    data = cfg.get_all()
+    reg = data.get("registration") or {}
+    print("registration.enabled", reg.get("enabled"))
+    print("registration.register_url", reg.get("register_url"))
+    print("server.advertised_host", (data.get("server") or {}).get("advertised_host"))
+    sslr = reg.get("ssl") or {}
+    for k in ("cert", "key", "ca"):
+        p = sslr.get(k)
+        ok = p and Path(p).is_file()
+        print(f"registration.ssl.{k}_exists", ok)
+
+
+if __name__ == "__main__":
+    main()

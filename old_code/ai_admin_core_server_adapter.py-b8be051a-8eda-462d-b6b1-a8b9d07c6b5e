@@ -1,0 +1,514 @@
+from ai_admin.core.custom_exceptions import ConfigurationError, SSLError
+"""Server adapter for switching between uvicorn and hypercorn.
+
+This module provides a unified interface for running ASGI servers,
+automatically selecting the appropriate server based on configuration
+and requirements.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import ssl
+from typing import Dict, Any, Optional, List
+from pathlib import Path
+import uvicorn
+import hypercorn.asyncio
+from .hypercorn_config import HypercornConfig as AIAdminHypercornConfig
+from .server_exceptions import (
+    ServerStartupError,
+    ServerConfigError,
+    SSLServerConfigError,
+)
+
+
+class ServerAdapter:
+    """Adapter for switching between uvicorn and hypercorn servers."""
+
+    def __init__(
+        self,
+        app: Any,
+        ssl_config: Optional[Dict[str, Any]] = None,
+        prefer_hypercorn: bool = True,
+    ):
+        """
+        Initialize server adapter.
+
+        Args:
+            app: ASGI application
+            ssl_config: SSL configuration dictionary
+            prefer_hypercorn: Whether to prefer hypercorn over uvicorn
+        """
+        self.app = app
+        self.ssl_config = ssl_config or {}
+        self.prefer_hypercorn = prefer_hypercorn
+        self.hypercorn_config_manager = AIAdminHypercornConfig()
+
+    async def run_server(
+        self,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        workers: int = 1,
+        reload: bool = False,
+        log_level: str = "info",
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+        ssl_verify_mode: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Run server with automatic server selection.
+
+        Args:
+            host: Server host
+            port: Server port
+            workers: Number of worker processes
+            reload: Whether to enable auto-reload
+            log_level: Logging level
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+            ssl_verify_mode: SSL verification mode
+            **kwargs: Additional server parameters
+
+        Raises:
+            ServerStartupError: If server startup fails
+            ServerConfigError: If server configuration fails
+        """
+        try:
+            # Determine if SSL is enabled
+            ssl_enabled = self._is_ssl_enabled(ssl_keyfile, ssl_certfile)
+
+            # Select appropriate server
+            server_type = self._select_server(ssl_enabled, workers, reload)
+
+            # Log server selection
+            reason = self._get_selection_reason(ssl_enabled, workers, reload)
+            self._log_server_selection(server_type, reason)
+
+            # Run selected server
+            if server_type == "uvicorn":
+                await self._run_uvicorn(
+                    host,
+                    port,
+                    reload,
+                    log_level,
+                    ssl_keyfile,
+                    ssl_certfile,
+                    ssl_ca_certs,
+                    ssl_verify_mode,
+                    **kwargs,
+                )
+            else:
+                await self._run_hypercorn(
+                    host,
+                    port,
+                    workers,
+                    log_level,
+                    ssl_keyfile,
+                    ssl_certfile,
+                    ssl_ca_certs,
+                    ssl_verify_mode,
+                    **kwargs,
+                )
+
+        except ConfigurationError as e:
+            raise ServerStartupError(
+                f"Failed to start server: {e}",
+                server_type="unknown",
+                startup_config={
+                    "host": host,
+                    "port": port,
+                    "workers": workers,
+                    "ssl_enabled": ssl_enabled,
+                },
+            ) from e
+
+    def _select_server(self, ssl_enabled: bool, workers: int, reload: bool) -> str:
+        """
+        Select appropriate server based on configuration.
+
+        Args:
+            ssl_enabled: Whether SSL is enabled
+            workers: Number of workers
+            reload: Whether auto-reload is enabled
+
+        Returns:
+            Server type ('uvicorn' or 'hypercorn')
+        """
+        # Always use hypercorn for SSL/mTLS support
+        if ssl_enabled:
+            return "hypercorn"
+
+        # Use hypercorn for production (multiple workers)
+        if workers > 1:
+            return "hypercorn"
+
+        # Use uvicorn only for development (reload mode) when no SSL
+        if reload and not ssl_enabled:
+            return "uvicorn"
+
+        # Default to hypercorn for better SSL/mTLS support
+        return "hypercorn"
+
+    async def _run_uvicorn(
+        self,
+        host: str,
+        port: int,
+        reload: bool,
+        log_level: str,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+        ssl_verify_mode: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Run server using uvicorn.
+
+        Args:
+            host: Server host
+            port: Server port
+            reload: Whether to enable auto-reload
+            log_level: Logging level
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+            ssl_verify_mode: SSL verification mode
+            **kwargs: Additional uvicorn parameters
+        """
+        try:
+            # Configure SSL for uvicorn
+            ssl_config = self._configure_uvicorn_ssl(
+                ssl_keyfile, ssl_certfile, ssl_ca_certs, ssl_verify_mode
+            )
+
+            # Create uvicorn config
+            config = uvicorn.Config(
+                app=self.app,
+                host=host,
+                port=port,
+                reload=reload,
+                log_level=log_level.lower(),
+                **ssl_config,
+                **kwargs,
+            )
+
+            # Create and run server
+            server = uvicorn.Server(config)
+            await server.serve()
+
+        except SSLError as e:
+            raise ServerStartupError(
+                f"Failed to start uvicorn server: {e}",
+                server_type="uvicorn",
+                startup_config={
+                    "host": host,
+                    "port": port,
+                    "reload": reload,
+                    "ssl_enabled": bool(ssl_keyfile and ssl_certfile),
+                },
+            ) from e
+
+    async def _run_hypercorn(
+        self,
+        host: str,
+        port: int,
+        workers: int,
+        log_level: str,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+        ssl_verify_mode: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Run server using hypercorn.
+
+        Args:
+            host: Server host
+            port: Server port
+            workers: Number of workers
+            log_level: Logging level
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+            ssl_verify_mode: SSL verification mode
+            **kwargs: Additional hypercorn parameters
+        """
+        try:
+            # Configure SSL for hypercorn
+            ssl_config = self._configure_hypercorn_ssl(
+                ssl_keyfile, ssl_certfile, ssl_ca_certs, ssl_verify_mode
+            )
+
+            # Create hypercorn config
+            self.hypercorn_config_manager.host = host
+            self.hypercorn_config_manager.port = port
+            self.hypercorn_config_manager.ssl_config = ssl_config
+
+            config = self.hypercorn_config_manager.create_config(
+                ssl_enabled=bool(ssl_keyfile and ssl_certfile)
+            )
+
+            # Override with additional parameters
+            for key, value in kwargs.items():
+                if hasattr(config, key):
+                    setattr(config, key, value)
+
+            # Run server
+            await hypercorn.asyncio.serve(self.app, config)
+
+        except SSLError as e:
+            raise ServerStartupError(
+                f"Failed to start hypercorn server: {e}",
+                server_type="hypercorn",
+                startup_config={
+                    "host": host,
+                    "port": port,
+                    "workers": workers,
+                    "ssl_enabled": bool(ssl_keyfile and ssl_certfile),
+                },
+            ) from e
+
+    def _configure_uvicorn_ssl(
+        self,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+        ssl_verify_mode: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Configure SSL settings for uvicorn.
+
+        Args:
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+            ssl_verify_mode: SSL verification mode
+
+        Returns:
+            SSL configuration dictionary for uvicorn
+        """
+        ssl_config = {}
+
+        if ssl_keyfile and ssl_certfile:
+            # Validate SSL files
+            validation_errors = self._validate_ssl_files(
+                ssl_keyfile, ssl_certfile, ssl_ca_certs
+            )
+            if validation_errors:
+                raise SSLServerConfigError(
+                    f"SSL file validation failed: {', '.join(validation_errors)}",
+                    ssl_config={
+                        "ssl_keyfile": ssl_keyfile,
+                        "ssl_certfile": ssl_certfile,
+                        "ssl_ca_certs": ssl_ca_certs,
+                    },
+                )
+
+            ssl_config["ssl_keyfile"] = ssl_keyfile
+            ssl_config["ssl_certfile"] = ssl_certfile
+
+            if ssl_ca_certs:
+                ssl_config["ssl_ca_certs"] = ssl_ca_certs
+
+            if ssl_verify_mode:
+                ssl_config["ssl_verify_mode"] = ssl_verify_mode
+
+        return ssl_config
+
+    def _configure_hypercorn_ssl(
+        self,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+        ssl_verify_mode: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Configure SSL settings for hypercorn.
+
+        Args:
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+            ssl_verify_mode: SSL verification mode
+
+        Returns:
+            SSL configuration dictionary for hypercorn
+        """
+        ssl_config = {}
+
+        if ssl_keyfile and ssl_certfile:
+            # Validate SSL files
+            validation_errors = self._validate_ssl_files(
+                ssl_keyfile, ssl_certfile, ssl_ca_certs
+            )
+            if validation_errors:
+                raise SSLServerConfigError(
+                    f"SSL file validation failed: {', '.join(validation_errors)}",
+                    ssl_config={
+                        "ssl_keyfile": ssl_keyfile,
+                        "ssl_certfile": ssl_certfile,
+                        "ssl_ca_certs": ssl_ca_certs,
+                    },
+                )
+
+            ssl_config.update(
+                {
+                    "enabled": True,
+                    "cert_file": ssl_certfile,
+                    "key_file": ssl_keyfile,
+                    "verify_client": False,
+                    "client_cert_required": False,
+                }
+            )
+
+            if ssl_ca_certs:
+                ssl_config["ca_cert"] = ssl_ca_certs
+
+            if ssl_verify_mode:
+                verify_mode = self._get_ssl_verify_mode_from_string(ssl_verify_mode)
+                if verify_mode == ssl.CERT_REQUIRED:
+                    ssl_config["client_cert_required"] = True
+                elif verify_mode == ssl.CERT_OPTIONAL:
+                    ssl_config["verify_client"] = True
+
+        return ssl_config
+
+    def _validate_ssl_files(
+        self,
+        ssl_keyfile: Optional[str] = None,
+        ssl_certfile: Optional[str] = None,
+        ssl_ca_certs: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Validate SSL certificate files.
+
+        Args:
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+            ssl_ca_certs: SSL CA certificates file path
+
+        Returns:
+            List of validation error messages
+        """
+        errors = []
+
+        if ssl_keyfile and not Path(ssl_keyfile).exists():
+            errors.append(f"SSL key file not found: {ssl_keyfile}")
+
+        if ssl_certfile and not Path(ssl_certfile).exists():
+            errors.append(f"SSL certificate file not found: {ssl_certfile}")
+
+        if ssl_ca_certs and not Path(ssl_ca_certs).exists():
+            errors.append(f"SSL CA certificates file not found: {ssl_ca_certs}")
+
+        return errors
+
+    def _get_ssl_verify_mode_from_string(self, verify_mode_str: str) -> ssl.VerifyMode:
+        """
+        Convert string SSL verify mode to ssl.VerifyMode.
+
+        Args:
+            verify_mode_str: SSL verify mode string
+
+        Returns:
+            SSL verify mode enum value
+        """
+        verify_mode_map = {
+            "none": ssl.CERT_NONE,
+            "optional": ssl.CERT_OPTIONAL,
+            "required": ssl.CERT_REQUIRED,
+        }
+
+        mode = verify_mode_str.lower()
+        if mode not in verify_mode_map:
+            raise ServerConfigError(
+                f"Invalid SSL verify mode: {verify_mode_str}",
+                config_type="ssl_verify_mode",
+                config_data={"verify_mode": verify_mode_str},
+            )
+
+        return verify_mode_map[mode]
+
+    def _is_ssl_enabled(
+        self, ssl_keyfile: Optional[str] = None, ssl_certfile: Optional[str] = None
+    ) -> bool:
+        """
+        Check if SSL is enabled based on certificate files.
+
+        Args:
+            ssl_keyfile: SSL key file path
+            ssl_certfile: SSL certificate file path
+
+        Returns:
+            True if SSL is enabled
+        """
+        return bool(ssl_keyfile and ssl_certfile)
+
+    def _get_server_info(self, server_type: str) -> Dict[str, Any]:
+        """
+        Get server information.
+
+        Args:
+            server_type: Type of server
+
+        Returns:
+            Server information dictionary
+        """
+        server_info = {
+            "uvicorn": {
+                "name": "Uvicorn",
+                "description": "Lightning-fast ASGI server",
+                "supports_ssl": True,
+                "supports_workers": False,
+                "supports_reload": True,
+                "best_for": ["development", "simple_ssl"],
+            },
+            "hypercorn": {
+                "name": "Hypercorn",
+                "description": "ASGI server with HTTP/2 and WebSocket support",
+                "supports_ssl": True,
+                "supports_workers": True,
+                "supports_reload": False,
+                "best_for": ["production", "mtls", "multiple_workers"],
+            },
+        }
+
+        return server_info.get(server_type, {})
+
+    def _log_server_selection(self, server_type: str, reason: str) -> None:
+        """
+        Log server selection decision.
+
+        Args:
+            server_type: Selected server type
+            reason: Reason for selection
+        """
+        # This would typically use a logger
+        print(f"Selected {server_type} server: {reason}")
+
+    def _get_selection_reason(
+        self, ssl_enabled: bool, workers: int, reload: bool
+    ) -> str:
+        """
+        Get reason for server selection.
+
+        Args:
+            ssl_enabled: Whether SSL is enabled
+            workers: Number of workers
+            reload: Whether auto-reload is enabled
+
+        Returns:
+            Reason string
+        """
+        if reload:
+            return "auto-reload enabled (development mode)"
+        elif workers > 1:
+            return f"multiple workers ({workers})"
+        elif ssl_enabled and self.prefer_hypercorn:
+            return "SSL enabled with hypercorn preference"
+        else:
+            return "default selection"

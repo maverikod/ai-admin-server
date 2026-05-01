@@ -1,0 +1,112 @@
+"""
+Queue Remove Task Command
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+
+This command allows removing a specific task from the queue.
+"""
+
+import logging
+from typing import Dict, Any, Optional, List
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.default_security_adapter import DefaultSecurityAdapter
+from ai_admin.core.custom_exceptions import CustomError, ValidationError
+from ai_admin.task_queue.queue_manager import QueueManager
+
+logger = logging.getLogger(__name__)
+
+
+class QueueRemoveTaskCommand(BaseUnifiedCommand):
+    """Command to remove a specific task from the queue."""
+
+    def __init__(self):
+        """Initialize QueueRemoveTaskCommand."""
+        super().__init__()
+        self.security_adapter = DefaultSecurityAdapter()
+        self.name = "queue_remove_task"
+    async def execute(
+        self,
+        task_id: str,
+        force: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+     ) -> Dict[str, Any]:
+        """
+        Remove a specific task from the queue.
+
+        Args:
+            task_id: ID of the task to remove
+            force: Force remove even if task is running
+            user_roles: User roles for security validation
+            **kwargs: Additional parameters
+
+        Returns:
+            Dict containing the result of the remove operation
+    """
+        try:
+            if not task_id:
+                raise ValidationError("Task ID is required")
+
+            is_valid, error_msg = await self._validate_security(
+                operation="queue_remove_task",
+                user_roles=user_roles,
+                **kwargs,
+            )
+            if not is_valid:
+                raise CustomError(f"Security validation failed: {error_msg}")
+
+            queue_manager = QueueManager()
+
+            task = await queue_manager.get_task(task_id)
+            if not task:
+                raise CustomError(f"Task {task_id} not found")
+
+            if task.status == "running" and not force:
+                raise CustomError(
+                    f"Task {task_id} is currently running. Use force=True to remove it"
+                )
+
+            success = await queue_manager.remove_task(task_id, force=force)
+            if not success:
+                raise CustomError(f"Failed to remove task {task_id}")
+
+            return {
+                "message": f"Task {task_id} removed successfully",
+                "task_id": task_id,
+                "removed_status": task.status,
+                "force_removed": force and task.status == "running",
+                "removed_at": task.updated_at,
+            }
+
+        except ValidationError as e:
+            logger.error(f"Validation error in queue_remove_task: {e}")
+            raise CustomError(f"Validation error: {str(e)}")
+        except CustomError:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in queue_remove_task: {e}")
+            raise CustomError(f"Failed to remove task: {str(e)}")
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Get the command schema."""
+        return {
+            "name": self.name,
+            "description": "Remove a specific task from the queue",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string",
+                        "description": "ID of the task to remove",
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Force remove even if task is running",
+                        "default": False,
+                    },
+                },
+                "required": ["task_id"],
+            },
+        }

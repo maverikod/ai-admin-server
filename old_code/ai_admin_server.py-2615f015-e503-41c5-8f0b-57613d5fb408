@@ -1,0 +1,156 @@
+from ai_admin.core.custom_exceptions import SSLError
+"""AI Admin MCP Server with enhanced SSL/mTLS integration.
+
+This module provides the main server implementation with support for:
+- HTTPS only mode
+- mTLS mode with role-based authentication
+- Token authentication mode
+- Automatic mode detection
+- Integration with AppFactory for application creation
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+import sys
+import asyncio
+import argparse
+from pathlib import Path
+
+import logging
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from ai_admin.core.server import ServerManager  # noqa: E402
+
+
+def validate_ssl_mtls_configuration(args: argparse.Namespace) -> bool:
+    """
+    Validate SSL/mTLS configuration arguments.
+
+    Args:
+        args: Parsed command line arguments
+
+    Returns:
+        True if configuration is valid, False otherwise
+    """
+    logger = logging.getLogger("ai_admin")
+
+    # Check for conflicting arguments
+    if args.disable_ssl and (not args.disable_mtls or not args.disable_token_auth):
+        logger.warning("SSL is disabled but mTLS or token auth is enabled")
+        logger.warning("mTLS and token auth require SSL to be enabled")
+        return False
+
+    # Check SSL mode compatibility
+    if args.ssl_mode:
+        if args.ssl_mode == "none" and (not args.disable_ssl):
+            logger.warning("SSL mode is 'none' but SSL is not disabled")
+            return False
+        elif args.ssl_mode in ["mtls", "token"] and args.disable_ssl:
+            logger.warning(f"SSL mode is '{args.ssl_mode}' but SSL is disabled")
+            return False
+
+    return True
+
+
+async def main() -> None:
+    """Main entry point for AI Admin server."""
+    parser = argparse.ArgumentParser(description="AI Admin MCP Server with SSL/mTLS")
+    parser.add_argument("--config", help="Path to configuration file")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--host", help="Server host address")
+    parser.add_argument("--port", type=int, help="Server port")
+    parser.add_argument(
+        "--ssl-mode",
+        choices=["https_only", "mtls", "token", "none"],
+        help="Force specific authentication mode",
+    )
+    parser.add_argument(
+        "--disable-ssl", action="store_true", help="Disable SSL support"
+    )
+    parser.add_argument(
+        "--disable-mtls", action="store_true", help="Disable mTLS support"
+    )
+    parser.add_argument(
+        "--disable-token-auth", action="store_true", help="Disable token authentication"
+    )
+    parser.add_argument(
+        "--disable-cors", action="store_true", help="Disable CORS support"
+    )
+
+    args = parser.parse_args()
+
+    # Validate SSL/mTLS configuration
+    if not validate_ssl_mtls_configuration(args):
+        logger = logging.getLogger("ai_admin")
+        logger.error("Invalid SSL/mTLS configuration")
+        sys.exit(1)
+
+    # Set environment variables
+    if args.debug:
+        os.environ["DEBUG"] = "true"
+    if args.config:
+        os.environ["CONFIG_PATH"] = args.config
+    if args.host:
+        os.environ["SERVER_HOST"] = args.host
+    if args.port:
+        os.environ["SERVER_PORT"] = str(args.port)
+    if args.ssl_mode:
+        os.environ["SSL_MODE"] = args.ssl_mode
+
+    # Create and run server
+    server_manager = ServerManager(config_path=args.config)
+
+    try:
+        # Initialize server manager
+        await server_manager.initialize()
+        # Create application with SSL/mTLS support
+        app = await server_manager.create_app(
+            app_name="AI Admin",
+            app_version="1.0.0",
+            description="AI Admin API Server with SSL/mTLS support",
+            enable_ssl=not args.disable_ssl,
+            enable_mtls=not args.disable_mtls,
+            enable_cors=not args.disable_cors,
+            enable_token_auth=not args.disable_token_auth,
+        )
+
+        # Log SSL/mTLS configuration
+        logger = logging.getLogger("ai_admin")
+        ssl_summary = await server_manager.get_ssl_context_summary()
+        mtls_summary = await server_manager.get_mtls_auth_summary()
+        token_summary = await server_manager.get_token_auth_summary()
+
+        logger.info(f"SSL Context Summary: {ssl_summary}")
+        logger.info(f"mTLS Auth Summary: {mtls_summary}")
+        logger.info(f"Token Auth Summary: {token_summary}")
+
+        # Run server
+        await server_manager.run_server(app)
+    except KeyboardInterrupt:
+        logger = logging.getLogger("ai_admin")
+        logger.info("Server stopped by user")
+    except SSLError as e:
+        logger = logging.getLogger("ai_admin")
+        logger.error(f"Server startup failed: {e}")
+
+        # Enhanced error handling for SSL/mTLS specific errors
+        if "SSL" in str(e) or "certificate" in str(e).lower():
+            logger.error("SSL/Certificate related error detected")
+            logger.error("Please check your SSL configuration and certificate files")
+        elif "mTLS" in str(e) or "mutual" in str(e).lower():
+            logger.error("mTLS related error detected")
+            logger.error("Please check your mTLS configuration and client certificates")
+        elif "token" in str(e).lower():
+            logger.error("Token authentication related error detected")
+            logger.error("Please check your token configuration and JWT settings")
+
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

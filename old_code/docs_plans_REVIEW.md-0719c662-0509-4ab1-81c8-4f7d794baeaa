@@ -1,0 +1,69 @@
+# Plan Review: Issues Found and Fixed
+
+Date: 2026-05-02
+
+## Issues Found
+
+### 1. CRITICAL: Wrong step order — delete before test
+**Where:** INDEX.md — Step 5 was "Delete legacy", Step 7 was "Tests"
+**Problem:** Deleting code before running tests means no fallback if tests fail.
+**Fix:** Swapped: Step 5 = Tests, Step 6 = Delete legacy, Step 7 = Final cleanup.
+Merged old Step 6 (deduplicate) into Steps 1 (analysis) and 7 (cleanup).
+
+### 2. CRITICAL: `create_text_file` used for .py files
+**Where:** step_2/2_2/TASKS.md, step_2/2_3_to_2_10/TASKS.md, step_3/TASKS.md
+**Problem:** `create_text_file` only supports `.md/.txt/.rst/.adoc`. Using it for `.py` will fail.
+**Fix:** Replaced with `cst_create_file(project_id, file_path, docstring)` + `cst_modify_tree` + `cst_save_tree` pattern. Added CRITICAL note at top of affected TASKS files.
+
+### 3. MODERATE: Broken links in INDEX files
+**Where:** step_3/INDEX.md links to 3_2/...3_10/, step_4/INDEX.md links to 4_1/...4_10/, etc.
+**Problem:** Actual TASKS files are in different paths (TASKS.md flat, or *_all/INDEX.md).
+**Status:** Not yet fixed. Links are navigational only — Haiku follows TASKS.md directly.
+**Recommendation:** Either create missing directories, or update INDEX links.
+
+### 4. MODERATE: Inconsistent command file paths in Step 4 table
+**Where:** step_4/TASKS.md per-command variable table
+**Problem:** Mixed `commands/docker_build_command.py` and `ai_admin/commands/vast_create_command.py`
+**Status:** Noted in Step 1 INDEX. Step 1.10 dependency_matrix.md will resolve via `list_project_files`.
+**Recommendation:** Haiku must run `list_project_files(glob="**/commands/**")` to discover real paths.
+
+### 5. LOW: Step 5.8 references file deleted in Step 5.4
+**Where:** step_5/INDEX.md — 5.8 says "Clean up ai_admin/task_queue/__init__.py"
+**Problem:** Step 5.4 deletes `ai_admin/task_queue/` entirely. 5.8 cannot clean a deleted file.
+**Fix:** With new ordering (delete is Step 6), this no longer applies. Step 6 handles deletion.
+
+### 6. LOW: Step 6 INDEX says "independent of migration" but TASKS depend on it
+**Where:** step_6/INDEX.md notes section
+**Problem:** Note says "Steps 6.1–6.5 can be done in parallel with Step 4" but TASKS include
+`fulltext_search("QueueManager()")` which requires Step 4 completion.
+**Fix:** With new ordering, old Step 6 is merged. Duplicate diffs (6.1–6.5) moved to Step 1.
+Code cleanup (6.8–6.10) moved to Step 7.
+
+### 7. LOW: `create_text_file` for scripts/*.py
+**Where:** step_3/TASKS.md — smoke_test_queue.py
+**Problem:** `create_text_file` won't work for `.py`.
+**Fix needed:** Use `cst_create_file` or `universal_file_save` for smoke test script.
+**Status:** Not yet fixed in file. Documented here.
+
+### 8. INFO: Step 2.1 TASKS uses `create_text_file` for `ai_admin/jobs/__init__.py`
+**Where:** step_2/2_1/TASKS.md
+**Problem:** Same `.py` issue as #2.
+**Fix needed:** Use `cst_create_file` instead.
+**Status:** Not yet fixed in file. Documented here.
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| docs/plans/INDEX.md | Reordered steps: 5=Tests, 6=Delete, 7=Cleanup. Added .py creation note. |
+| docs/plans/step_1/INDEX.md | Added output artifacts list, duplicate diff note, command paths note. |
+| docs/plans/step_2/2_2/TASKS.md | Replaced create_text_file with cst_create_file pattern. |
+| docs/plans/step_2/2_3_to_2_10/TASKS.md | Added CRITICAL header about cst_create_file. |
+| docs/plans/step_3/TASKS.md | Added CRITICAL header about cst_create_file. |
+
+## Remaining Known Issues (not yet fixed in files)
+
+1. Broken INDEX links in step_3/4/5/6/7 — links point to non-existent subdirectories
+2. step_2/2_1/TASKS.md still uses create_text_file for __init__.py
+3. step_3/TASKS.md still uses create_text_file for smoke_test_queue.py
+4. step_4/TASKS.md command path table needs real paths from list_project_files

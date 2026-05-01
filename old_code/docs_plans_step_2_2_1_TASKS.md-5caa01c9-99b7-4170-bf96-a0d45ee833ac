@@ -1,0 +1,76 @@
+# 2.1 TASKS — Atomic Instructions for Haiku
+
+## TASK 1
+**Action:** Check if ai_admin/jobs/ already exists
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/jobs/*"
+)
+```
+**If count > 0:** skip TASK 2-4, go to TASK 5
+
+## TASK 2
+**Action:** Create __init__.py
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/jobs/__init__.py",
+  content="""\
+\"\"\"Job classes for queuemgr-based task execution.\"\"\"
+
+from .docker_job import DockerJob
+from .git_job import GitJob
+from .github_job import GitHubJob
+from .k8s_job import K8sJob
+from .vast_job import VastJob
+from .ftp_job import FtpJob
+from .ollama_job import OllamaJob
+from .ssl_job import SslJob
+from .system_job import SystemJob
+
+__all__ = [
+    "DockerJob", "GitJob", "GitHubJob", "K8sJob",
+    "VastJob", "FtpJob", "OllamaJob", "SslJob", "SystemJob",
+]
+"""
+)
+```
+**Note:** Imports will fail until all Job files exist — that is expected
+
+## TASK 3
+**Action:** Verify import of QueueJobBase works in project venv
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="python",
+  args=["-c", "from queuemgr.jobs.base_core import QueueJobBase; print('OK')"]
+)
+```
+**Expected output:** "OK"
+**If error:** run step 3.1 first (pip install queuemgr)
+
+## TASK 4
+**Action:** Check queuemgr version
+```
+project_pip_show(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  packages=["queuemgr"]
+)
+```
+**Save:** version string for requirements.txt
+
+## TASK 5
+**Action:** Verify __init__.py is indexed
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/jobs/__init__.py"
+)
+```
+**Expected:** count=1
+
+## DONE CHECK
+- [ ] ai_admin/jobs/__init__.py created
+- [ ] QueueJobBase import verified working
+- [ ] queuemgr version noted

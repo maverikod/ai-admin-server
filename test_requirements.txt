@@ -1,0 +1,5 @@
+# Requirements for comprehensive test suite
+aiohttp>=3.8.0
+click>=8.0.0
+rich>=13.0.0
+asyncio

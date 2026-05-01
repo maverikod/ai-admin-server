@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-08-11T17:00:50.778352",
+  "status": "SUCCESS",
+  "gpu_tests_passed": 2,
+  "total_tests": 2,
+  "ftp_upload_success": true,
+  "hostname": "VASILIY-NOTE",
+  "gpu_info": {
+    "gpu_0": {
+      "name": "NVIDIA GeForce MX150",
+      "memory_total_gb": 1.95,
+      "memory_free_gb": 1.95,
+      "compute_capability": "6.1",
+      "multi_processor_count": 3
+    }
+  }
+}

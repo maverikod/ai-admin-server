@@ -1,0 +1,16 @@
+"""Inspect LifespanManager."""
+from __future__ import annotations
+
+import inspect
+from mcp_proxy_adapter.api.core import LifespanManager
+
+print("LifespanManager methods:")
+for n in sorted(dir(LifespanManager)):
+    if n.startswith("_"):
+        continue
+    a = getattr(LifespanManager, n)
+    if callable(a):
+        try:
+            print(n, inspect.signature(a))
+        except Exception:
+            print(n)

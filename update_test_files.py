@@ -1,0 +1,62 @@
+
+#!/usr/bin/env python3
+"""
+Script to update all test files to use BaseTester.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+import re
+
+def update_test_file(filename):
+    """Update a test file to use BaseTester."""
+    if not os.path.exists(filename):
+        return
+    
+    with open(filename, 'r') as f:
+        content = f.read()
+    
+    content = re.sub(
+        'import asyncio\nfrom typing import List, Dict, Any\nfrom test_base import BaseTester',
+        content
+    )
+    
+    # Update class definition
+    class_name = filename.replace('test_', '').replace('.py', '').title() + 'Tests'
+    pattern = (
+        r'class ' + re.escape(class_name) + r':\s*\n\s*"""([^"]*)"""\s*\n\s*def __init__\(self, base_url: str, headers: Dict\[str, str\] = None\):\s*\n\s*'
+        r'self\.base_url = base_url\s*\n\s*self\.headers = headers or \{\}\s*\n\s*self\.console = Console\(\)'
+    )
+    content = re.sub(
+        pattern,
+        rf'class {class_name}(BaseTester):\n    """\1"""',
+        content
+    )
+    
+    # Update test methods to use _make_request
+    # This is a simplified version - would need more complex regex for full automation
+    
+    with open(filename, 'w') as f:
+        f.write(content)
+    
+    print(f"Updated {filename}")
+
+def main():
+    """Update all test files."""
+    test_files = [
+        'test_ftp.py',
+        'test_vast.py', 
+        'test_k8s.py',
+        'test_ollama.py',
+        'test_github.py',
+        'test_queue.py',
+        'test_system.py'
+    ]
+    
+    for filename in test_files:
+        update_test_file(filename)
+
+if __name__ == "__main__":
+    main()

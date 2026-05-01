@@ -1,0 +1,44 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 20000
+  },
+  "ssl": {
+    "enabled": false
+  },
+  "security": {
+    "enabled": false
+  },
+  "registration": {
+    "enabled": false,
+    "auth_method": "token",
+    "server_url": "http://127.0.0.1:3004/proxy",
+    "token": {
+      "enabled": true,
+      "token": "proxy_registration_token_123"
+    },
+    "proxy_info": {
+      "name": "mcp_example_server",
+      "capabilities": [
+        "jsonrpc",
+        "rest",
+        "proxy_registration"
+      ],
+      "endpoints": {
+        "jsonrpc": "/api/jsonrpc",
+        "rest": "/cmd",
+        "health": "/health"
+      }
+    },
+    "heartbeat": {
+      "enabled": true,
+      "interval": 30
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http"
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError, AuthorizationError
+"""Base Unified Command Template for AI Admin.
+
+This module provides a base template for all commands using the unified
+security approach with CommandSecurityMixin.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+from typing import Dict, Any
+from mcp_proxy_adapter.commands.base import Command
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from security import CommandSecurityMixin
+from ai_admin.security.base_security_adapter import AuthorizationError
+
+class BaseUnifiedCommand(Command, CommandSecurityMixin):
+    """Base class for all unified commands.
+
+    This class provides the standard template for all commands using
+    the unified security approach with CommandSecurityMixin.
+    """
+
+    def __init__(self):
+        """Initialize command with unified security."""
+        super().__init__()
+        CommandSecurityMixin.__init__(self)
+
+    async def execute(self, **kwargs) -> SuccessResult:
+        """Execute command with unified security.
+
+        This method should be overridden by subclasses to implement
+        specific command logic while maintaining security integration.
+
+        Args:
+            **kwargs: Command parameters
+
+        Returns:
+            Success or error result
+        """
+        try:
+            # Extract common parameters
+            operation = kwargs.get("operation", self._get_default_operation())
+
+            # 1. Validate security
+            is_valid, error_msg = await self._validate_security(operation, kwargs)
+            if not is_valid:
+                return ErrorResult(
+                    message=f"Security validation failed: {error_msg}",
+                    code="SECURITY_VALIDATION_FAILED"
+                )
+
+            # 2. Execute command logic (to be implemented by subclasses)
+            result = await self._execute_command_logic(**kwargs)
+
+            # 3. Audit operation
+            await self._audit_operation(operation, kwargs, result)
+
+            return SuccessResult(message=f"{self.name} completed successfully", data=result)
+
+        except AuthorizationError as e:
+            return ErrorResult(message=f"Security error: {str(e)}", code=e.code, details={"command": self.name})
+        except CustomError as e:
+            return ErrorResult(
+                message=f"{self.name} failed: {str(e)}",
+                code="COMMAND_ERROR",
+                details={"command": self.name, "error": str(e)},
+            )
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute command-specific logic.
+
+        This method should be overridden by subclasses to implement
+        the actual command functionality.
+
+        Args:
+            **kwargs: Command parameters
+
+        Returns:
+            Command result data
+        """
+        return {"status": "not_implemented", "command": self.name}
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for this command.
+
+        Returns:
+            Default operation name
+        """
+        return f"{self.name}:execute"
+
+    async def _validate_command_parameters(self, **kwargs) -> tuple[bool, str]:
+        """Validate command-specific parameters.
+
+        This method can be overridden by subclasses to add
+        command-specific parameter validation.
+
+        Args:
+            **kwargs: Command parameters
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        return True, ""
+
+    async def _pre_execution_hook(self, **kwargs) -> None:
+        """Pre-execution hook for command setup.
+
+        This method can be overridden by subclasses to perform
+        setup tasks before command execution.
+
+        Args:
+            **kwargs: Command parameters
+        """
+        pass
+
+    async def _post_execution_hook(self, result: Dict[str, Any], **kwargs) -> None:
+        """Post-execution hook for command cleanup.
+
+        This method can be overridden by subclasses to perform
+        cleanup tasks after command execution.
+
+        Args:
+            result: Command execution result
+            **kwargs: Command parameters
+        """
+        pass

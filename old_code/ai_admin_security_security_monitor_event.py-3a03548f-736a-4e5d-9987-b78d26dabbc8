@@ -1,0 +1,46 @@
+"""Module event."""
+
+from ai_admin.core.custom_exceptions import CustomError
+from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+from dataclasses import dataclass, asdict
+from enum import Enum
+import logging
+from ai_admin.settings_manager import get_settings_manager
+pass  # SecurityEventType imported where needed
+from .severity import SecuritySeverity
+pass  # SecurityAlert imported where needed
+pass  # SecurityMonitor
+from .metrics import SecurityMetrics
+
+class SecurityEvent:
+    """Security event data structure."""
+
+    event_id: str
+    event_type: SecurityEventType
+    severity: SecuritySeverity
+    component: str
+    operation: str
+    user_roles: List[str]
+    user_id: Optional[str] = None
+    timestamp: datetime = None
+    source_ip: Optional[str] = None
+    details: Dict[str, Any] = None
+    result: Any = None
+    error_message: Optional[str] = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+        if self.details is None:
+            self.details = {}
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        data = asdict(self)
+        data["event_type"] = self.event_type.value
+        data["severity"] = self.severity.value
+        data["timestamp"] = self.timestamp.isoformat()
+        return data
+

@@ -1,0 +1,464 @@
+"""
+Git Authentication Manager
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+
+This module provides authentication management for Git operations,
+including SSH key handling and token-based authentication.
+"""
+
+import os
+import stat
+import subprocess
+import tempfile
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
+import logging
+from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SshKeyInfo:
+    """Information about an SSH key."""
+    path: str
+    name: str
+    type: str  # rsa, ed25519, etc.
+    has_passphrase: bool
+    public_key: Optional[str] = None
+
+
+@dataclass
+class GitAuthConfig:
+    """Git authentication configuration."""
+    ssh_keys_dir: str = "~/.ssh"
+    github_token: Optional[str] = None
+    gitlab_token: Optional[str] = None
+    default_ssh_key: Optional[str] = None
+    ssh_agent_timeout: int = 300  # 5 minutes
+
+
+class GitAuthManager:
+    """
+    Manages Git authentication using SSH keys and tokens.
+    
+    Features:
+    - SSH key discovery and management
+    - Passphrase-protected key handling
+    - Token-based authentication
+    - SSH agent integration
+    """
+    
+    def __init__(self, config: Optional[GitAuthConfig] = None):
+        """
+        Initialize Git authentication manager.
+        
+        Args:
+            config: Authentication configuration
+        """
+        self.config = config or GitAuthConfig()
+        self.ssh_keys_dir = Path(self.config.ssh_keys_dir).expanduser()
+        self._ssh_keys_cache: List[SshKeyInfo] = []
+        self._ssh_agent_socket: Optional[str] = None
+        
+    def get_github_token(self) -> Optional[str]:
+        """Get GitHub token from configuration."""
+        return self.config.github_token
+    
+    def get_gitlab_token(self) -> Optional[str]:
+        """Get GitLab token from configuration."""
+        return self.config.gitlab_token
+    
+    def discover_ssh_keys(self) -> List[SshKeyInfo]:
+        """
+        Discover available SSH keys in the SSH directory.
+        
+        Returns:
+            List of SSH key information
+        """
+        if self._ssh_keys_cache:
+            return self._ssh_keys_cache
+            
+        keys = []
+        
+        if not self.ssh_keys_dir.exists():
+            logger.warning(f"SSH directory not found: {self.ssh_keys_dir}")
+            return keys
+            
+        # Common SSH key file patterns
+        key_patterns = [
+            "id_rsa", "id_ed25519", "id_ecdsa", "id_dsa",
+            "github_*", "gitlab_*", "bitbucket_*"
+        ]
+        
+        for pattern in key_patterns:
+            if "*" in pattern:
+                # Handle wildcard patterns
+                for key_file in self.ssh_keys_dir.glob(pattern):
+                    if key_file.is_file() and not key_file.name.endswith('.pub'):
+                        key_info = self._analyze_ssh_key(key_file)
+                        if key_info:
+                            keys.append(key_info)
+            else:
+                # Handle specific patterns
+                key_file = self.ssh_keys_dir / pattern
+                if key_file.exists() and key_file.is_file():
+                    key_info = self._analyze_ssh_key(key_file)
+                    if key_info:
+                        keys.append(key_info)
+        
+        self._ssh_keys_cache = keys
+        logger.info(f"Discovered {len(keys)} SSH keys")
+        return keys
+    
+    def _analyze_ssh_key(self, key_path: Path) -> Optional[SshKeyInfo]:
+        """
+        Analyze an SSH key file to extract information.
+        
+        Args:
+            key_path: Path to the SSH key file
+            
+        Returns:
+            SSH key information or None if invalid
+        """
+        try:
+            # Check file permissions (should be 600)
+            file_stat = key_path.stat()
+            if file_stat.st_mode & 0o777 != 0o600:
+                logger.warning(f"SSH key {key_path} has incorrect permissions")
+            
+            # Try to determine key type
+            key_type = self._detect_key_type(key_path)
+            
+            # Check if key has passphrase
+            has_passphrase = self._check_key_passphrase(key_path)
+            
+            # Get public key if available
+            public_key = self._get_public_key(key_path)
+            
+            return SshKeyInfo(
+                path=str(key_path),
+                name=key_path.name,
+                type=key_type,
+                has_passphrase=has_passphrase,
+                public_key=public_key
+            )
+            
+        except Exception as e:
+            logger.error(f"Error analyzing SSH key {key_path}: {e}")
+            return None
+    
+    def _detect_key_type(self, key_path: Path) -> str:
+        """Detect SSH key type."""
+        try:
+            with open(key_path, 'r') as f:
+                content = f.read()
+                
+            if 'BEGIN RSA PRIVATE KEY' in content:
+                return 'rsa'
+            elif 'BEGIN OPENSSH PRIVATE KEY' in content:
+                if 'ed25519' in content:
+                    return 'ed25519'
+                elif 'ecdsa' in content:
+                    return 'ecdsa'
+                else:
+                    return 'openssh'
+            elif 'BEGIN DSA PRIVATE KEY' in content:
+                return 'dsa'
+            else:
+                return 'unknown'
+                
+        except Exception:
+            return 'unknown'
+    
+    def _check_key_passphrase(self, key_path: Path) -> bool:
+        """Check if SSH key is protected with a passphrase."""
+        try:
+            # Try to load the key without passphrase
+            result = subprocess.run(
+                ['ssh-keygen', '-y', '-f', str(key_path)],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode != 0
+        except Exception:
+            return True  # Assume it has passphrase if we can't check
+    
+    def _get_public_key(self, key_path: Path) -> Optional[str]:
+        """Get public key content if available."""
+        pub_key_path = key_path.with_suffix(key_path.suffix + '.pub')
+        if pub_key_path.exists():
+            try:
+                with open(pub_key_path, 'r') as f:
+                    return f.read().strip()
+            except Exception:
+                pass
+        return None
+    
+    def get_best_ssh_key(self, preferred_type: str = 'ed25519') -> Optional[SshKeyInfo]:
+        """
+        Get the best SSH key for authentication.
+        
+        Args:
+            preferred_type: Preferred key type (ed25519, rsa, etc.)
+            
+        Returns:
+            Best SSH key or None
+        """
+        keys = self.discover_ssh_keys()
+        
+        if not keys:
+            return None
+        
+        # If default key is specified, use it
+        if self.config.default_ssh_key:
+            for key in keys:
+                if key.name == self.config.default_ssh_key:
+                    return key
+        
+        # Prefer keys without passphrase
+        no_passphrase_keys = [k for k in keys if not k.has_passphrase]
+        if no_passphrase_keys:
+            keys = no_passphrase_keys
+        
+        # Prefer specific key type
+        preferred_keys = [k for k in keys if k.type == preferred_type]
+        if preferred_keys:
+            return preferred_keys[0]
+        
+        # Return first available key
+        return keys[0]
+    
+    def setup_ssh_agent(self, key_path: str, passphrase: Optional[str] = None) -> bool:
+        """
+        Add SSH key to SSH agent.
+        
+        Args:
+            key_path: Path to SSH key
+            passphrase: Key passphrase if required
+            
+        Returns:
+            True if successful
+        """
+        try:
+            # Start SSH agent if not running
+            if not self._is_ssh_agent_running():
+                self._start_ssh_agent()
+            
+            # Add key to agent
+            cmd = ['ssh-add', key_path]
+            env = os.environ.copy()
+            
+            if passphrase:
+                # Use expect or similar to provide passphrase
+                return self._add_key_with_passphrase(key_path, passphrase)
+            else:
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                    env=env
+                )
+                return result.returncode == 0
+                
+        except Exception as e:
+            logger.error(f"Error setting up SSH agent: {e}")
+            return False
+    
+    def _is_ssh_agent_running(self) -> bool:
+        """Check if SSH agent is running."""
+        try:
+            result = subprocess.run(
+                ['ssh-add', '-l'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+    
+    def _start_ssh_agent(self) -> bool:
+        """Start SSH agent."""
+        try:
+            result = subprocess.run(
+                ['ssh-agent', '-s'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                # Parse SSH_AUTH_SOCK and SSH_AGENT_PID from output
+                for line in result.stdout.split('\n'):
+                    if line.startswith('SSH_AUTH_SOCK='):
+                        self._ssh_agent_socket = line.split('=')[1].strip(';')
+                        os.environ['SSH_AUTH_SOCK'] = self._ssh_agent_socket
+                    elif line.startswith('SSH_AGENT_PID='):
+                        os.environ['SSH_AGENT_PID'] = line.split('=')[1].strip(';')
+                
+                return True
+        except Exception as e:
+            logger.error(f"Error starting SSH agent: {e}")
+        
+        return False
+    
+    def _add_key_with_passphrase(self, key_path: str, passphrase: str) -> bool:
+        """Add SSH key with passphrase using expect."""
+        try:
+            # Create expect script
+            expect_script = f"""
+spawn ssh-add {key_path}
+expect "Enter passphrase"
+send "{passphrase}\\r"
+expect eof
+"""
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.exp', delete=False) as f:
+                f.write(expect_script)
+                expect_file = f.name
+            
+            try:
+                result = subprocess.run(
+                    ['expect', expect_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                return result.returncode == 0
+            finally:
+                os.unlink(expect_file)
+                
+        except Exception as e:
+            logger.error(f"Error adding key with passphrase: {e}")
+            return False
+    
+    def get_git_env_with_auth(self, 
+                            repository_url: str,
+                            ssh_key: Optional[SshKeyInfo] = None,
+                            token: Optional[str] = None) -> Dict[str, str]:
+        """
+        Get environment variables for Git operations with authentication.
+        
+        Args:
+            repository_url: Git repository URL
+            ssh_key: SSH key to use
+            token: Authentication token
+            
+        Returns:
+            Environment variables for Git
+        """
+        env = os.environ.copy()
+        
+        # Handle HTTPS URLs with token
+        if repository_url.startswith('https://') and token:
+            # Insert token into URL
+            if 'github.com' in repository_url:
+                # GitHub token authentication
+                if not repository_url.startswith('https://'):
+                    repository_url = repository_url.replace('git@github.com:', 'https://github.com/')
+                if not token.startswith('ghp_'):
+                    token = f"ghp_{token}"
+                env['GIT_ASKPASS'] = 'echo'
+                env['GITHUB_TOKEN'] = token
+                
+            elif 'gitlab.com' in repository_url:
+                # GitLab token authentication
+                env['GIT_ASKPASS'] = 'echo'
+                env['GITLAB_TOKEN'] = token
+        
+        # Handle SSH URLs with SSH key
+        elif repository_url.startswith('git@') and ssh_key:
+            # Set up SSH key
+            if ssh_key.has_passphrase:
+                logger.warning(f"SSH key {ssh_key.path} requires passphrase")
+                # In production, you might want to prompt for passphrase
+                # or use a secure method to get it
+            
+            # Set SSH key path
+            env['GIT_SSH_COMMAND'] = f'ssh -i {ssh_key.path} -o IdentitiesOnly=yes'
+            
+            # Add key to SSH agent if not already added
+            if not self._is_key_in_agent(ssh_key.path):
+                self.setup_ssh_agent(ssh_key.path)
+        
+        return env
+    
+    def _is_key_in_agent(self, key_path: str) -> bool:
+        """Check if SSH key is already in SSH agent."""
+        try:
+            result = subprocess.run(
+                ['ssh-add', '-l'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                # Check if our key fingerprint is in the list
+                key_fingerprint = self._get_key_fingerprint(key_path)
+                return key_fingerprint in result.stdout
+                
+        except Exception:
+            pass
+        
+        return False
+    
+    def _get_key_fingerprint(self, key_path: str) -> Optional[str]:
+        """Get SSH key fingerprint."""
+        try:
+            result = subprocess.run(
+                ['ssh-keygen', '-lf', key_path],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0:
+                # Extract fingerprint from output
+                parts = result.stdout.strip().split()
+                if len(parts) >= 2:
+                    return parts[1]
+                    
+        except Exception:
+            pass
+        
+        return None
+    
+    def configure_git_credentials(self, repository_url: str) -> Dict[str, str]:
+        """
+        Configure Git credentials for a repository.
+        
+        Args:
+            repository_url: Repository URL
+            
+        Returns:
+            Environment variables for Git
+        """
+        env = os.environ.copy()
+        
+        # Determine authentication method based on URL
+        if repository_url.startswith('https://'):
+            # HTTPS - use token authentication
+            if 'github.com' in repository_url:
+                token = self.get_github_token()
+                if token:
+                    env['GIT_ASKPASS'] = 'echo'
+                    env['GITHUB_TOKEN'] = token
+            elif 'gitlab.com' in repository_url:
+                token = self.get_gitlab_token()
+                if token:
+                    env['GIT_ASKPASS'] = 'echo'
+                    env['GITLAB_TOKEN'] = token
+                    
+        elif repository_url.startswith('git@'):
+            # SSH - use SSH key authentication
+            ssh_key = self.get_best_ssh_key()
+            if ssh_key:
+                env['GIT_SSH_COMMAND'] = f'ssh -i {ssh_key.path} -o IdentitiesOnly=yes'
+        
+        return env

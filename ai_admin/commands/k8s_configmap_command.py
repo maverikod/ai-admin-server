@@ -1,0 +1,276 @@
+"""K8s ConfigMap command."""
+
+from mcp_proxy_adapter.commands.result import SuccessResult
+
+from ai_admin.core.custom_exceptions import ConfigurationError
+
+"""Kubernetes ConfigMap command for managing ConfigMaps.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import subprocess
+
+from typing import Dict, Any, Optional, List
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+from ai_admin.security.k8s_security_adapter import K8sSecurityAdapter
+
+
+class K8sConfigMapCreateCommand:
+    """Command to create Kubernetes ConfigMaps using Python kubernetes library."""
+
+    name = "k8s_configmap"
+
+    def __init__(self):
+        """Initialize K8s ConfigMap command."""
+        super().__init__()
+        self.security_adapter = K8sSecurityAdapter()
+
+    async def execute(
+        self,
+        action: str = "create",
+        name: str = "my-configmap",
+        namespace: str = "default",
+        data: Optional[Dict[str, str]] = None,
+        from_file: Optional[str] = None,
+        from_literal: Optional[List[str]] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute K8s ConfigMap command with unified security.
+
+        Args:
+            action: ConfigMap action (create, get, delete, list)
+            name: Name of the ConfigMap
+            namespace: Kubernetes namespace
+            data: ConfigMap data
+            from_file: Create from file
+            from_literal: Create from literal values
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with ConfigMap information
+        """
+        # Use unified security approach
+        return await super().execute(
+            action=action,
+            name=name,
+            namespace=namespace,
+            data=data,
+            from_file=from_file,
+            from_literal=from_literal,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for K8s ConfigMap command."""
+        return "k8s:configmap"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute K8s ConfigMap command logic."""
+        action = kwargs.get("action", "create")
+
+        if action == "create":
+            return await self._create_configmap(**kwargs)
+        elif action == "get":
+            return await self._get_configmap(**kwargs)
+        elif action == "delete":
+            return await self._delete_configmap(**kwargs)
+        elif action == "list":
+            return await self._list_configmaps(**kwargs)
+        else:
+            raise ConfigurationError(f"Unknown ConfigMap action: {action}")
+
+    async def _create_configmap(
+        self,
+        name: str = "my-configmap",
+        namespace: str = "default",
+        data: Optional[Dict[str, str]] = None,
+        from_file: Optional[str] = None,
+        from_literal: Optional[List[str]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Create Kubernetes ConfigMap."""
+        try:
+            cmd = ["kubectl", "create", "configmap", name, "-n", namespace]
+
+            if from_file:
+                cmd.extend(["--from-file", from_file])
+            elif from_literal:
+                for literal in from_literal:
+                    cmd.extend(["--from-literal", literal])
+            elif data:
+                for key, value in data.items():
+                    cmd.extend(["--from-literal", f"{key}={value}"])
+            else:
+                raise ConfigurationError("No data provided for ConfigMap")
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise ConfigurationError(f"ConfigMap creation failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully created ConfigMap '{name}' in namespace '{namespace}'",
+                "action": "create",
+                "name": name,
+                "namespace": namespace,
+                "data": data,
+                "from_file": from_file,
+                "from_literal": from_literal,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise ConfigurationError(f"ConfigMap creation command timed out: {str(e)}")
+        except ConfigurationError as e:
+            raise ConfigurationError(f"ConfigMap creation failed: {str(e)}")
+
+    async def _get_configmap(
+        self,
+        name: str = "my-configmap",
+        namespace: str = "default",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Get Kubernetes ConfigMap."""
+        try:
+            cmd = ["kubectl", "get", "configmap", name, "-n", namespace, "-o", "yaml"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise ConfigurationError(f"ConfigMap retrieval failed: {result.stderr}")
+
+            return {
+                "message": f"Retrieved ConfigMap '{name}' from namespace '{namespace}'",
+                "action": "get",
+                "name": name,
+                "namespace": namespace,
+                "configmap_yaml": result.stdout,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise ConfigurationError(f"ConfigMap retrieval command timed out: {str(e)}")
+        except ConfigurationError as e:
+            raise ConfigurationError(f"ConfigMap retrieval failed: {str(e)}")
+
+    async def _delete_configmap(
+        self,
+        name: str = "my-configmap",
+        namespace: str = "default",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Delete Kubernetes ConfigMap."""
+        try:
+            cmd = ["kubectl", "delete", "configmap", name, "-n", namespace]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise ConfigurationError(f"ConfigMap deletion failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully deleted ConfigMap '{name}' from namespace '{namespace}'",
+                "action": "delete",
+                "name": name,
+                "namespace": namespace,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise ConfigurationError(f"ConfigMap deletion command timed out: {str(e)}")
+        except ConfigurationError as e:
+            raise ConfigurationError(f"ConfigMap deletion failed: {str(e)}")
+
+    async def _list_configmaps(
+        self,
+        namespace: str = "default",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """List Kubernetes ConfigMaps."""
+        try:
+            cmd = ["kubectl", "get", "configmaps", "-n", namespace, "-o", "wide"]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise ConfigurationError(f"ConfigMap listing failed: {result.stderr}")
+
+            configmaps = []
+            lines = result.stdout.strip().split("\n")
+            for line in lines[1:]:  # Skip header
+                if line.strip():
+                    parts = line.split()
+                    if len(parts) >= 4:
+                        configmaps.append(
+                            {
+                                "name": parts[0],
+                                "data": parts[1],
+                                "age": parts[2],
+                            }
+                        )
+
+            return {
+                "message": f"Found {len(configmaps)} ConfigMaps in namespace '{namespace}'",
+                "action": "list",
+                "namespace": namespace,
+                "configmaps": configmaps,
+                "count": len(configmaps),
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise ConfigurationError(f"ConfigMap listing command timed out: {str(e)}")
+        except ConfigurationError as e:
+            raise ConfigurationError(f"ConfigMap listing failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for K8s ConfigMap command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "ConfigMap action (create, get, delete, list)",
+                    "default": "create",
+                    "enum": ["create", "get", "delete", "list"],
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name of the ConfigMap",
+                    "default": "my-configmap",
+                },
+                "namespace": {
+                    "type": "string",
+                    "description": "Kubernetes namespace",
+                    "default": "default",
+                },
+                "data": {
+                    "type": "object",
+                    "description": "ConfigMap data",
+                },
+                "from_file": {
+                    "type": "string",
+                    "description": "Create from file",
+                },
+                "from_literal": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Create from literal values",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "additionalProperties": False,
+        }

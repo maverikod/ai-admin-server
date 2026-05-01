@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""
+Script to add full queue support to Docker commands with proper queue logic.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+import re
+from typing import List, Dict, Any
+
+
+def get_docker_commands() -> List[str]:
+    """Get list of all Docker command files."""
+    commands_dir = "ai_admin/commands"
+    docker_commands = []
+
+    for file in os.listdir(commands_dir):
+        if file.startswith("docker_") and file.endswith("_command.py"):
+            docker_commands.append(file)
+
+    return sorted(docker_commands)
+
+
+def add_queue_logic_to_command(file_path: str) -> bool:
+    """Add full queue logic to a Docker command."""
+    print(f"Processing {file_path}...")
+
+    with open(file_path, "r") as f:
+        content = f.read()
+
+    # Check if already has queue logic
+    if (
+        "add_build_task" in content
+        or "add_pull_task" in content
+        or "add_push_task" in content
+    ):
+        print(f"  ✅ {file_path} already has queue logic")
+        return True
+
+    # Find the main execution method (usually _run_container, _build_image, etc.)
+    execution_methods = [
+        "_run_container",
+        "_build_image",
+        "_pull_image",
+        "_push_image",
+        "_stop_container",
+        "_start_container",
+        "_restart_container",
+        "_remove_container",
+        "_inspect_object",
+        "_list_containers",
+        "_list_images",
+        "_tag_image",
+        "_login_registry",
+        "_copy_files",
+        "_manage_volume",
+        "_manage_network",
+        "_search_images",
+    ]
+
+    execution_method = None
+    for method in execution_methods:
+        if f"async def {method}(" in content:
+            execution_method = method
+            break
+
+    if not execution_method:
+        print(f"  ❌ {file_path} - Could not find execution method")
+        return False
+
+    # Add use_queue parameter to execution method
+    method_pattern = (
+        rf"async def {execution_method}\(\s*self,([^)]*)\) -> Dict\[str, Any\]:"
+    )
+    method_match = re.search(method_pattern, content, re.DOTALL)
+
+    if method_match:
+        params_str = method_match.group(1)
+        if "use_queue: bool = True" not in params_str:
+            # Add use_queue parameter
+            if "**kwargs" in params_str:
+                new_params = params_str.replace(
+                    "**kwargs", "use_queue: bool = True,\n        **kwargs"
+                )
+            else:
+                new_params = params_str.rstrip() + ",\n        use_queue: bool = True"
+
+            content = content.replace(params_str, new_params)
+
+    # Add queue logic at the beginning of execution method
+    method_start_pattern = rf'async def {execution_method}\(\s*self,[^)]*\) -> Dict\[str, Any\]:\s*"""([^"]*)"""\s*try:'
+    method_start_match = re.search(method_start_pattern, content, re.DOTALL)
+
+    if method_start_match:
+        docstring = method_start_match.group(1)
+        # Add queue logic after try:
+        queue_logic = f'''        """{docstring}"""
+        try:
+            # Check if we should use queue for long-running operation
+            if use_queue:
+                from ai_admin.task_queue.queue_manager import queue_manager
+                from ai_admin.task_queue.task_queue import TaskType
+                
+                # Determine task type based on command
+                task_type_map = {{
+                    'docker_build': TaskType.DOCKER_BUILD,
+                    'docker_pull': TaskType.DOCKER_PULL,
+                    'docker_push': TaskType.DOCKER_PUSH,
+                    'docker_run': TaskType.DOCKER_RUN,
+                    'docker_stop': TaskType.DOCKER_STOP,
+                    'docker_remove': TaskType.DOCKER_REMOVE,
+                    'docker_tag': TaskType.DOCKER_TAG,
+                }}
+                
+                task_type = task_type_map.get(self.name, TaskType.DOCKER_RUN)
+                
+                # Add task to queue
+                task_id = await queue_manager.add_task(Task(
+                    task_type=task_type,
+                    params={{k: v for k, v in locals().items() if k not in ['self', 'use_queue']}}
+                ))
+                
+                return {{
+                    "message": f"{{self.name}} task queued successfully",
+                    "task_id": task_id,
+                    "use_queue": True,
+                    "status": "queued",
+                    "command": self.name,
+                }}
+            
+            # Direct execution without queue
+'''
+
+        content = content.replace(method_start_match.group(0), queue_logic)
+
+    # Add use_queue to schema if not present
+    if '"use_queue"' not in content:
+        schema_pattern = r'(\s+"user_roles":\s*{\s*"type":\s*"array",\s*"items":\s*{"type":\s*"string"},\s*"description":\s*"List of user roles for security validation",\s*},)'
+        schema_match = re.search(schema_pattern, content, re.DOTALL)
+
+        if schema_match:
+            user_roles_schema = schema_match.group(1)
+            use_queue_schema = """                "use_queue": {
+                    "type": "boolean",
+                    "description": "Use background queue for long-running operations",
+                    "default": True,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },"""
+
+            content = content.replace(user_roles_schema, use_queue_schema)
+
+    # Write back to file
+    with open(file_path, "w") as f:
+        f.write(content)
+
+    print(f"  ✅ {file_path} - Added full queue support")
+    return True
+
+
+def main():
+    """Main function to add full queue support to all Docker commands."""
+    print("🔧 Adding full queue support to Docker commands...")
+
+    docker_commands = get_docker_commands()
+    print(f"Found {len(docker_commands)} Docker commands:")
+
+    success_count = 0
+    for command in docker_commands:
+        file_path = f"ai_admin/commands/{command}"
+        if add_queue_logic_to_command(file_path):
+            success_count += 1
+
+    print(f"\n📊 Results:")
+    print(f"  Total commands: {len(docker_commands)}")
+    print(f"  Successfully updated: {success_count}")
+    print(f"  Failed: {len(docker_commands) - success_count}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-08-11T15:44:56.292238",
+  "hostname": "VASILIY-NOTE",
+  "gpu_info": {
+    "gpu_0": {
+      "name": "NVIDIA GeForce MX150",
+      "memory_total_gb": 1.95,
+      "memory_free_gb": 1.95,
+      "compute_capability": "6.1",
+      "multi_processor_count": 3
+    }
+  },
+  "system_info": {
+    "cpu_count": 8,
+    "memory_total_gb": 31.2,
+    "memory_available_gb": 5.58,
+    "disk_usage_percent": 88.0,
+    "python_version": "3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]",
+    "torch_version": "2.5.1+cu121",
+    "cuda_available": true
+  },
+  "test_results": {
+    "memory_test": {
+      "success": true,
+      "tensor_size_mb": 256,
+      "memory_allocated_gb": 0.25,
+      "memory_reserved_gb": 0.25,
+      "execution_time_seconds": 0.439
+    },
+    "compute_test": {
+      "success": true,
+      "matrix_size": 512,
+      "iterations": 100,
+      "total_time_seconds": 0.041,
+      "operations_per_second": 2437.7
+    },
+    "tensor_operations": {
+      "success": true,
+      "tensor_size": "1000x1000",
+      "operations_tested": [
+        "addition",
+        "multiplication",
+        "matmul",
+        "exp",
+        "sin"
+      ],
+      "execution_time_seconds": 0.072
+    }
+  }
+}

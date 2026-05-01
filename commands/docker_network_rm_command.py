@@ -1,0 +1,104 @@
+from ai_admin.core.custom_exceptions import InternalError
+"""Docker network remove command.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerNetworkRmCommand(BaseUnifiedCommand):
+    """Remove Docker network."""
+
+    name = "docker_network_rm"
+
+    def __init__(self):
+        """Initialize Docker network rm command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        network_name: str,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker network rm command with unified security.
+
+        Args:
+            network_name: Name or ID of the network to remove
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with removal information
+        """
+        # Validate inputs
+        if not network_name:
+            return ErrorResult(message="Network name is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            network_name=network_name,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker network rm command."""
+        return "docker:network_rm"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker network rm command logic."""
+        return await self._remove_network(**kwargs)
+
+    async def _remove_network(
+        self,
+        network_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Remove Docker network."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "network", "rm", network_name]
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise InternalError(f"Failed to remove Docker network: {result.stderr}")
+
+            return {
+                "message": f"Removed Docker network '{network_name}'",
+                "network_name": network_name,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise InternalError(f"Docker network rm command timed out: {str(e)}")
+        except InternalError as e:
+            raise InternalError(f"Docker network rm failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker network rm command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "network_name": {
+                    "type": "string",
+                    "description": "Name or ID of the network to remove",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["network_name"],
+            "additionalProperties": False,
+        }

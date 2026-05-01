@@ -1,0 +1,12 @@
+"""Start vast_srv briefly, then run live registration against the proxy (bounded)."""
+
+# cst-node-ids: begin
+# cst-node-ids: version=1
+# cst-node-id 0 Module d03535d7-b8d2-44a2-a3a2-b0cd5cf8f047
+# cst-node-id 0.0 SimpleStatementLine bc46aec7-5eb2-48c0-a08d-84210756e0c7
+# cst-node-id 0.0.0 Expr 667c684e-a1a3-4fb8-88c3-0a51528accd3
+# cst-node-id 0.0.0.0 SimpleString 474def43-4a30-4d41-8c74-0298cc9f19ea
+# cst-node-id 0.0.1 TrailingWhitespace 49c6c41d-594a-4160-986c-757766cb3556
+# cst-node-id 0.0.1.0 SimpleWhitespace ebfafa5f-1407-48de-a806-fa71140b806a
+# cst-node-id 0.0.1.1 Newline 25570558-ed94-484f-a518-02c675f1676f
+# cst-node-ids: end

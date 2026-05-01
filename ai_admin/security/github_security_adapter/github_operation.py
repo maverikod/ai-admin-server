@@ -1,0 +1,36 @@
+"""Module github_operation."""
+
+from ai_admin.core.custom_exceptions import ConfigurationError, CustomError, PermissionError, SSLError, ValidationError
+import subprocess
+from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime
+from enum import Enum
+import logging
+from ai_admin.settings_manager import get_settings_manager
+from ai_admin.config.roles_config import RolesConfig
+
+class GitHubOperation(Enum):
+    """GitHub operation types."""
+
+    CREATE_REPO = "create_repo"
+    LIST_REPOS = "list_repos"
+    DELETE_REPO = "delete_repo"
+    UPDATE_REPO = "update_repo"
+    GET_REPO = "get_repo"
+    CLONE_REPO = "clone_repo"
+    FORK_REPO = "fork_repo"
+    CREATE_BRANCH = "create_branch"
+    DELETE_BRANCH = "delete_branch"
+    CREATE_PULL_REQUEST = "create_pull_request"
+    MERGE_PULL_REQUEST = "merge_pull_request"
+    CREATE_ISSUE = "create_issue"
+    UPDATE_ISSUE = "update_issue"
+    CREATE_WIKI = "create_wiki"
+    UPDATE_WIKI = "update_wiki"
+    MANAGE_WEBHOOKS = "manage_webhooks"
+    MANAGE_COLLABORATORS = "manage_collaborators"
+    MANAGE_TEAMS = "manage_teams"
+    API_ACCESS = "api_access"
+
+
+

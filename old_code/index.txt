@@ -1,0 +1,676 @@
+# UUID|File Path|Timestamp|Command|Related Files|Comment
+000456ee-9c57-4fef-a0e7-e130270bbfce|ai_admin/commands/ollama_base.py|2026-03-05T01-30-17|cst_save_tree||Before saving CST tree 93e07373-35d4-40a6-bc54-994018d27085
+00662e14-d4d9-49be-a672-88970e4fd231|ai_admin/security/security_monitor.py|2026-01-06T16-13-46|split_file_to_package|event_type,severity,event,alert,monitor,metrics|
+008005fa-7177-4883-a4c6-6d74e3970388|ai_admin/commands/docker_login_command.py|2026-03-04T01-46-21|format_code||Before format
+0092ab07-5a3d-4672-a40b-c8d9f49beeca|add_fallback_logic.py|2026-04-04T09-53-36|restore_backup_file||Before restore from backup
+00c7059c-194d-494d-809d-5cb55a759905|_fix_ssl_type.py|2026-03-02T19-58-35|cst_save_tree||Before saving CST tree 01af1439-c025-49bc-849e-922fbdfdbdda
+00dc9f14-c633-4a80-b013-2c2a50a23bf1|ai_admin/core/token_auth_manager.py|2026-01-06T16-13-45|split_file_to_package|types,manager|
+01a6c7e4-eac4-4bf0-8d18-81e25009002a|add_full_queue_support/__init__.py|2026-04-04T21-31-03|cst_save_tree||Before saving CST tree 2d0b8402-26c7-4344-86f8-3ebece4006e3
+021e2e48-e62c-4efe-942d-db9f218737fe|ai_admin/commands/docker_network_disconnect_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 07901e00-f8ba-4c7d-8442-ff71a57454bd
+034ac8b2-9643-4c08-ac25-43a9bb2bad9e|docs/plans/step_7/TASKS.md|2026-05-01T21-11-56|create_text_file||Before create_text_file overwrite docs/plans/step_7/TASKS.md
+0357c32a-c4ff-4c2c-be56-4ec633ba3c2a|add_full_queue_support/__init__.py|2026-04-04T21-06-17|restore_backup_file||Before restore from backup
+03af562a-ebbe-45f9-9e4d-95edad5f5595|add_fallback_logic.py|2026-04-04T22-33-39|cst_save_tree||Before saving CST tree 07ac972a-25da-4bfd-82b0-994b81d3c677
+03f9a919-36d1-4470-98c5-304a2c2663ee|ai_admin/settings_manager.py|2026-01-06T16-13-45|split_file_to_package|manager,helpers|
+041372ca-6b23-4f3e-840f-a9cd9fee35a8|ai_admin/task_queue/task_queue/task_queue.py|2026-03-01T20-34-01|split_file_to_package|core,ftp_executor,docker_executor,k8s_executor,ollama_executor,misc_executor,facade|
+045476ac-28c2-4e96-bc1e-878dad13a719|ai_admin/core/mtls_auth_manager.py|2026-01-06T16-13-45|format_code||Before format
+04ca0a67-a4e7-4319-96c5-8c70c2bb4e92|tests/ssl_tests/__init__.py|2025-09-13T03-54-00|cst_save_tree||Before saving CST tree 6dd69594-8346-45fa-9f74-d5f59da59a52
+056af116-a35f-47a2-870f-48f731fc140b|scripts/bounded_autoreg_probe.py|2026-04-05T15-21-55|cst_save_tree||Before saving CST tree d5483b7d-6dea-484b-817f-825755cae11c
+057270af-e37b-4370-9bce-b72484e98e7f|ai_admin/commands/docker_push_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree d38ff085-8fb2-4f6b-9bee-8ced92f6f051
+05dfadf7-174f-417f-8226-b884025e65c0|ai_admin/commands/base.py|2026-04-13T22-25-01|cst_save_tree||Before saving CST tree ce19bbfe-2e88-4dab-8422-60c6cab1dc38
+065f1827-cdb9-4221-8791-fce3caef15ac|ai_admin/security/system_security_adapter/system_operation.py|2026-02-27T15-08-37|cst_save_tree||Before saving CST tree 7485fef9-d1ac-4e85-9b5c-9562ba267276
+069aaee6-eadc-4504-91ce-1ebafdd3fdd7|ai_admin/commands/base.py|2026-04-13T22-19-31|format_code||Before format
+06f488e2-b2ae-4cac-9727-eabce68504b3|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T18-10-17|split_class|TaskQueueCore,FTPExecutor,DockerExecutor,K8sKindExecutor,MiscExecutor|
+0719c662-0509-4ab1-81c8-4f7d794baeaa|docs/plans/REVIEW.md|2026-05-01T22-15-53|create_text_file||Before create_text_file overwrite docs/plans/REVIEW.md
+076d9957-b093-4dad-9002-f1574a26b4e2|add_fallback_logic.py|2026-04-04T10-21-05|cst_save_tree||Before saving CST tree 13aecd5c-b183-499f-b28f-5a65cfb2478e
+079ecc40-3f88-4976-a57f-0ee7e3e365af|scripts/live_registration_probe.py|2026-04-05T15-16-34|format_code||Before format
+07f042c2-7934-47bc-9257-b3d82c22d9e0|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T17-43-41|cst_save_tree||Before saving CST tree 6de8ab45-696b-411a-a730-15abc1c0f282
+083d717b-4c53-43f4-be09-ebd24562758a|ai_admin/commands/ollama_base.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 779b5f90-0214-46b4-b71f-56d5eefc33c6
+086c993a-cf89-4c86-aabc-f8785fd27e20|docs/plans/step_1/INDEX.md|2026-05-01T19-53-49|create_text_file||Before create_text_file overwrite docs/plans/step_1/INDEX.md
+09278736-308b-4b62-9e88-f790c2af1f9d|scripts/patch_registration_config.py|2026-04-05T19-08-03|format_code||Before format
+09331c85-1d09-4ff5-867a-4c0ff8f05a55|add_fallback_logic.py|2026-04-04T09-47-32|restore_backup_file||Before restore from backup
+09af351d-1449-48aa-9911-119c3df728d5|ai_admin/working_server.py|2026-03-04T00-14-14|format_code||Before format
+09c0f2f9-a809-4386-a1c2-8b8de8df575c|config/http_reg.json|2026-04-11T17-32-01|json_save_tree||Before saving JSON tree a8327212-3afe-4ec9-9842-4ae90de251fd
+0a5c7dcc-7c17-40bf-8911-36ee9cf315dc|scripts/live_registration_probe.py|2026-04-05T15-15-32|format_code||Before format
+0ac4c82e-6ab8-44b7-9b87-e287dde54b69|ai_admin/core/ssl_error_handler.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 5a13231c-b05d-48b8-86b9-b7b845ad5a9d
+0acbfab5-5a35-47d4-9535-5f228bad9360|ai_admin/commands/k8s_cluster_manager_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree c90c4c32-647d-46c0-8f49-28cff9326f5f
+0b0a0be6-571e-4929-89e1-8ce9f06c57fd|ai_admin/commands/crl_operations_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 345a00e2-4e4b-4c2c-b535-4be3d76a1a09
+0b0a94bd-2af7-4731-adc1-ec5cb1959bc1|add_fallback_logic.py|2026-03-05T01-21-28|format_code||Before format
+0b5354ee-9186-46f4-80ac-d9d01bbd25c7|ai_admin/settings_manager/helpers.py|2026-03-01T21-19-19|query_cst_replace||
+0b83d5dc-c2e1-4822-8c4f-b1dbe4131837|ai_admin/__init__.py|2026-04-04T22-31-50|restore_backup_file||Before restore from backup
+0beca5c7-b667-42ee-a734-2a519bcfbea6|config/http_reg.json|2026-04-11T17-41-49|restore_backup_file||Before restore from backup
+0c12c8a0-3ab9-432f-8d2f-9c21e245ac4d|add_fallback_logic.py|2026-02-26T20-07-02|cst_save_tree||Before saving CST tree 63240cf0-d8c5-4bc5-b12f-993bfb3e47b5
+0c54fa83-a7ae-484f-b166-71af64a26111|ai_admin/commands/k8s_certificates_command.py|2026-03-05T01-29-17|format_code||Before format
+0c5d85b0-30a9-46b1-808a-64adfc7da82a|ai_admin/commands/queue_manage_command.py|2026-01-06T16-13-45|format_code||Before format
+0c83c42e-9aeb-4bb6-81a9-d877ffc07abf|add_full_queue_support.py|2025-09-15T10-20-36|format_code||Before format
+0cd78707-036a-41bf-b2fe-d24bd57c8d7b|add_fallback_logic.py|2026-04-04T20-23-11|format_code||Before format
+0d253efc-3b3b-45a2-a0dc-a26337192603|ai_admin/core/app_factory/__init__.py|2026-02-27T15-07-13|cst_save_tree||Before saving CST tree 999e6374-b3d0-4233-900c-2893d80145bd
+0d3d040e-b3be-4885-8b95-7a69915f40b5|ai_admin/settings_manager/helpers.py|2026-04-05T12-17-56|format_code||Before format
+0d5241e8-092f-4c46-b68c-41714227d55f|test_github.py|2026-03-01T20-25-54|query_cst_replace||
+0d737f17-49c0-42ce-ab26-776aa1cc9947|_fix_ssl_type.py|2026-03-01T21-27-15|cst_save_tree||Before saving CST tree e09e8c5c-b892-4f59-a79c-def01f9f2747
+0db7fee6-98bb-4435-9895-91ffc801da74|_fix_ssl_type.py|2026-04-05T01-44-20|cst_save_tree||Before saving CST tree 92708791-97b3-40d7-bcb6-05b49cc42469
+0e536f6a-df87-43da-8c69-eb915b09fa0e|projectid|2026-02-10T17-46-48|write_project_text_lines||Before write_project_text_lines 1-1
+0e945e52-623a-4b2a-8c6d-94fa18b6bfa3|scripts/bounded_autoreg_probe.py|2026-04-05T15-55-02|format_code||Before format
+0ee647c6-d78d-4217-b999-60d805318e1d|ai_admin/security/security_monitor/alert.py|2026-03-01T22-47-44|cst_save_tree||Before saving CST tree eb0d3753-2d76-44e6-a4b3-3d5fb19ad3cb
+0f9c35dd-9839-403b-b1b0-2c19500a9748|add_full_queue_support/__init__.py|2026-04-04T21-25-29|cst_save_tree||Before saving CST tree 9f854e2b-33f9-43d5-9806-46d7178b9ea3
+0fd25053-e702-45a9-9b2f-b98e773b1570|ai_admin/core/custom_exceptions/__init__.py|2026-04-05T05-46-12|cst_convert_and_save||Before convert and save
+101b819d-baf7-4b5c-9ce2-29798a8e825d|requirements.txt|2026-04-06T01-31-18|write_project_text_lines||Before write_project_text_lines 1-1
+103027bc-2902-4654-b16d-1845ead400e7|ai_admin/commands/ssl_cert_generate_command.py|2026-01-06T16-13-46|split_file_to_package|ssl_cert_generate_impl|
+108313c6-2da0-4c51-af40-0396c4845e99|add_fallback_logic.py|2026-04-04T10-12-42|format_code||Before format
+1098590b-ce61-490a-8dce-e52785870513|ai_admin/core/app_factory/app_factory_impl.py|2026-04-05T13-46-20|cst_save_tree||Before saving CST tree 65b13bdb-59a4-496e-9add-6da451e451b8
+10d098cf-edbf-4264-b61a-351ff87911ff|ai_admin/security/security_monitor/event.py|2026-03-01T23-01-06|cst_save_tree||Before saving CST tree bee07ed2-02c0-4db1-b1cb-027bfbf2e2ba
+114b2cac-665b-4840-ab4b-e26449576648|ai_admin/commands/base.py|2026-04-13T22-24-46|format_code||Before format
+12ca66a6-dded-447b-94f7-a91a87dfe7ca|ai_admin/security/system_security_adapter/__init__.py|2026-02-27T15-08-37|cst_save_tree||Before saving CST tree c0c3dc2e-af28-4cf5-be2f-5f5b3a606227
+13428347-a9bb-43ca-b847-0ed2226d2ca8|ai_admin/commands/docker_start_command.py|2026-03-05T01-37-21|format_code||Before format
+1388a70f-3259-4877-bf4e-a1244aad13c4|add_fallback_logic.py|2026-02-27T11-19-44|cst_save_tree||Before saving CST tree b69f9ad0-6d1a-40ec-b95d-afa22ff5af28
+13d663ff-f229-462e-add8-2b6ab14aabe1|ai_admin/task_queue/task_queue/task_type.py|2026-02-27T15-07-58|cst_save_tree||Before saving CST tree a04d88b3-effb-467f-86bf-f8993b39f611
+13e5f8df-fda0-49de-b8fc-b67788ae035e|ai_admin/core/ssl_error_handler.py|2026-03-04T00-13-22|restore_backup_file||Before restore from backup
+13f75d72-8b23-4c04-82e2-30056afa23fe|ai_admin/commands/base.py|2026-04-13T22-22-15|cst_save_tree||Before saving CST tree 48967f06-5046-42f8-9d18-1cbe056712ee
+14205695-b92f-4761-8b0f-078e39470bcd|_fix_ssl_type.py|2026-04-04T20-56-35|restore_backup_file||Before restore from backup
+145bb0c3-59d2-4e59-a265-d53eb19e61cc|ai_admin/security/security_monitor/alert.py|2026-03-01T22-44-50|cst_save_tree||Before saving CST tree e083015a-3153-4036-be7b-319e86b5476b
+14be950f-9d39-4cfb-a11e-5f8642a4e515|add_full_queue_support/__init__.py|2026-04-04T21-07-52|cst_save_tree||Before saving CST tree d215ebe8-4ebe-497a-af80-f21dfdaeecd2
+15141413-c622-4117-8abc-828d4ef6ff8f|ai_admin/__init__.py|2026-04-04T22-31-37|cst_save_tree||Before saving CST tree b7d101aa-c9e1-4c28-a3ec-afeb89ae2955
+1533de86-15c9-4972-8519-b72846c9a3d5|ai_admin/commands/base.py|2026-03-13T22-38-27|format_code||Before format
+15e6a30d-f021-418e-a5e6-0c71abd2f78d|ai_admin/core/token_auth_manager/__init__.py|2026-03-14T22-35-36|cst_save_tree||Before saving CST tree 5a5112bc-06f3-4ddd-a144-e72fbd853c58
+164d1aaa-e597-4a54-8b51-011ee3c377ad|ai_admin/commands/queue_cancel_command.py|2026-01-06T16-13-46|format_code||Before format
+16993c4a-d5f3-4913-a7d2-f618e209e90d|add_full_queue_support/queue_helpers.py|2026-04-04T22-06-38|cst_save_tree||Before saving CST tree 950ab23e-12af-4acd-99a8-d2b0f2f1f7f3
+169c34b5-f62d-4351-bf00-e5af2d850651|ai_admin/security/command_security_mixin/mixin_impl.py|2026-02-27T15-00-15|cst_save_tree||Before saving CST tree d6504593-a343-4ef8-a1fc-3dcd4f1c642b
+181b42f1-aa31-4eec-bb8a-9b5d4fbad80a|ai_admin/core/custom_exceptions/base.py|2026-03-15T18-03-19|cst_save_tree||Before saving CST tree c5a82356-b939-451d-9545-bac732eee697
+181beb3f-2a5f-40a1-9712-45347e549fb1|_fix_ssl_type.py|2026-04-17T15-04-08|format_code||Before format
+18655486-3d56-4d5d-8f2b-ed91ba5d13b8|ai_admin/commands/docker_tag_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 768ace7a-fa23-46f9-82a0-d23d647ad5d8
+1881c91d-ed25-4216-8e1c-a707296f299d|ai_admin/auth/git_auth_manager.py|2026-04-04T09-56-26|cst_save_tree||Before saving CST tree 492c90a9-ceca-415c-b858-e10e1bac6048
+198c5e6c-954d-4b34-9f75-a40f4e4b5a5d|ai_admin/security/security_monitor/__init__.py|2026-02-27T15-08-17|cst_save_tree||Before saving CST tree 2249ffd8-778b-4edb-927c-0bc7ddfb4828
+19cc475f-6c3f-4ed1-83ca-d704e647abab|add_full_queue_support/__init__.py|2026-04-04T19-56-36|format_code||Before format
+1af6c585-1895-40ee-b732-b59a21236a20|ai_admin/security/security_monitor/severity.py|2026-03-01T22-36-45|cst_save_tree||Before saving CST tree 050c3613-51bb-4d83-a014-f5d91cc2ae9d
+1bc0eb67-60b4-41d3-8636-74b1e7c7417f|add_fallback_logic.py|2026-04-04T22-33-39|cst_save_tree||Before saving CST tree 18295375-8d47-460a-a79c-3a7524819148
+1be9f942-32b4-4fe9-8244-637ddaac2ce8|ai_admin/core/server/factory.py|2026-03-04T23-39-13|cst_save_tree||Before saving CST tree bb49ddcb-8fa0-4025-858d-87fb9bef07ed
+1c988451-095a-4f34-a6d2-3e6ba7d778d6|README.md|2025-09-15T11-58-14|write_project_text_lines||Before write_project_text_lines 2-2
+1d4dcdad-fde5-4aec-b573-c44c7d46ae8d|docs/plans/step_6/INDEX.md|2026-05-01T19-55-15|create_text_file||Before create_text_file overwrite docs/plans/step_6/INDEX.md
+1d727673-c819-4562-9ebb-10a944dd7a55|ai_admin/commands/docker_stop_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 8aaded0d-f402-49a2-a248-ac4f1651b8d6
+1db3e63d-536c-4667-8280-8039bd011117|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-36|query_cst_replace||
+1f1f6d31-7406-4ce0-b708-0c182dc54036|add_full_queue_support/__init__.py|2026-04-04T22-21-39|cst_save_tree||Before saving CST tree 1c64a7e1-656f-4989-b86a-5cea2d1f379f
+1fdd4835-fece-43ef-abe6-928e84dbb8ad|_fix_ssl_type.py|2026-04-05T01-38-24|cst_save_tree||Before saving CST tree 8caa2d4a-e5a7-4a3f-8459-f7d8e6ce01c2
+1fe166df-5956-460f-a11a-55440089bb9d|ai_admin/commands/config_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 7b59444f-f26f-4620-a0ec-1f4e36bf322c
+20208a98-c2a9-4f15-ab6c-0e3ebf6ba1bc|ai_admin/settings_manager/helpers.py|2026-04-05T05-49-25|format_code||Before format
+204efb76-a6f5-4834-8035-29064b0b259d|ai_admin/commands/queue_cancel_task_command.py|2026-03-02T00-57-27|query_cst_replace||
+20a94394-0d93-4274-9afb-4077da3ded17|ai_admin/commands/base.py|2026-04-13T22-21-45|format_code||Before format
+22237fb7-4a74-4906-bb33-13af29bfb7e5|add_full_queue_support/queue_helpers.py|2026-04-04T22-06-59|restore_backup_file||Before restore from backup
+223fac65-3461-4627-b1ab-7169051c9008|ai_admin/config/config_validator.py|2026-04-11T18-03-25|cst_save_tree||Before saving CST tree d47d1910-c9be-466f-9e0b-ae5a48f760fd
+22a51978-ed07-45da-bd4f-9fee0c991247|ai_admin/settings_manager.py|2026-01-06T16-13-45|split_file_to_package|manager,helpers|
+23b7060c-6d64-44c8-8494-42bb44f7442b|ai_admin/commands/docker_pull_command.py|2026-01-06T16-13-45|format_code||Before format
+23def4ca-d048-4f69-aa12-a27b0a48e64f|ai_admin/task_queue/task_queue/queue/__init__.py|2026-03-01T20-38-30|cst_save_tree||Before saving CST tree 4d2af99a-c7ef-47fc-a888-2f1539e6eeaa
+2422518a-7bfd-45f1-91bf-f4de82567270|ai_admin/__init__.py|2026-03-14T00-40-45|cst_save_tree||Before saving CST tree 47b1f2b6-4d61-49ce-b7d6-b698e3c68c61
+242a3248-d8a5-4491-86e5-bf3977dd9a6e|ai_admin/security/command_security_mixin/mixin_impl.py|2026-02-27T15-27-45|restore_backup_file||Before restore from backup
+24930dfc-5b4f-4f6a-9c4b-d2258c48f7cb|ai_admin/commands/example_unified_security_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 354a8300-13aa-4f9c-82c4-0ccc1f44700c
+24a02831-376a-4a55-b401-e4d27ff49237|add_full_queue_support/queue_helpers.py|2026-04-05T05-35-21|cst_save_tree||Before saving CST tree 2fec3e8d-0cd9-47c7-9e59-3b2057f3a6a8
+25b7965c-1d57-4c77-82c3-742b77494450|scripts/patch_registration_config.py|2026-04-05T14-50-11|format_code||Before format
+25d5396d-a252-4996-8559-5f82e1de34be|add_fallback_logic.py|2026-02-26T18-11-08|cst_save_tree||Before saving CST tree 63240cf0-d8c5-4bc5-b12f-993bfb3e47b5
+2615f015-e503-41c5-8f0b-57613d5fb408|ai_admin/server.py|2026-01-06T16-13-46|cst_convert_and_save||Before convert and save
+264cca92-ca5a-49d5-a8fe-6ea60180e9f7|README.md|2026-04-07T09-41-50|replace_file_lines||Before replace_file_lines 2-2
+26743915-fcc4-498a-ad0c-25c90f404cf6|ai_admin/commands/github_list_repos_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 4dca24df-a9ad-4c8e-8deb-65cbc3a05a28
+26e0e356-bb45-41e3-b50a-6fda780de41a|docs/plans/step_5/TASKS.md|2026-05-01T21-10-10|create_text_file||Before create_text_file overwrite docs/plans/step_5/TASKS.md
+2781fbd6-9dd5-4fea-b00a-f524fe8e4e5a|ai_admin/commands/k8s_configmap_command.py|2026-03-05T01-35-42|format_code||Before format
+278be440-ba0f-4346-9b73-eda5af028d77|ai_admin/commands/ollama_base.py|2026-04-07T05-44-21|cst_save_tree||Before saving CST tree a1f2a5b0-c856-4d44-b2c5-a0af39cdae37
+27a38d1d-a5bb-473f-8b6e-bf2bde705fab|add_full_queue_support/__init__.py|2026-03-14T18-43-32|cst_save_tree||Before saving CST tree 7f8d27d1-22b8-4dde-bb40-603fdd06753c
+285e3d40-d961-4e89-9db6-7d9e60a18aa7|scripts/live_registration_probe.py|2026-04-05T14-32-15|cst_convert_and_save||Before convert and save
+288a0ac0-1c68-453b-95c7-70622bd3d048|add_full_queue_support/__init__.py|2026-04-04T22-18-44|restore_backup_file||Before restore from backup
+28cc45b6-b954-4e44-9044-211190be3aab|ai_admin/commands/docker_hub_images_command.py|2026-03-04T01-45-49|format_code||Before format
+28fb9121-d8bc-4d14-bc40-957e0522f91d|ai_admin/settings_manager/helpers.py|2026-03-05T01-41-09|cst_save_tree||Before saving CST tree e79bdbea-6794-42fb-979d-9054d297eacd
+2958c128-785e-4609-b399-8270b74f719b|ai_admin/settings_manager.py|2026-01-06T16-13-45|split_file_to_package|manager,helpers|
+297205d6-e78a-4fc9-bd02-331bda71cabd|ai_admin/task_queue/task_queue/enums.py|2026-03-01T14-52-03|format_code||Before format
+29c98ac3-04aa-4dc2-a825-ae124c835926|ai_admin/commands/ssl_cert_generate_command/__init__.py|2026-02-27T15-08-42|cst_save_tree||Before saving CST tree 1342e9c0-607e-4946-80ed-92c81321cfcb
+2a56206d-f782-4fb3-8e31-6440228a9690|ai_admin/core/ssl_context_manager.py|2026-01-06T16-13-45|split_file_to_package|ssl_context_type,ssl_context_info,manager|
+2a602df0-23ee-4157-9a7b-05c66ad59495|add_fallback_logic.py|2026-04-04T10-12-42|cst_save_tree||Before saving CST tree 4e4d5e90-bd99-4471-a701-c2422dafae7e
+2c4d0377-2e0e-44aa-a775-da30bef2abc9|ai_admin/security/command_security_mixin.py|2026-01-06T16-13-46|split_file_to_package|mixin_impl|
+2c5eb10c-f38b-4c41-8ef5-10c14e714b66|add_fallback_logic.py|2026-04-05T01-03-36|cst_save_tree||Before saving CST tree 9a497edc-889b-47b2-8996-b6209e8b2a13
+2c792cca-2822-4c8d-baac-9374ff5462c5|README.md|2026-04-07T09-59-22|replace_file_lines||Before replace_file_lines 2-2
+2e2a4767-1760-40e9-b8fe-b688c0d463b4|add_fallback_logic.py|2025-09-15T10-43-03|cst_save_tree||Before saving CST tree 0c485ef0-6502-4e84-809e-df84fe3cdcfb
+2ecd9760-86e3-4964-acbb-386f22464b36|ai_admin/commands/ssl_cert_generate_command.py|2026-01-06T16-13-46|split_class|CertGeneratorHelpers|
+2ee7b045-b59b-4cbf-a461-1157a5aa169f|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-25|query_cst_replace||
+2f9dfcb2-2980-46a2-b7af-af735368a78c|requirements.txt|2026-01-06T14-57-02|write_project_text_lines||Before write_project_text_lines 1-1
+2fcedb2f-8572-4aa7-9038-9d1d234149ba|docs/plans/step_3/TASKS.md|2026-05-01T22-28-20|create_text_file||Before create_text_file overwrite docs/plans/step_3/TASKS.md
+302ff8dc-e26a-431f-90ad-9b0c6afc80c7|ai_admin/commands/docker_login_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree c5c7e58d-444a-4ffa-b655-750823667c96
+30324fe0-b12d-4ab5-ba89-6cdceb1d4472|ai_admin/settings_manager/settings_helpers.py|2026-03-13T18-21-38|cst_save_tree||Before saving CST tree 1ba1168f-f4bf-4063-8b02-1f96bbc28298
+307ffa2c-c38c-44a6-bb0b-1c0bf1342153|detach_start_ai_admin_http.py|2026-04-13T21-48-52|format_code||Before format
+30c52cff-165b-4bc8-94e4-1ccea4379ea0|add_full_queue_support.py|2025-09-15T10-20-36|split_file_to_package|queue_helpers,main_module|
+314b87b9-2366-4c28-b3aa-4948f2163df8|ai_admin/commands/argocd_init_command.py|2026-03-04T00-14-16|format_code||Before format
+323f1f70-5618-47d7-9628-dd62240d3b8f|ai_admin/core/server/factory.py|2026-04-05T12-25-28|format_code||Before format
+32f1e5b1-550e-43a6-b495-dc204c81ea17|ai_admin/task_queue/task_queue/__init__.py|2026-02-27T14-14-50|cst_save_tree||Before saving CST tree c835714a-3ea0-4783-bc40-dec9bfab3767
+333365ad-7a07-4034-a27a-971a82936205|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T15-00-15|cst_save_tree||Before saving CST tree 63ccbb47-80a8-43b4-8d44-726f3da2c932
+33359685-bb39-4352-8b2a-fa87a23eb0b2|docs/plans/step_3/TASKS.md|2026-05-01T22-27-04|universal_file_replace||Before universal_file_replace docs/plans/step_3/TASKS.md
+333dd68f-b1b4-4b76-97f4-586f81245b8f|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-40-25|query_cst_replace||
+33978c56-bd50-4111-8f1b-f314ac7221a0|ai_admin/commands/base.py|2026-04-13T22-23-58|cst_save_tree||Before saving CST tree 48967f06-5046-42f8-9d18-1cbe056712ee
+33d9e527-8fe7-4bed-96b4-7b5fc8005223|ai_admin/__main__.py|2026-04-05T16-31-05|cst_convert_and_save||Before convert and save
+3431ba10-27ef-402f-9fb1-b99accf4a49e|add_full_queue_support/__init__.py|2026-04-04T21-08-11|restore_backup_file||Before restore from backup
+344efcae-a6d9-421d-9417-74c5017e0c43|ai_admin/commands/docker_inspect_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree c50e096b-b01e-4e00-80d2-ba915e752d2e
+345ead84-4234-4c07-a03c-caa33b7f55b2|ai_admin/core/server/server_manager.py|2026-03-04T17-13-22|cst_save_tree||Before saving CST tree fc54878e-3dc9-42b8-b9dc-eb482ed81d30
+350d638c-ebd4-479e-ab9e-b8d13b530173|ai_admin/server.py|2026-04-05T16-30-48|format_code||Before format
+35bd9ed8-a474-4f63-8786-11acc9937158|ai_admin/commands/github_list_repos_command.py|2026-03-05T01-29-15|format_code||Before format
+35dc19f3-be04-4eb0-9416-3feffdddc082|ai_admin/core/mtls_auth_manager/__init__.py|2026-04-05T12-20-05|format_code||Before format
+3606b187-84a0-4d61-a678-810150d3db56|ai_admin/security/security_monitor/metrics.py|2026-02-27T15-08-31|cst_save_tree||Before saving CST tree 91b530eb-8c0e-4b7c-870a-730a4de09d62
+370ebfab-c802-4d36-8a7d-1a016fc6c697|ai_admin/commands/docker_network_inspect_command.py|2026-03-05T01-23-58|format_code||Before format
+376f805b-c987-4093-a041-b7ae14b5d7d6|docs/plans/INDEX.md|2026-05-01T19-53-31|create_text_file||Before create_text_file overwrite docs/plans/INDEX.md
+377bcd4c-4483-48da-bce1-33d056265730|ai_admin/core/token_auth_manager.py|2026-03-04T00-13-24|restore_backup_file||Before restore from backup
+38f7af8e-0fa8-406d-baf0-84c34a801825|ai_admin/task_queue/task_queue/task_status.py|2026-03-02T00-04-26|cst_save_tree||Before saving CST tree 5e6db88d-67d6-4ff6-8e83-fc5659ebeef7
+3926d0e3-1f0b-4088-871e-19dea0b63f54|ai_admin/core/ssl_context_manager/manager.py|2026-03-01T21-25-44|query_cst_replace||
+39a00b33-d54c-4aa4-802d-6e8cb22bb559|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-16-10|cst_save_tree||Before saving CST tree d25e1445-445e-486e-9b69-002fdd3c1090
+39a3031d-b270-4a12-ac3d-49bda0dd83ea|ai_admin/security/security_metrics.py|2026-03-14T22-02-16|split_file_to_package|types,metrics|
+39b869e4-5b2b-480e-8d76-320bba5f830c|add_fallback_logic.py|2026-04-04T21-47-59|restore_backup_file||Before restore from backup
+3a03548f-736a-4e5d-9987-b78d26dabbc8|ai_admin/security/security_monitor/event.py|2026-03-01T22-57-48|cst_save_tree||Before saving CST tree 39960389-d16d-4f19-8e70-1cf6cdfbdd3d
+3a4ed2ed-40c5-4fac-a693-40d2da230b82|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T19-49-11|query_cst_replace||
+3ab05124-fe08-40bd-81f1-02952e813adf|ai_admin/task_queue/task_queue/task_queue/core.py|2026-03-02T00-43-20|query_cst_replace||
+3acb5543-1e7f-42c6-94fc-e64c20fd56ec|scripts/bounded_autoreg_probe.py|2026-04-05T16-47-58|format_code||Before format
+3adeb8da-398e-4c60-91df-cf3bf7eeed1b|ai_admin/security/security_metrics/__init__.py|2026-03-14T22-03-28|cst_save_tree||Before saving CST tree 04831779-e157-4bb9-823d-7585eaaea48f
+3b1cb1fd-0255-4a27-bdf1-e72fa32e2a23|ai_admin/commands/docker_volume_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree a1da39ce-be20-4c39-a06a-df2296bee770
+3c9a5881-a934-4cad-95a0-4dfd89db4f04|ai_admin/task_queue/task_queue/enums.py|2026-03-01T14-54-14|cst_save_tree||Before saving CST tree 5e39b8bc-1aea-4ed0-929f-a76e630fb1a9
+3ce6c278-0990-4d81-bc0f-fc6577f545ac|add_fallback_logic.py|2026-04-04T20-23-11|cst_save_tree||Before saving CST tree 7e703f74-9bc6-46e2-b261-5646fd17b9f5
+3dfee73c-00eb-4a2f-9f06-7ea77e1c75fb|ai_admin/security/base_security_adapter.py|2026-01-06T16-13-46|split_file_to_package|models,adapter|
+3e210771-aecd-4caa-9ce4-aff94541255a|ai_admin/commands/docker_exec_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 8599a8aa-630c-4c08-805f-2dea0a11baca
+3e78bde0-f5d6-4fb1-8f52-f72067fc55f7|ai_admin/task_queue/task_queue/task_queue.py|2026-02-27T15-08-08|split_class|TaskQueueCore,FTPExecutor,DockerExecutor,K8sKindExecutor,OllamaExecutor,MiscExecutor|
+3e92abc8-6a27-4d3f-a468-c2f3e578a4b1|ai_admin/core/app_factory.py|2026-01-06T16-16-44|split_file_to_package|app_factory_impl|
+401cf05f-18b3-480d-9bc2-a45a8818d4f1|ai_admin/security/security_monitor/event_type.py|2026-02-27T15-08-17|cst_save_tree||Before saving CST tree 457aff94-ce14-4802-925d-cf1914ab1590
+405ebc64-2c34-4bd4-b7a9-6ab8ee362d01|ai_admin/commands/docker_rm_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree e3bf2f27-20bf-4bff-aa73-bf316f1b7fcd
+40ef6ea3-87b4-44c6-be2b-510ac582113d|add_fallback_logic.py|2026-04-06T01-00-22|restore_backup_file||Before restore from backup
+41711e24-7e73-479b-8a75-87e815fd15b7|ai_admin/commands/queue_remove_task_command.py|2026-03-02T01-01-12|cst_save_tree||Before saving CST tree de1e512d-b37f-4ceb-97df-bd1771dbde7b
+4204dff1-c7b4-49ad-aa18-4482982bb503|add_fallback_logic.py|2026-03-05T01-21-28|cst_save_tree||Before saving CST tree d3a5188f-0e9b-495d-94f1-1d63716d554c
+4246f5e3-f499-4c6c-9596-c4ab3f734846|add_fallback_logic.py|2026-04-04T10-31-57|cst_save_tree||Before saving CST tree eb59642d-2cea-475c-9a7f-123872e16b9e
+42aa988d-280f-44c1-ae2d-20527b2b7839|test_ftp_commands.py|2026-02-28T21-36-24|replace_file_lines||Before replace_file_lines 168-168
+4376fe79-afd9-4262-a8ac-e63bd8307489|ai_admin/core/custom_exceptions/application_errors.py|2026-04-05T05-50-52|format_code||Before format
+4407b35a-59eb-45ed-9131-797aa0707657|scripts/gen_reg_config.py|2026-04-11T17-30-44|cst_save_tree||Before saving CST tree a27c52db-6735-46e4-a127-7ff131f0b73d
+442bdf2a-f1c9-4a71-8058-3ee52166780a|ai_admin/core/app_factory/app_factory_impl.py|2026-02-27T15-07-13|query_cst_replace||
+4453843e-23de-440a-8f14-05aedca16caf|_fix_ssl_type.py|2026-04-05T01-38-37|cst_save_tree||Before saving CST tree f9d67bbe-a7da-4aca-96cf-92e86c476c29
+44ac41a8-9a78-43f0-b454-1c258d1082b3|ai_admin/commands/base.py|2026-04-13T22-26-12|format_code||Before format
+44c1ff13-f917-4dae-98b7-7f526932347f|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-21-17|restore_backup_file||Before restore from backup
+450d436d-0f70-44a7-b057-120febe66059|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-34|query_cst_replace||
+45519379-0977-4514-b5ac-fee4af135c57|ai_admin/commands/docker_containers_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree e8f22627-3f4c-4862-8b2b-c0068af5d8c3
+4565532e-608d-4900-be91-ae15f9379de1|scripts/patch_registration_config.py|2026-04-05T15-23-38|format_code||Before format
+45aeb825-0030-42fb-b73c-9e66fcd11071|scripts/bounded_autoreg_probe.py|2026-04-05T15-21-40|format_code||Before format
+45eb6e87-5b98-46e0-8f44-4ddaea8f5a1a|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-27|query_cst_replace||
+460eac4d-c676-4ce3-86ae-eaf5f39d46e2|add_full_queue_support/__init__.py|2026-04-04T21-25-47|restore_backup_file||Before restore from backup
+47317af9-240b-4001-8f8c-cf3e68c5b44d|docs/plans/step_3/TASKS.md|2026-05-01T22-27-27|universal_file_replace||Before universal_file_replace docs/plans/step_3/TASKS.md
+4746f489-586a-4923-a185-dda468342b19|tests/ssl_tests/__init__.py|2026-04-07T09-03-06|restore_backup_file||Before restore from backup
+47957a81-a9ad-456b-8544-75f014298222|ai_admin/core/server/factory.py|2026-04-05T12-23-34|format_code||Before format
+47cc6531-823e-4450-a53b-811b5754f74b|ai_admin/security/security_monitor/severity.py|2026-03-01T22-34-11|cst_save_tree||Before saving CST tree db32894a-f7f7-4ef9-80e0-e8aadc6f9038
+48137022-8176-4128-af6d-aa0581262bbc|add_fallback_logic.py|2026-04-04T10-31-57|cst_save_tree||Before saving CST tree 3e4ce57a-da07-4885-bf04-9abcd336c79d
+48f5a478-899b-4045-8a5d-859585ab1c81|docs/plans/step_2/INDEX.md|2026-05-01T19-54-07|create_text_file||Before create_text_file overwrite docs/plans/step_2/INDEX.md
+49133911-e195-4968-bb5e-f48e058e01de|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T20-20-50|split_file_to_package|task_queue,task_queue_core,ftp_executor,docker_executor,k8s_kind_executor,misc_executor|
+49402578-d0f3-48f8-ba8d-4b1149863485|ai_admin/core/server/factory.py|2026-03-04T21-46-31|format_code||Before format
+4941ad0d-3ee4-45c1-85f8-eec78871f517|add_full_queue_support/queue_helpers.py|2026-04-05T02-31-38|format_code||Before format
+49577a68-04bc-40ce-8dc8-0365d748f32d|add_full_queue_support/queue_helpers.py|2026-04-05T05-35-04|format_code||Before format
+4a6e9145-aa2a-44b1-8068-80ae227bcd2a|ai_admin/commands/example_unified_security_command.py|2026-03-05T01-39-01|format_code||Before format
+4a781a7c-82d5-42bf-89b2-5a61d0ab85d2|ai_admin/commands/docker_network_ls_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree ec5740e4-969e-4932-851c-4fbb7826024b
+4a848070-8245-4a7c-bc70-dc42f5c856be|ai_admin/commands/ollama_base.py|2026-03-05T01-29-27|restore_backup_file||Before restore from backup
+4acd61e8-c82e-456a-8f17-2703b7c47199|ai_admin/security/security_monitor/event.py|2026-02-27T15-08-21|replace_file_lines||Before replace_file_lines 49-52
+4b3ce3fe-e39b-4467-b802-7e4d7c38ad86|ai_admin/core/ssl_error_handler.py|2026-03-04T00-26-07|cst_save_tree||Before saving CST tree 30e5a970-3124-4964-98ef-342da434941c
+4b627e23-a2fb-498d-9925-07dd9857c153|ai_admin/security/github_security_adapter.py|2026-01-06T16-13-46|split_file_to_package|github_operation,adapter|
+4bde5874-1b88-49ed-a4cc-bab5db78356a|scripts/live_registration_probe.py|2026-04-05T14-31-19|cst_convert_and_save||Before convert and save
+4cc32714-3ac3-4bfb-a34d-641a8b25fc11|ai_admin/task_queue/task_queue/task_error_code.py|2026-03-02T00-06-40|cst_save_tree||Before saving CST tree 553c405b-1724-4bfa-903b-014e8bc2b08c
+4d0d2892-e05c-4765-8b8d-2e5bbda751fd|ai_admin/core/server_manager.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 019d9706-1bab-4921-8c6e-bf501ef98383
+4d69bced-9a2b-4715-82d1-4a2a69a49f2e|README.md|2026-04-07T09-41-39|write_project_text_lines||Before write_project_text_lines 2-2
+4d75fa2a-199c-4d1b-a384-2a39b20f4ccb|add_fallback_logic.py|2026-02-28T17-06-12|replace_file_lines||Before replace_file_lines 2-2
+4dac3ae3-1678-4f2c-a031-9e405122cb39|ai_admin/commands/docker_build_command.py|2026-03-04T00-50-29|format_code||Before format
+4deb16ee-7d93-4ffa-a3bf-a6b954334d3a|ai_admin/__main__.py|2026-04-05T16-37-10|replace_file_lines||Before replace_file_lines 1-1
+4e44a8ed-339f-4720-b9c1-34027771a486|ai_admin/settings_manager/manager.py|2026-03-01T21-19-49|query_cst_replace||
+4f96f7ec-5ea2-4882-9cb7-82fd865f2487|scripts/live_registration_probe.py|2026-04-05T14-30-55|cst_convert_and_save||Before convert and save
+507ebdc2-9b69-455e-8bf5-677de315c033|ai_admin/security/system_security_adapter.py|2026-01-06T16-13-46|split_file_to_package|system_operation,adapter|
+512d4d2d-3ff3-4789-a680-c3461a735b21|docs/plans/step_4/INDEX.md|2026-05-01T19-54-44|create_text_file||Before create_text_file overwrite docs/plans/step_4/INDEX.md
+5179b968-0322-4416-9c54-9436fade3404|ai_admin/core/custom_exceptions/base.py|2026-03-15T18-03-19|restore_backup_file||Before restore from backup
+517bb32a-2488-4fa9-9b05-be2e2e1a489e|add_full_queue_support/__init__.py|2026-04-04T22-18-18|cst_save_tree||Before saving CST tree 1c64a7e1-656f-4989-b86a-5cea2d1f379f
+520917c6-d428-417c-b03b-aa07aa7cfca0|_fix_ssl_type.py|2026-04-06T00-52-21|cst_save_tree||Before saving CST tree a47e89db-d949-4a29-919a-7cd73658beda
+52507e92-a57f-44ea-adaf-6ac88e286011|ai_admin/ollama/ollama_client.py|2026-04-07T05-57-22|restore_backup_file||Before restore from backup
+5296942c-a99d-4c5c-8afb-dac216988f6b|ai_admin/commands/cert_key_pair_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree d112000c-ade5-4dae-a89c-8f5e7f1fd590
+52a5e381-d36a-4635-ba49-bccd6b6b6fff|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T15-35-21|cst_save_tree||Before saving CST tree 5ef7d732-bffe-4ce5-b6e3-0ef4e3e75fcf
+5377c6c0-341f-437d-bae5-631f8745f975|add_full_queue_support/queue_helpers.py|2026-04-04T22-06-38|cst_save_tree||Before saving CST tree 01b85d9a-aefd-48d8-b4c0-8382b5abeeb8
+53cb8be9-661b-46b4-bdd6-b64192e9cad5|add_fallback_logic.py|2026-03-05T01-21-15|format_code||Before format
+53ee1970-7190-41da-ad60-2f985415cd91|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-11|query_cst_replace||
+53f478a7-7bca-44a9-a542-93a02632b999|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-22-05|restore_backup_file||Before restore from backup
+54016bfb-0b1f-4445-a4a0-1b30ab5ce329|add_fallback_logic.py|2026-04-04T20-23-11|cst_save_tree||Before saving CST tree fb60cb5e-ef20-402e-850d-3b61679210b5
+551e3763-8818-4901-b2f3-c1f0926ec470|ai_admin/commands/docker_network_rm_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree bc0c9759-d6c8-427a-9d0e-59e1f4e596d3
+553fe649-3669-4128-b886-3f3f47766d4b|_fix_ssl_type.py|2026-04-04T20-57-25|restore_backup_file||Before restore from backup
+5596d756-18e4-40d5-b461-2324d6e6100e|add_fallback_logic.py|2026-04-04T20-22-25|restore_backup_file||Before restore from backup
+56203cdd-5e2d-4d58-b3e1-513f76e69444|add_fallback_logic.py|2026-02-28T19-17-16|cst_save_tree||Before saving CST tree 9acc1499-c612-4910-839f-46d3082bf381
+5684b91d-6bb2-496f-b09b-2196bee7a39b|ai_admin/commands/docker_search_cli_command.py|2026-03-05T01-36-18|format_code||Before format
+5787b2da-f34a-4985-8710-e6d728c32cc9|add_fallback_logic.py|2026-04-05T00-18-00|restore_backup_file||Before restore from backup
+5797cfa4-155d-495e-8867-0ddf9a90d086|ai_admin/core/ssl_context_manager/ssl_context_info.py|2026-03-01T21-30-40|cst_save_tree||Before saving CST tree bf17209c-d44d-4dce-87b9-06b390de0fec
+5876f6ee-ec82-4504-90bd-5411311d0100|docs/plans/step_6/TASKS.md|2026-05-01T21-10-52|create_text_file||Before create_text_file overwrite docs/plans/step_6/TASKS.md
+58b5b4f3-68d3-4035-b561-4f8934e1a275|ai_admin/commands/docker_network_rm_command.py|2026-03-05T01-24-30|format_code||Before format
+5972a441-e620-41a9-b7a0-e1140e8ac75e|ai_admin/commands/docker_network_create_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree eb6457b9-f099-4fd2-9c63-437513095f40
+5a21f49c-0194-4690-8c8c-e6a28c5e2c3f|add_fallback_logic.py|2026-04-05T00-11-09|cst_save_tree||Before saving CST tree 045fe8ab-aae3-4d2a-9146-53d50c130be5
+5afb3b77-aff2-4aba-b686-becd6fcae11d|scripts/bounded_autoreg_probe.py|2026-04-05T15-55-18|cst_save_tree||Before saving CST tree cbf0ede4-403b-47e8-8e13-3ead26b62b6b
+5b4295ea-cdf2-40fd-9105-4de2f6bc751f|ai_admin/core/server/factory.py|2026-03-04T21-46-56|cst_save_tree||Before saving CST tree 69e9f291-b923-49f5-af1b-14b405e57080
+5b500c4d-1890-47fe-9180-4f4e6075a1a8|add_full_queue_support/__init__.py|2026-04-04T22-21-59|cst_save_tree||Before saving CST tree 1c64a7e1-656f-4989-b86a-5cea2d1f379f
+5c03a01b-11c0-4f4f-8816-3680130404c6|ai_admin/core/ssl_error_handler.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 752ee847-5302-4c76-b933-1f324f002566
+5caa01c9-99b7-4170-bf96-a0d45ee833ac|docs/plans/step_2/2_1/TASKS.md|2026-05-01T21-06-35|create_text_file||Before create_text_file overwrite docs/plans/step_2/2_1/TASKS.md
+5d03a722-ea8b-4cf4-b06b-c0fa5d4afd2f|ai_admin/commands/docker_login_command.py|2026-03-04T01-46-00|restore_backup_file||Before restore from backup
+5d15c84c-0e20-460d-99b2-61ad44e68913|config/http_reg.json|2026-04-11T17-36-16|json_save_tree||Before saving JSON tree 1a4f1543-af75-486b-9a01-5338797c50e5
+5de15d21-db7a-4f79-beff-d8fd55c11722|README.md|2026-04-07T09-28-16|write_project_text_lines||Before write_project_text_lines 2-2
+5e3d4e5f-cfcb-4b2d-8b9b-6b5246994e97|detach_start_ai_admin_http.py|2026-04-13T21-48-22|cst_save_tree||Before saving CST tree 5194125b-3519-429d-8fec-5ccd1e05359a
+5e3f8a4a-e67f-4d73-9257-14d33e9dd222|ai_admin/commands/cert_request_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 3ff7783e-e68c-401a-8a88-2cd2d8e4c977
+5e8265d3-909b-4dac-8a4d-76b0b44d7452|ai_admin/commands/ssl_cert_generate_command.py|2026-03-05T01-42-03|split_class|CertGeneratorHelpers,CommandRunner|
+5ebe0bac-32c8-41c1-8b79-9b29985c1a57|add_fallback_logic.py|2026-03-05T01-21-28|query_cst_replace||
+5f8a83fc-5e8d-48cc-8403-8cbb47fec45c|ai_admin/commands/docker_restart_command.py|2026-03-05T01-26-30|format_code||Before format
+5faaafb9-5c36-4bab-a685-008a0af22562|ai_admin/core/server/server_manager.py|2026-03-04T17-12-36|cst_save_tree||Before saving CST tree a2ef174b-c660-41e4-97c0-359c571bbc01
+5fcff89e-808b-479a-8f98-d717f738df31|ai_admin/task_queue/task_queue/task.py|2026-03-01T14-51-40|cst_save_tree||Before saving CST tree ac0fa071-14e0-4d28-93c8-ea9e5e62c662
+5fd7c09e-45ea-48a2-954a-808a14bc4b47|docs/plans/step_3/TASKS.md|2026-05-01T22-15-07|universal_file_replace||Before universal_file_replace docs/plans/step_3/TASKS.md
+6017582b-e334-410e-8cb0-3a9b1097cf27|ai_admin/core/server.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 6a24d4ea-9cf1-4f3e-804d-79df51312476
+605e0340-af7c-4bad-8a3f-017a8ffb5fbe|ai_admin/__main__.py|2026-02-25T19-38-33|format_code||Before format
+60628a0a-6356-4761-9f10-9d33c80ca755|ai_admin/commands/base_unified_command.py|2026-04-13T22-17-46|cst_save_tree||Before saving CST tree 507151b2-63e8-4484-a6b8-47067cbca5ce
+61680576-dd13-42c0-8ff9-d963456a92a1|requirements.txt|2026-01-06T14-57-02|write_project_text_lines||Before write_project_text_lines 1-1
+62078af2-e467-414e-98c7-3061f977b62e|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-40-06|query_cst_replace||
+6255261a-ab29-4fd5-84b3-2a5b56619f24|ai_admin/config/config_validator.py|2026-01-06T16-16-44|cst_save_tree||Before saving CST tree a87458c1-0b02-47d4-9d4b-13a4a1562322
+6291cded-876d-4d90-ba0a-bad3acfe9959|add_fallback_logic.py|2026-04-05T00-12-09|cst_save_tree||Before saving CST tree 1d728128-5d1e-45c9-9727-585ac5a6e1b6
+62b2b1cf-dae6-4a11-8add-602ff0ece0c5|add_fallback_logic.py|2026-04-04T20-46-40|restore_backup_file||Before restore from backup
+62be947c-d416-4976-b60b-a9f47604ce8e|config.json|2026-03-03T01-07-35|json_save_tree||Before saving JSON tree 5ca4d907-fa1d-4098-832f-9812fcfdabb8
+62e4417a-8953-4629-8515-0f043520d424|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-23|query_cst_replace||
+63737329-debe-42be-9543-82228b9a8be0|add_full_queue_support/queue_helpers.py|2026-04-05T02-31-51|cst_save_tree||Before saving CST tree 89cbf638-cb13-40a9-aed5-e3fca0a9d712
+6379e2e2-ac26-445c-beec-1bfb83e6d6eb|ai_admin/commands/docker_push_command.py|2026-03-05T01-26-27|format_code||Before format
+646cb3c9-ded5-4664-b96a-a5e432335aa8|ai_admin/commands/cert_request_command.py|2026-03-04T00-50-27|format_code||Before format
+661b2a2f-0ae9-4a85-a9bf-9cda79017f7d|ai_admin/commands/ftp_download_command.py|2026-03-05T01-42-11|format_code||Before format
+66913cc5-5e02-4266-b200-a882299a1fe3|ai_admin/core/ssl_context_manager/ssl_context_info.py|2026-02-27T15-14-40|query_cst_replace||
+66a46d09-b09b-4ef1-9cc2-6fcbead4e5ab|ai_admin/core/server/__init__.py|2026-02-27T15-07-24|cst_save_tree||Before saving CST tree 924037bb-f0bd-4503-b632-a5f97d02f5d0
+6738689a-86fe-4bc5-9207-06e587c5ad25|ai_admin/__main__.py|2026-04-05T20-35-59|format_code||Before format
+674f19ad-e1b0-4082-a2db-d108bf414916|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-14-54|split_class|QueueCore,FtpExecutor,DockerExecutor,K8sExecutor,KindExecutor,OllamaExecutor,MiscExecutor|
+675afeda-b6b2-40b1-ab08-40946919358e|test_ftp_commands.py|2026-02-28T20-30-09|replace_file_lines||Before replace_file_lines 167-167
+67baec7b-7c0e-4fe4-804e-92428969d9b7|ai_admin/settings_manager/manager.py|2026-03-01T21-19-56|query_cst_replace||
+67d32742-7f44-44fb-9f5e-f9e4df351501|ai_admin/ftp/ftp_client/__init__.py|2026-02-27T15-14-41|cst_save_tree||Before saving CST tree edbd5cfd-9bef-474e-b0f8-aec20469b70a
+6838483f-33d2-49b5-a697-9b29424c80d4|add_fallback_logic.py|2026-04-04T10-12-42|cst_save_tree||Before saving CST tree 7354a1ba-a3cb-4ec7-b384-857c85ffff35
+687a700c-5ee8-4e5e-b5a5-33fa9c866997|ai_admin/commands/base.py|2026-03-13T22-38-27|cst_save_tree||Before saving CST tree f52be822-77c7-41a8-b126-bc17d32a791e
+697ab8ab-f37c-4372-a34b-e386666833b2|ai_admin/commands/docker_stop_command.py|2026-03-05T01-37-22|format_code||Before format
+697ebbe7-301c-46e7-94b6-118a4dc543b3|ai_admin/settings_manager/manager.py|2026-02-27T15-07-17|query_cst_replace||
+69b89f57-8eb5-49a4-8d19-8bff8b72c32f|ai_admin/core/command_registry.py|2026-03-03T23-58-48|format_code||Before format
+69cb9e43-6c9e-4fc7-826b-76a6e8e1fbb8|ai_admin/commands/config_command.py|2026-03-04T00-49-37|format_code||Before format
+69e518c8-9243-44b0-b170-e828cef61706|ai_admin/core/server/factory.py|2026-04-05T12-25-38|cst_save_tree||Before saving CST tree 0d55470c-396f-4320-964f-1be3336494a9
+6a5aecdf-120f-4010-afe1-1c56bea2c057|ai_admin/core/ssl_error_handler.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 18d2ee46-f82e-4d36-90fc-c93970bc544c
+6ba90ec1-5b61-4775-97ad-6660a734bf79|ai_admin/commands/vast_destroy_command.py|2026-01-06T16-13-45|query_cst_replace||
+6bad5ffc-cc44-4438-bca5-54d3a84cca57|ai_admin/commands/base_unified_command.py|2026-04-13T22-26-07|format_code||Before format
+6c00a297-06cd-46bb-b57e-0576f52e3dab|docs/plans/step_2/2_3_to_2_10/TASKS.md|2026-05-01T21-07-48|universal_file_replace||Before universal_file_replace docs/plans/step_2/2_3_to_2_10/TASKS.md
+6c68567a-32df-4c74-b055-d72b0514301f|README.md|2026-04-07T09-50-22|replace_file_lines||Before replace_file_lines 2-2
+6cb36484-fa1d-4534-9aac-9f7e43148977|ai_admin/task_queue/task_queue/task_queue.py|2026-03-01T20-34-01|split_file_to_package|queue_facade,ftp_executor,docker_executor,k8s_kind_executor,ollama_executor,misc_executor|
+6d3dd3b9-e057-41e2-82d9-7061c474ebc2|ai_admin/task_queue/task_queue.py|2026-01-06T16-13-45|split_file_to_package|task_status,task_type,task_error_code,task,task_queue|
+6e237f79-1675-4deb-91b9-65d01eda0376|add_fallback_logic.py|2026-02-28T22-44-11|cst_save_tree||Before saving CST tree b3efc35c-6f5e-4168-b033-0bde048b2d8c
+6e2dce90-bb01-4207-a684-9228b7d19192|ai_admin/task_queue/task_queue/task_status.py|2026-02-27T15-07-58|cst_save_tree||Before saving CST tree 36c42d9a-2533-426c-8b83-15849bc8a110
+6e50bf1a-d102-4149-87fa-c8289e552043|ai_admin/auth/git_auth_manager.py|2026-04-05T02-12-33|format_code||Before format
+6ee2d4b2-c395-402e-81d1-3c2bf726b341|ai_admin/commands/base_unified_command.py|2026-04-13T22-21-40|format_code||Before format
+6ee85e3a-0ca2-45db-bb98-1babadc0dd07|add_full_queue_support/__init__.py|2026-04-04T21-30-24|cst_save_tree||Before saving CST tree 9f854e2b-33f9-43d5-9806-46d7178b9ea3
+6f9c67c9-0be4-4dc7-b9c2-e9dc487dcba3|ai_admin/core/custom_exceptions/__init__.py|2026-04-05T05-46-12|format_code||Before format
+6fab3903-65f8-4a8e-81aa-92c02c955792|_fix_ssl_type.py|2026-04-06T00-52-21|cst_save_tree||Before saving CST tree b5a04069-fd59-42f2-92fd-725344ce2115
+6fd9e789-6386-4f71-8869-060446b09a7e|ai_admin/commands/ollama_base.py|2026-03-05T01-29-56|format_code||Before format
+6fe816ec-cbb8-40fd-974a-79da53d3e85c|tests/ssl_tests/__init__.py|2025-09-13T03-54-00|restore_backup_file||Before restore from backup
+6fead183-2908-4ff7-8b1c-4864104f3fee|ai_admin/commands/docker_containers_command.py|2026-03-04T01-44-00|format_code||Before format
+706f5710-4b92-4d76-ac74-5beb87791ea9|ai_admin/commands/docker_login_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree c5c7e58d-444a-4ffa-b655-750823667c96
+7072fdd0-9d59-4a78-b450-97e7f08f02c3|add_fallback_logic.py|2026-04-04T10-29-38|format_code||Before format
+70a8ad8c-efc0-4277-8bc7-c65ab6617fa7|ai_admin/core/server/factory.py|2026-04-05T12-23-47|cst_save_tree||Before saving CST tree a780e9c7-82a6-42a3-aadc-d914bd27a723
+70aa8fc2-a67f-46fb-b1a7-96573c98de44|ai_admin/commands/ssl_cert_generate_command.py|2026-03-05T01-42-18|split_file_to_package|ssl_command,cert_helpers,command_runner|
+7128cb76-4223-4827-84ec-588d5bf1886f|add_fallback_logic.py|2026-04-04T09-44-05|restore_backup_file||Before restore from backup
+71de9bbf-4c5e-4e4b-b74a-d7df2fcc48f2|add_fallback_logic.py|2026-02-28T22-43-47|format_code||Before format
+72240c7a-ae10-480f-a6ff-f6fa02926621|ai_admin/commands/ssl_cert_generate_command.py|2026-01-06T16-13-46|split_file_to_package|ssl_cert_generate_impl|
+72389400-ff2c-4776-9e0c-526a09b297ab|ai_admin/commands/docker_cp_command.py|2026-03-04T01-44-03|restore_backup_file||Before restore from backup
+726597bf-e9c6-416f-9ba8-d542d5e0f26d|ai_admin/commands/docker_remove_command.py|2026-03-05T01-26-29|format_code||Before format
+728b22fc-a0a4-4c98-8d66-3107ff2166a4|ai_admin/task_queue/task_queue/queue_impl/__init__.py|2026-03-01T20-31-01|query_cst_replace||
+731ced94-0472-40ba-98a6-c8aeee5a0fed|ai_admin/commands/base_unified_command.py|2026-03-04T01-43-43|format_code||Before format
+73ef8fa4-74e5-44b3-8e3c-03146223c7cc|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-08|query_cst_replace||
+73f142c1-009b-44a9-b671-46e3e6b5b810|ai_admin/task_queue/task_queue/queue_impl/misc_executor.py|2026-03-01T20-51-10|format_code||Before format
+7453bee0-adab-4912-b86e-e5c30de90d0b|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T15-49-35|restore_backup_file||Before restore from backup
+7499959e-0265-4f94-bdf9-a1b19eb10e57|ai_admin/security/security_monitor/event.py|2026-03-01T22-54-30|cst_save_tree||Before saving CST tree d0c2be82-3e8e-4e52-8ebd-cc2fb6963534
+75501974-40bb-49fb-8a4c-46125e7e3f66|ai_admin/__main__.py|2026-04-05T12-25-43|cst_convert_and_save||Before convert and save
+7599f517-94e0-44c9-93ae-77faf4c3ec67|scripts/patch_registration_config.py|2026-04-05T13-52-26|cst_save_tree||Before saving CST tree 2999b1c9-7c93-4ccc-8705-b874f2d0043f
+7707c668-4b39-43db-9f13-c5458893a0ea|ai_admin/security/github_security_adapter/github_operation.py|2026-02-27T15-14-37|cst_save_tree||Before saving CST tree 682099ab-3530-4dd1-8c76-40a600341d02
+77a41d17-8378-4e86-8da4-0cbd2b900954|ai_admin/core/hypercorn_config.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree abcc1a8b-85b8-402f-ba86-c50295b1e8ca
+77b5347e-90df-4201-a4c2-5d35c203fa39|ai_admin/settings_manager/__init__.py|2026-03-01T21-16-46|query_cst_replace||
+7905e086-317c-4038-8af8-f84674fdf3a3|ai_admin/settings_manager/helpers.py|2026-04-05T05-49-35|cst_save_tree||Before saving CST tree 768be57b-3dab-4c32-8152-947d04ae1d21
+79293cce-dab9-4ddf-9868-22fc559fc8a3|ai_admin/settings_manager/helpers.py|2026-02-27T15-07-17|query_cst_replace||
+7947be59-98a2-4c03-9064-07bb35f594eb|ai_admin/core/ssl_error_handler.py|2026-03-04T01-42-59|format_code||Before format
+7984920c-fe22-4655-8de0-96aae5f5eda5|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T19-49-11|format_code||Before format
+7a5b65e4-d512-42b9-98b8-e859432808cd|scripts/run_vast_reg_capture.py|2026-04-11T17-38-41|cst_convert_and_save||Before convert and save
+7a81e496-a857-4090-a043-a0da24103f5d|ai_admin/security/security_monitor/severity.py|2026-03-01T21-57-06|replace_file_lines||Before replace_file_lines 26-30
+7aa5697b-1fde-48d9-944a-ea6bb1cf1937|ai_admin/security/security_monitor/event.py|2026-03-01T22-06-27|cst_save_tree||Before saving CST tree da272593-beb7-471e-8f3c-969547b1f70d
+7aa78720-cf57-4836-91fe-bdb7a157f42f|ai_admin/security/security_monitor/severity.py|2026-02-27T15-08-17|replace_file_lines||Before replace_file_lines 27-28
+7c377937-f69b-44b7-8ad8-f5a35058d3ec|docs/plans/step_7/INDEX.md|2026-05-01T19-55-32|create_text_file||Before create_text_file overwrite docs/plans/step_7/INDEX.md
+7d619102-bb24-433e-833f-4656205e0d40|ai_admin/security/security_monitor/severity.py|2026-03-01T22-14-31|cst_save_tree||Before saving CST tree 69c60531-989f-4525-b27b-682408e5f9ef
+7d93f57b-f663-4b75-befc-49805a72a854|add_full_queue_support/__init__.py|2026-04-04T19-56-36|cst_save_tree||Before saving CST tree 00f6594b-3424-45c8-86c3-46f99e699907
+7d99c1b3-2a25-4d73-8f78-801a4c9b6a36|ai_admin/settings_manager/helpers.py|2026-03-01T21-19-14|query_cst_replace||
+7db62a68-9770-4d8e-b494-92a72a25db09|add_fallback_logic.py|2026-04-04T18-26-41|restore_backup_file||Before restore from backup
+7de0bb64-f492-4656-b394-359e2fc8294f|ai_admin/task_queue/task_queue/task_queue/__init__.py|2026-03-01T20-36-54|cst_save_tree||Before saving CST tree c1af5e97-94a8-4152-a480-fd2e2f430dc9
+7e519933-a818-46c5-8746-3385c98e8a29|test_github.py|2025-09-14T23-26-23|query_cst_replace||
+7e584239-2acd-449d-827c-75108e82a61d|ai_admin/commands/k8s_namespace_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree f1beed09-42c2-4651-a0d1-2b35da5f593a
+7f064916-f303-4ab0-bf75-be120521c021|_fix_ssl_type.py|2026-04-06T00-51-44|cst_save_tree||Before saving CST tree 6ac6e045-9abc-4936-b680-8424d58cb8c1
+7fb08a92-a587-4819-87ae-f4a0a9b89ee4|ai_admin/core/custom_exceptions/base.py|2026-04-07T08-51-38|restore_backup_file||Before restore from backup
+80919fda-a5ed-45dc-9ae4-ca5b7ca6c98c|broken_syntax.py|2026-02-28T20-31-34|replace_file_lines||Before replace_file_lines 2-2
+8118a505-2b47-4d1f-80d9-c1e52501a9a6|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-40-51|query_cst_replace||
+812b858c-7b96-405c-86b9-1160992f3b92|add_full_queue_support/__init__.py|2026-04-04T21-25-29|cst_save_tree||Before saving CST tree 966ec0e6-49be-4b41-a19d-bc4b74b3a772
+812e5536-45dc-458c-b23d-86d66e3788c5|ai_admin/task_queue/task_queue/queue/__init__.py|2026-03-01T20-31-30|query_cst_replace||
+8141e0bb-9e37-4bed-b039-20632c525fc4|ai_admin/commands/docker_search_cli_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 8305b097-eff5-46c6-acea-ffca7f7e3ee4
+81b2be40-dc1f-4df0-b7e1-fb5725fd7436|ai_admin/security/security_monitor/event_type.py|2026-03-01T23-08-45|cst_save_tree||Before saving CST tree 22c79498-7c69-4cb6-a1b5-9ddfc8064427
+81b90fe2-48f0-42ec-9c9e-a1a4b4e33f1d|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-16|query_cst_replace||
+81bae6f2-4b08-43da-a149-bb203ee70a9d|add_fallback_logic.py|2026-04-06T00-59-33|cst_save_tree||Before saving CST tree 83c3c634-74e9-40c6-b029-e01d3beaf9f5
+81e7cbc5-7446-46fc-a37f-03a98daafd62|ai_admin/commands/ftp_delete_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 842ea3d6-ff7f-48df-8214-e289481860a2
+82c3abd7-6dc5-421b-9c50-a6593075285d|detach_start_ai_admin_http.py|2026-04-13T21-52-04|format_code||Before format
+82cd7524-e80b-445c-990e-5d793bed1efa|ai_admin/task_queue/task_queue/enums.py|2026-03-01T14-53-58|format_code||Before format
+82ef705d-a1f4-4b47-baf8-ea674454be10|ai_admin/commands/ollama_base.py|2026-04-07T05-44-49|restore_backup_file||Before restore from backup
+836cdef0-fbca-4500-bdff-e1933af4b40b|ai_admin/commands/docker_images_compare_command.py|2026-03-04T01-45-53|format_code||Before format
+8382fa33-8fac-4f59-aa91-df48be3cd98b|ai_admin/config/config_validator.py|2026-04-11T18-03-52|restore_backup_file||Before restore from backup
+8469054b-4471-462d-8c96-3fc3f45d0b00|docs/plans/step_3/TASKS.md|2026-05-01T21-08-47|universal_file_replace||Before universal_file_replace docs/plans/step_3/TASKS.md
+846d69dd-66c7-4fce-a61b-f718381f10da|ai_admin/settings_manager.py|2026-01-06T16-13-45|split_file_to_package|settings_core,settings_helpers|
+84a2ed69-bee6-4b72-bd44-b1c7d855a3a6|test_import.py|2026-03-01T23-25-47|cst_save_tree||Before saving CST tree 66656cea-7fd5-45c9-8838-fd2c37dca57c
+84ace259-389f-4811-b5f7-4bfc48ecbafc|ai_admin/commands/docker_search_command.py|2026-03-05T01-37-19|format_code||Before format
+85930aaa-7b96-4682-bbf4-9d55dff88877|add_fallback_logic.py|2026-04-04T10-20-47|format_code||Before format
+85982e5d-4411-4244-80e0-7df1c1dd65b6|test_ftp_commands.py|2026-02-28T21-37-33|replace_file_lines||Before replace_file_lines 167-168
+863f77aa-4648-4af0-8169-924e36b292d1|docs/plans/step_3/INDEX.md|2026-05-01T19-54-25|create_text_file||Before create_text_file overwrite docs/plans/step_3/INDEX.md
+86aebe01-c15a-4373-bd20-a6f2b62314fb|ai_admin/commands/queue_cancel_task_command.py|2026-03-02T00-59-38|cst_save_tree||Before saving CST tree 19d8a273-5608-4cb4-b526-bb2f47006992
+8751e313-8470-4714-9be1-8f235a9f083b|ai_admin/auth/git_auth_manager.py|2026-04-05T02-14-47|format_code||Before format
+87999c76-58bc-42ce-8298-88bed7f4c412|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-41-01|cst_save_tree||Before saving CST tree 64ab8130-b395-4186-9da8-2e8051593460
+87cfd9ed-fb3e-45c1-8d5e-77122f6438d6|README.md|2026-04-07T08-59-37|write_project_text_lines||Before write_project_text_lines 2-2
+87de89b9-3864-41e4-adc8-807d64fe1034|ai_admin/commands/docker_search_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 470a1c84-8019-47a9-aca7-fa10d3fc6816
+887ffa72-1aab-4142-bc48-d721900e439c|ai_admin/commands/docker_build_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree ebf1fc11-1beb-426d-8010-71da5e0ecf46
+88e9cdf5-501e-462c-a984-bc2f7374b140|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-41|query_cst_replace||
+893320ea-4006-480e-8264-1b4795b37e0f|ai_admin/commands/vast_create_command.py|2026-01-06T16-13-46|query_cst_replace||
+8973849f-9971-418a-8093-c34abe80b993|add_fallback_logic.py|2026-04-04T23-16-00|cst_save_tree||Before saving CST tree 045fe8ab-aae3-4d2a-9146-53d50c130be5
+8a42827c-ba1d-4bff-bc47-3626ee6dd901|detach_start_ai_admin_http.py|2026-04-13T21-50-05|cst_save_tree||Before saving CST tree 5194125b-3519-429d-8fec-5ccd1e05359a
+8b37e1cd-82ae-4c85-909f-2a50e08d7e14|add_fallback_logic.py|2026-04-04T20-23-11|cst_save_tree||Before saving CST tree 18295375-8d47-460a-a79c-3a7524819148
+8b6fafb0-97ee-40d5-8a76-671d8f25b741|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-18|query_cst_replace||
+8c32da81-4fcf-4292-a94c-85ae5fceccfb|docs/plans/step_5/INDEX.md|2026-05-01T19-54-59|create_text_file||Before create_text_file overwrite docs/plans/step_5/INDEX.md
+8c5b3fbb-a96c-40f9-937b-f81b2e1a48dd|ai_admin/core/ssl_error_handler.py|2026-03-04T00-25-22|restore_backup_file||Before restore from backup
+8c94a08d-0aae-41cd-b521-d31a5eec607c|ai_admin/settings_manager/helpers.py|2026-03-01T21-18-55|query_cst_replace||
+8cfc0e55-40b1-44dd-ad61-b78f915a89f6|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-26|query_cst_replace||
+8d2ba11d-a906-42ca-a4e2-fb3ee6b17029|ai_admin/__init__.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 36284fb2-79d2-4ab4-8847-bf48566b7b7d
+8dbef2d4-b2f1-4f9f-8877-df7e94fada88|ai_admin/commands/docker_tag_command.py|2026-03-05T01-38-56|format_code||Before format
+8e20b7f2-ef83-41be-968f-571a0f07c650|_fix_ssl_type.py|2026-04-17T15-03-45|cst_save_tree||Before saving CST tree 0e651595-e596-4911-a97d-8ece9f9823fe
+8ecf5541-3fff-4f97-9a80-aae1d885bf84|ai_admin/task_queue/task_queue/queue_impl/__init__.py|2026-03-01T20-38-28|cst_save_tree||Before saving CST tree af34c207-52c5-4047-883a-ee4103d95de1
+8f1466f7-85cc-42dd-a7c1-98f1e7344744|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T16-42-31|cst_save_tree||Before saving CST tree 40ff301a-bb3d-45e7-8716-e3fc80df95e2
+901682ea-05dd-49f3-a354-916c62fa0806|add_full_queue_support.py|2025-09-15T10-20-36|split_file_to_package|queue_helpers,main_module|
+9054bff2-669c-480e-b83a-4e9c6ca8f038|ai_admin/core/server/factory.py|2026-03-04T17-17-24|cst_save_tree||Before saving CST tree 95fb4753-f915-4aba-a3b5-7ee36eda88a8
+90f5c938-ab42-4c81-99b4-75c34fd71cd3|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T15-51-34|cst_save_tree||Before saving CST tree c952e96a-87f0-49d4-a092-3d8e8c2a85f2
+90facf1d-3891-4678-94b6-57df4e0cf373|ai_admin/security/security_monitor/alert.py|2026-02-27T15-08-24|cst_save_tree||Before saving CST tree dff90d0e-47e8-429b-8894-cb772634b1af
+9184d942-b133-4f76-9c3d-a00405173fc5|ai_admin/commands/k8s_certificates_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree e860fe1a-83fd-4344-b84c-51347e948e8a
+91ade846-0bfc-46ba-abb0-b19cbe5a7de7|ai_admin/ollama/ollama_client.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 876018a9-1084-4e47-87e8-70ae68295ca6
+922515c0-1d71-4154-8581-c240d513bb21|ai_admin/commands/k8s_cluster_command.py|2026-03-05T01-29-19|format_code||Before format
+929a3d0d-4a31-4ac1-843a-ee03bc67ce52|ai_admin/core/custom_exceptions/__init__.py|2026-04-05T05-51-47|format_code||Before format
+92db07aa-d7d7-4f66-9e07-c33f90503472|ai_admin/core/ssl_context_manager/manager.py|2026-02-27T15-14-43|query_cst_replace||
+93822c4f-a350-48c9-915c-54a0085aa320|ai_admin/security/security_monitor/severity.py|2026-03-01T21-58-22|cst_save_tree||Before saving CST tree 29afbbba-a609-443c-aca0-0f2a1dbd5f4d
+93f9bb6b-07fa-4de2-9bf2-85337dd17d5b|ai_admin/task_queue/task_queue/enums.py|2026-03-01T14-53-03|cst_save_tree||Before saving CST tree 1c46f5f7-8d1d-45b3-a71f-14bb37539af3
+93ff7f0a-53f0-4136-90c5-f57ea427828f|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-30|query_cst_replace||
+9447dc08-8229-432c-9491-9048845e2082|ai_admin/commands/queue_cancel_task_command.py|2026-03-02T00-59-02|query_cst_replace||
+94e4adaa-efc4-45d6-8411-67bce62208fe|ai_admin/core/ssl_context_manager/ssl_context_info.py|2026-03-01T21-29-45|cst_save_tree||Before saving CST tree 0a6a82a1-4128-4810-b1b5-e2dfac1ffe81
+95def2fb-392b-4eab-89d1-006110339712|ai_admin/settings_manager/settings_helpers.py|2026-04-05T06-01-51|format_code||Before format
+95e52095-d413-4474-a60d-cc364222c4cd|scripts/vast_srv_http_manager.py|2026-04-13T23-16-24|format_code||Before format
+95e94d57-2e71-48f7-b74f-d4f99cd5014b|scripts/live_registration_probe.py|2026-04-05T14-33-39|format_code||Before format
+95f7ee80-20a6-454e-a2c9-6af259d2a8cd|ai_admin/commands/docker_run_command.py|2026-01-06T16-13-46|format_code||Before format
+9614b75c-b46b-4949-9d2e-e680e2ee35b0|ai_admin/security/command_security_mixin/mixin_impl.py|2026-02-27T15-00-15|query_cst_replace||
+963643f6-adcd-447f-ab94-c4a1870cf75e|scripts/patch_registration_config.py|2026-04-05T13-56-35|cst_save_tree||Before saving CST tree 3ebfc549-d8f3-4275-a8bf-a656f6ab81d9
+96493b0d-5370-4aeb-8fe3-c5c3ae06f535|ai_admin/commands/docker_inspect_command.py|2026-03-04T01-45-56|format_code||Before format
+965c30b3-af1e-4bdf-903b-ff4542492ff0|scripts/live_registration_probe.py|2026-04-05T14-34-27|cst_save_tree||Before saving CST tree 78d98adc-64d5-4018-b3ae-b59484542d66
+96f1ecd5-0f06-4aa1-8942-835ebe69f3f6|add_fallback_logic.py|2026-04-04T22-33-39|cst_save_tree||Before saving CST tree 18295375-8d47-460a-a79c-3a7524819148
+9825045a-1bb1-4556-b915-f7d80251655d|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T20-20-50|split_file_to_package|core,ftp_executor,docker_executor,k8s_executor,misc_executor|
+99369029-8884-4d54-b55a-b7c86a43fe81|ai_admin/__init__.py|2026-04-04T22-31-37|cst_save_tree||Before saving CST tree 86eb3e17-063c-4649-98be-6ba5046c29c8
+994d5793-2a00-4214-b38c-fe59f32f5c32|add_fallback_logic.py|2026-02-28T22-44-11|format_code||Before format
+99b13a5f-00be-47ae-b654-bee8f18981a7|ai_admin/commands/docker_network_disconnect_command.py|2026-03-05T01-23-29|format_code||Before format
+9a225898-409c-468f-aa04-06542d329170|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T16-27-32|format_code||Before format
+9a45655b-eb18-4351-b0c5-075b8f6e85aa|ai_admin/commands/docker_start_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 449bf6b5-d33e-4a1c-b38c-0c19ae4e3c1a
+9aaf30e1-10ed-4c8c-a309-7e5edd8ff87b|ai_admin/auth/git_auth_manager.py|2026-04-05T02-14-59|cst_save_tree||Before saving CST tree 1dee8784-2a27-4017-ab7f-01b4a5e50455
+9b676a27-b167-4912-94fc-6e25e97ba0fb|add_fallback_logic.py|2026-04-04T10-31-57|cst_save_tree||Before saving CST tree 3e4ce57a-da07-4885-bf04-9abcd336c79d
+9b901667-5610-49e9-816f-408b3430914c|ai_admin/settings_manager/manager.py|2026-03-05T01-41-08|cst_save_tree||Before saving CST tree 322d7311-6468-4225-978f-55a82d6b19f5
+9ba3b2be-7394-4d17-b9f6-227408246a38|ai_admin/commands/docker_run_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 3c6dbd91-faab-46c6-9e42-4bdcf975072b
+9ba4e48a-1cd2-4fc1-81fc-18c7e72c9483|add_fallback_logic.py|2026-04-04T09-53-36|restore_backup_file||Before restore from backup
+9bdf26e0-b346-44cd-8169-ec0bee2db0c6|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-16-10|split_file_to_package|task_queue_facade,core,ftp_executor,docker_executor,k8s_executor,kind_executor,ollama_executor,misc_executor|
+9d285e53-eaed-4d03-9582-71c025e0f175|ai_admin/commands/docker_cp_command.py|2026-03-04T01-44-51|format_code||Before format
+9d43fad0-4e35-4f96-84e4-b48d0ac02f3d|ai_admin/commands/docker_logs_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 7443adf7-c766-46cf-b474-3f80b4ddf4b2
+9d7d3df0-f0aa-4db1-818a-4f7f13e28f8b|add_fallback_logic.py|2026-04-04T22-33-00|cst_save_tree||Before saving CST tree 18295375-8d47-460a-a79c-3a7524819148
+9e719e29-9bb3-4f96-a519-6474a0685b1a|add_full_queue_support/queue_helpers.py|2026-04-04T21-57-14|restore_backup_file||Before restore from backup
+9eeb4087-5a28-430c-b85e-c8422da782a7|ai_admin/settings_manager/helpers.py|2026-03-01T21-19-17|query_cst_replace||
+a049dce0-588d-4828-8106-df122c7472d8|ai_admin/__main__.py|2026-04-05T12-24-25|format_code||Before format
+a04d7707-f802-4204-8fec-c052a9d13ef9|ai_admin/commands/queue_cancel_task_command.py|2026-03-02T19-57-34|format_code||Before format
+a095a23d-3506-4668-a478-734017c643e9|ai_admin/commands/k8s_configmap_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree ba075431-7b70-40cf-bdf3-27f3bb012bc3
+a0aa7688-0f23-46e8-8c1e-adc2d27e5b43|ai_admin/core/server/server_manager.py|2026-03-04T17-18-53|format_code||Before format
+a0fdb3f2-4264-486d-8b3d-41fe7290719a|ai_admin/commands/ftp_download_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 172e9888-77f5-4809-83e9-aa74a690ea77
+a1b8f3e7-5f5e-43d1-b7bf-6fb9b6ea4d52|docs/plans/step_3/TASKS.md|2026-05-01T22-28-01|universal_file_replace||Before universal_file_replace docs/plans/step_3/TASKS.md
+a1cc92ec-4bc8-4d42-9aba-a7e9ae0e2939|ai_admin/commands/docker_network_ls_command.py|2026-03-05T01-24-28|format_code||Before format
+a1d3b818-b1f8-48b3-b06d-cdd7e0816a84|_fix_ssl_type.py|2026-04-17T15-03-45|format_code||Before format
+a205eb1c-6de6-4375-93b1-bb00a3246c97|scripts/patch_registration_config.py|2026-04-05T16-51-19|cst_save_tree||Before saving CST tree 5ccffb74-b578-4dd8-b381-b96d1026d77e
+a2133c99-fa8c-4067-b906-5cb8c0edd353|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-16-10|cst_save_tree||Before saving CST tree d25e1445-445e-486e-9b69-002fdd3c1090
+a26de0d2-e043-48dc-8072-7ba7e060a240|ai_admin/core/app_factory.py|2026-03-04T00-10-38|format_code||Before format
+a28dcd27-aaf8-461c-9b56-71c13a139175|requirements.txt|2026-04-06T01-22-26|restore_backup_file||Before restore from backup
+a3260a49-c664-475a-8f6c-6f503a71d0ac|update_test_files.py|2026-02-28T17-46-07|replace_file_lines||Before replace_file_lines 20-20
+a3487889-c15e-42df-bac5-4f0253684ce2|scripts/gen_reg_config.py|2026-04-11T17-31-45|cst_convert_and_save||Before convert and save
+a40c7621-1d78-4bd3-9b54-fa393df0f4b2|ai_admin/commands/docker_hub_image_info_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree f46ceb4f-7c4d-41f2-a294-3279631c9230
+a420260d-e88f-4427-b3b8-ae05b8ea8c72|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T16-27-32|cst_save_tree||Before saving CST tree d96b8634-e8bb-49d2-9610-e44e5d674276
+a484090e-f117-49c7-9f77-21b4fbf89c54|ai_admin/core/custom_exceptions.py|2026-01-06T16-13-45|split_file_to_package|base,ssl_errors,auth_errors,validation_errors,config_errors,network_errors,file_errors,docker_errors,kubernetes_errors,git_errors,queue_errors,security_errors,vast_ai_errors,ftp_errors,ollama_errors,github_errors,vector_store_errors,llm_errors,system_errors,command_errors,application_errors|
+a4a08b31-f346-4d95-bd4c-dbd9377ab122|ai_admin/commands/queue_cancel_task_command.py|2026-01-06T16-13-46|query_cst_replace||
+a4f1caac-77c1-4eb1-8a93-8abed6be696d|add_full_queue_support/__init__.py|2026-04-04T22-18-18|cst_save_tree||Before saving CST tree 1c64a7e1-656f-4989-b86a-5cea2d1f379f
+a56703ff-9fd5-4bc7-a248-76b3f665a529|ai_admin/commands/base_unified_command.py|2026-04-13T22-18-34|format_code||Before format
+a64d74c1-33e3-479a-a2ef-809a39a93cc9|ai_admin/commands/base_unified_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 62dd549f-ef58-4486-b76c-d7a395c8981a
+a6b8f803-e17a-4058-bb73-f2b5ed2f9de5|ai_admin/task_queue/task_queue/task_queue/__init__.py|2026-03-01T20-34-21|query_cst_replace||
+a6cf0b06-3256-4682-ba69-6458a58f3e35|ai_admin/auth/git_auth_manager.py|2026-04-05T02-12-44|cst_save_tree||Before saving CST tree 61e0d239-4851-443e-8fbc-5a72083e262e
+a71114ab-b3b7-4ac9-aecd-502f29f6fc7f|ai_admin/security/command_security_mixin/mixin_impl.py|2026-02-27T15-28-33|restore_backup_file||Before restore from backup
+a72e5dd4-c7f1-452a-956e-c990f9fa7094|ai_admin/__main__.py|2026-04-05T16-37-10|format_code||Before format
+a7404882-7e4f-45df-a4af-ab6b0ecad6e7|config/http_reg.json|2026-04-11T17-36-16|json_save_tree||Before saving JSON tree 1a4f1543-af75-486b-9a01-5338797c50e5
+a7db93bc-98e7-445c-8b56-5f8a8de6fc52|ai_admin/__main__.py|2026-01-06T16-13-45|format_code||Before format
+a7f25236-bcfd-4b8a-912a-022352c64811|scripts/run_vast_reg_capture.py|2026-04-11T17-37-57|cst_convert_and_save||Before convert and save
+a87d612b-6e17-4d32-ae42-d36cc2d2d7c3|add_fallback_logic.py|2026-04-04T20-23-11|cst_save_tree||Before saving CST tree fb60cb5e-ef20-402e-850d-3b61679210b5
+a88b0da7-dcf8-4b0e-9482-7a082fc26363|ai_admin/task_queue/task_queue/task_queue/facade.py|2026-03-01T20-34-38|cst_save_tree||Before saving CST tree 463cb694-c109-4f5c-8692-b1b19ea6f0ef
+a8b2a990-687b-40d1-93df-53f787068efb|tests/ssl_tests/__init__.py|2025-09-13T03-54-00|cst_save_tree||Before saving CST tree 1ad735eb-6595-4165-81d6-020b4f05d882
+a8f40f5a-7399-4fdf-a5d9-8dc5f630a411|ai_admin/security/command_security_mixin/mixin_impl.py|2026-02-27T15-00-15|cst_save_tree||Before saving CST tree d6504593-a343-4ef8-a1fc-3dcd4f1c642b
+a97081f7-365b-45eb-b3db-caa52d3bee18|add_fallback_logic.py|2026-03-05T01-21-28|cst_save_tree||Before saving CST tree 98dcb300-b3b2-4bdd-bb1e-0f3a733b198d
+aa0de6be-6758-40c9-b280-d0eccccc89a4|scripts/patch_registration_config.py|2026-04-05T19-11-36|cst_save_tree||Before saving CST tree eb373373-5c78-4109-94fe-e99b3a502981
+ab2e9e83-1fbd-4c97-8091-2aa959b30683|scripts/probe_registration.py|2026-04-05T13-55-53|format_code||Before format
+ac6f7a71-d279-442e-8e7a-6396f35f6667|ai_admin/commands/example_di_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 63d82657-1e5d-443a-8e70-ba01fe567038
+ad0429d2-0874-4c20-b7c0-e3d800edad85|ai_admin/commands/ftp_delete_command.py|2026-03-05T01-39-07|format_code||Before format
+ad8bdc1b-80e7-4c0b-a943-90dc577b4a0d|_fix_ssl_type.py|2026-04-05T01-38-12|cst_save_tree||Before saving CST tree 8caa2d4a-e5a7-4a3f-8459-f7d8e6ce01c2
+ade35087-87c9-4f5f-8a65-6c36e0eb9cfa|ai_admin/auth/git_auth_manager.py|2026-01-06T16-13-45|format_code||Before format
+ae11301f-406c-432d-ae1b-2458d12259d8|ai_admin/commands/queue_health_command.py|2026-03-05T01-35-43|format_code||Before format
+ae218102-6e79-4ef2-9b7b-b0a9de0e1b12|_fix_ssl_type.py|2026-04-04T20-55-41|cst_save_tree||Before saving CST tree 8caa2d4a-e5a7-4a3f-8459-f7d8e6ce01c2
+ae7b0f78-6ac3-4c8a-bdf5-8ae802b1974d|add_fallback_logic.py|2026-03-01T14-01-21|cst_save_tree||Before saving CST tree 0c6347f2-6ae2-4d9f-b7a0-8acc01b8741d
+aef02e58-d501-46c8-81a0-094e027cf42e|ai_admin/core/ssl_error_handler.py|2026-03-04T00-12-34|restore_backup_file||Before restore from backup
+af20459a-c623-4ce0-bd69-98dfcc5f17d8|scripts/bounded_autoreg_probe.py|2026-04-05T15-21-08|cst_save_tree||Before saving CST tree 4f749c87-1c8e-406d-b77c-f6fce5e502ce
+af3036a8-115e-414a-b39a-2c50e1f26a4d|add_fallback_logic.py|2026-04-05T01-03-36|cst_save_tree||Before saving CST tree 1b5d9d9d-133c-47d1-869b-6710417b0753
+af95b6d5-c592-4400-b4dd-bc142c5f4492|ai_admin/task_queue/task_queue/queue_impl/misc_executor.py|2026-03-01T20-31-11|split_class|MiscScriptExecutor,MiscSecurityExecutor|
+afe63dc4-594c-4cb6-8343-a4c3a0c2709c|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T20-20-50|split_file_to_package|queue_facade,ftp_executor,docker_executor,k8s_kind_executor,misc_executor|
+afed381e-edb5-4ac8-845f-d8a9cc935801|add_full_queue_support/queue_helpers.py|2026-03-14T18-46-48|cst_save_tree||Before saving CST tree 950ab23e-12af-4acd-99a8-d2b0f2f1f7f3
+b0384a05-30f2-4390-b43d-b3b57ec30e2e|ai_admin/security/system_security_adapter/__init__.py|2026-03-01T21-51-20|query_cst_replace||
+b0c38cab-45b3-455d-8a3c-c7c8031faf13|add_full_queue_support/queue_helpers.py|2026-04-06T13-55-01|cst_save_tree||Before saving CST tree 7ef1c790-53c4-4767-bdac-8ce891aa16ca
+b0f088e5-937b-496e-ab86-0e3fddfd44b5|add_full_queue_support/__init__.py|2026-04-04T22-21-20|cst_save_tree||Before saving CST tree 1c64a7e1-656f-4989-b86a-5cea2d1f379f
+b115e73a-6568-4c6b-a5aa-3ac73083fad8|ai_admin/commands/k8s_cluster_manager_command.py|2026-03-05T01-35-40|format_code||Before format
+b20796d6-24f0-4e71-a490-f14daaf4a71e|_fix_ssl_type.py|2026-04-06T01-23-25|restore_backup_file||Before restore from backup
+b2d527db-468b-4d68-968d-1ce8f99faf8f|ai_admin/commands/docker_restart_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 8e0e7601-b826-4bb9-8d1d-e0dc3a20a27e
+b41eac10-511f-496c-a554-08dd0a6fed5b|ai_admin/commands/docker_pull_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree ba9963b6-57df-4a23-adb3-6e5292ebadd0
+b49bd5f7-b6eb-4324-be91-2a4f2afefbc9|ai_admin/core/ssl_context_manager/ssl_context_info.py|2026-03-01T21-28-29|cst_save_tree||Before saving CST tree f658867e-97d5-4c74-a648-5a78cd56e1d2
+b511563e-0e84-4ab4-82ed-d746bd5b818e|ai_admin/commands/k8s_cluster_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 61250f99-9e5c-41d6-9c23-832a6d0d5ae7
+b56d0aa2-0928-4612-a133-09037994c8d2|ai_admin/commands/queue_task_status_command.py|2026-01-06T16-13-46|format_code||Before format
+b60c8984-bb1b-4c45-bf57-7a9081dc4765|ai_admin/task_queue/task_queue/queue_impl/docker_executor.py|2026-03-01T20-31-05|split_class|DockerImageExecutor,DockerMiscExecutor|
+b734b92e-8364-427c-9205-2304c00f7e04|ai_admin/task_queue/task_queue/task_queue/core.py|2026-03-02T00-43-25|query_cst_replace||
+b79594fd-62cc-4f23-ad17-f7e354540d48|ai_admin/server.py|2026-04-05T16-37-07|format_code||Before format
+b80ab52d-b4c5-4c53-a350-58d90a368d25|ai_admin/task_queue/task_queue/task_queue/core.py|2026-03-02T00-43-14|query_cst_replace||
+b81ebcea-cdc9-4202-885a-ef83177bcb80|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-37-17|query_cst_replace||
+b85f39af-96e2-45ac-9769-744469c0bcde|add_fallback_logic.py|2026-04-04T23-16-00|cst_save_tree||Before saving CST tree 07ac972a-25da-4bfd-82b0-994b81d3c677
+b8714a89-4f4b-4ca9-b479-0feecfb3c4b4|docs/plans/step_4/TASKS.md|2026-05-01T21-09-29|universal_file_replace||Before universal_file_replace docs/plans/step_4/TASKS.md
+b8be051a-8eda-462d-b6b1-a8b9d07c6b5e|ai_admin/core/server_adapter.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 9227e785-8b1c-4042-9a04-53328463775b
+b8d522f8-b5e4-4023-8fa7-aa69b38a2386|ai_admin/task_queue/task_queue/queue_impl/docker_executor.py|2026-03-01T20-50-42|format_code||Before format
+bac8c083-25f1-4edb-beb7-e541f3716e4d|scripts/vast_srv_http_manager.py|2026-04-13T23-15-15|cst_save_tree||Before saving CST tree 4d9db640-c5b6-45fd-b14d-c3a0c2ef0e1b
+bb911e13-5596-402a-a275-5a42e5fc5e18|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-16-10|split_file_to_package|queue_facade,ftp_executor,docker_executor,k8s_executor,kind_executor,ollama_executor,misc_executor|
+bc185d48-0967-423d-a409-d87d3ebf4904|ai_admin/commands/base_unified_command.py|2026-04-13T22-24-31|format_code||Before format
+bc682d1d-e32b-4657-a04a-774fe3ea4ab0|ai_admin/settings_manager/helpers.py|2026-03-01T21-21-09|cst_save_tree||Before saving CST tree 609d3227-61df-468c-986c-997afa16ba75
+bc8ed348-19cf-4951-ab8b-61a43bc1e64b|scripts/live_registration_probe.py|2026-04-05T14-32-45|cst_convert_and_save||Before convert and save
+bcb6cdc9-f5ad-4dff-81c3-2f9ca567ff40|ai_admin/commands/docker_hub_image_info_command.py|2026-03-04T01-44-11|restore_backup_file||Before restore from backup
+bcc28aa9-2533-4cfd-a179-241da198bbe8|ai_admin/commands/queue_cancel_task_command.py|2026-03-02T00-58-17|query_cst_replace||
+bcf10d8b-018a-4963-a080-9ef2b0fde048|ai_admin/commands/example_di_command.py|2026-03-05T01-38-59|format_code||Before format
+bd5b8f41-2c2b-4f9a-a5ba-f8cc3ba79e46|add_fallback_logic.py|2026-04-04T22-33-19|cst_save_tree||Before saving CST tree 18295375-8d47-460a-a79c-3a7524819148
+bda44663-5a8a-491e-9a0c-77db5b5a3f9d|ai_admin/task_queue/task_queue/queue_impl/core.py|2026-03-04T21-49-12|format_code||Before format
+bdde86da-74cb-4ea0-813a-6e32e43bb27e|ai_admin/settings_manager/manager.py|2026-04-05T05-53-00|cst_save_tree||Before saving CST tree 07fe421a-0c14-419b-ad5a-a5a5c4a15272
+be01846c-e63a-4efd-a6a2-013f20985855|ai_admin/working_server.py|2026-03-03T01-13-36|cst_save_tree||Before saving CST tree 3cbdfd2f-fb10-40da-b165-f713cb865c19
+bec2f733-cc68-4734-b720-0d1385e31a54|ai_admin/security/security_monitor/alert.py|2026-03-01T22-13-11|cst_save_tree||Before saving CST tree d59dbede-57e0-4f41-b9d0-06f1c0d4162c
+bf079ed9-bcd1-4330-b1bc-255105900a13|ai_admin/core/server.py|2026-01-06T16-13-45|split_file_to_package|server_manager,factory|
+bf809dc3-2d91-4733-80f9-0d74b645205f|add_fallback_logic.py|2026-04-04T22-34-51|restore_backup_file||Before restore from backup
+bf86f6a7-8879-4908-a0b9-fd662c5e4f2a|ai_admin/security/command_security_mixin/__init__.py|2026-02-27T15-30-54|cst_save_tree||Before saving CST tree e36a45db-e10d-422b-b0c9-7a19d0269c7a
+c03d68ed-9cee-4fb4-9b85-4c7abcf02e27|scripts/patch_registration_config.py|2026-04-05T19-11-20|format_code||Before format
+c05d53fe-77ee-4ddc-9b64-e05db6c06edc|ai_admin/commands/docker_hub_image_info_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree f46ceb4f-7c4d-41f2-a294-3279631c9230
+c07c6ba3-d962-4b8b-9ca2-7565533314ee|ai_admin/task_queue/task_queue/task_queue/facade.py|2026-03-01T23-55-24|cst_save_tree||Before saving CST tree 87c4c744-d78a-4412-a89c-0a4e115f04ea
+c08e15ee-c5a3-4c06-9866-6f42168199b5|ai_admin/security/github_security_adapter/__init__.py|2026-02-27T15-14-37|cst_save_tree||Before saving CST tree 1d8ff816-ae25-498d-9c94-25b978180a92
+c0a0842b-d039-4805-9474-07fa0c383f65|_fix_ssl_type.py|2026-03-01T21-27-51|format_code||Before format
+c0c660ad-d876-402e-a55c-7151d3c44814|ai_admin/task_queue/task_queue/queue_impl/facade.py|2026-03-01T20-31-14|cst_save_tree||Before saving CST tree 16bab79e-94d6-45a0-bf24-804aab771d1e
+c0de36c2-75f7-4858-b9f4-f74036b8e5e3|_fix_ssl_type.py|2026-04-17T15-01-25|restore_backup_file||Before restore from backup
+c0e1c6ec-6550-4050-8445-fbf448b2a968|ai_admin/task_queue/task_queue/task_queue/core.py|2026-03-02T00-43-10|query_cst_replace||
+c1004079-5b3a-4970-9933-82c3b2bfc604|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-14|query_cst_replace||
+c121d375-fdca-46e5-b208-8ce9337825f5|ai_admin/security/base_security_adapter/__init__.py|2026-02-27T12-03-27|cst_save_tree||Before saving CST tree d55fb1f0-1550-400a-8b50-5764d6e6a27e
+c128ebc5-a4fb-467c-8771-cc50ca7c6c59|ai_admin/commands/ssl_cert_generate_command.py|2026-03-05T01-42-18|restore_backup_file||Before restore from backup
+c14fa491-aa6e-4c14-9a14-69ee97372c66|ai_admin/core/server.py|2026-03-04T00-11-36|format_code||Before format
+c15d9970-7a9d-47fe-87d0-fa52476c8252|ai_admin/settings_manager.py|2026-01-06T16-13-45|split_file_to_package|manager,helpers|
+c1b18d02-1277-48ce-85cf-41f78521b099|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T20-20-50|split_file_to_package|core,ftp_executor,docker_executor,k8s_executor,misc_executor,facade|
+c1e894b4-ddac-44b4-b242-52bf5c5895bd|ai_admin/security/security_monitor/event_type.py|2026-03-01T22-05-11|cst_save_tree||Before saving CST tree 457aff94-ce14-4802-925d-cf1914ab1590
+c1f60a1f-3df8-41d7-ae5c-16dc062ddab1|ai_admin/settings_manager/helpers.py|2026-03-01T21-22-00|query_cst_replace||
+c2f25d9e-3f56-48ce-a285-da329b9e02a4|remaining_commands_test_results.json|2026-04-06T01-33-44|json_save_tree||Before saving JSON tree f6a1dd1d-52eb-4671-9e9c-2ea324c25677
+c30908d4-3069-4561-9ff6-05c93e56abd8|ai_admin/commands/docker_exec_command.py|2026-03-04T01-44-06|restore_backup_file||Before restore from backup
+c3dc40d6-f01a-4bac-a807-cabebb81723b|add_full_queue_support/__init__.py|2026-04-04T21-07-52|cst_save_tree||Before saving CST tree 966ec0e6-49be-4b41-a19d-bc4b74b3a772
+c4153024-8eda-4e20-87c7-1de5a8d1226a|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-44-39|query_cst_replace||
+c41f62a7-4eb2-4f7a-812e-f3dca88afd65|update_test_files.py|2025-09-13T21-15-42|cst_convert_and_save||Before convert and save
+c43324c6-4ec2-4c64-bbf2-d0534703e62e|scripts/patch_registration_config.py|2026-04-05T13-51-30|cst_convert_and_save||Before convert and save
+c433eaa8-af33-4b9e-95ff-b1b2d17bb470|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-40-56|query_cst_replace||
+c47e1392-802a-4767-af8c-0d2627029157|tests/ssl_tests/__init__.py|2025-09-13T03-54-00|cst_save_tree||Before saving CST tree 59f01de7-b5b4-4420-888d-233642047807
+c4940ab5-a929-402c-ab32-591117086df1|ai_admin/core/server/factory.py|2026-03-04T17-16-48|cst_save_tree||Before saving CST tree db46dae3-4e99-422b-991b-57ac94e881c2
+c5cdc441-b91f-440f-b1c8-3615ee35f7f3|ai_admin/core/ssl_context_manager/ssl_context_info.py|2026-03-01T21-33-28|cst_save_tree||Before saving CST tree 169cc3f7-bf9b-4e53-9d39-a7903db8fc24
+c6365b2e-0025-4d69-b211-eb0cff81b3d2|ai_admin/commands/base_unified_command.py|2026-04-13T22-23-54|cst_save_tree||Before saving CST tree b5016d3f-f3a8-4618-b84b-196c084383a0
+c6583b6a-4291-4268-a53c-a613604528bc|_fix_ssl_type.py|2026-04-04T20-55-41|cst_save_tree||Before saving CST tree 5af9b5d3-2cad-4b6f-9e9f-ae5af78a8950
+c68410fb-48af-4cd4-93e0-81a4456ccc38|add_fallback_logic.py|2026-04-04T21-48-48|restore_backup_file||Before restore from backup
+c71677fb-8983-4a1f-b0cd-61fd9b8505d7|ai_admin/core/server/factory.py|2026-03-04T17-14-19|cst_save_tree||Before saving CST tree e52900c9-4eb8-400f-a654-c561a7c4af88
+c74a0ec9-711d-4cab-b88c-ab536855dce0|ai_admin/task_queue/task_queue.py|2026-01-06T16-13-45|split_file_to_package|enums,task_model,queue|
+c7769755-351a-4741-9a27-3d2400fae209|ai_admin/commands/docker_exec_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 8599a8aa-630c-4c08-805f-2dea0a11baca
+c7fff2bf-cc37-4107-9078-7ff42fd23604|ai_admin/commands/docker_images_compare_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 30de67cc-4321-437d-adea-520b2448363e
+c8468535-ccc8-4629-a75c-acd9eadfc0a0|ai_admin/__main__.py|2026-02-25T19-38-33|cst_save_tree||Before saving CST tree 9d9ff495-822d-4062-807a-efedec10d33a
+c8c01606-3d7f-4dbf-a485-1f6b670e96c9|add_fallback_logic.py|2026-02-28T17-05-54|format_code||Before format
+c8ce2747-3c70-41b1-a6d4-5a9c7cc464e3|ai_admin/core/custom_exceptions/application_errors.py|2026-03-15T18-03-19|cst_save_tree||Before saving CST tree c2591229-8a1f-44c2-af98-64410d6626ef
+c98a2d70-3eff-421a-9f04-f469e9c3adba|ai_admin/auth/git_auth_manager.py|2026-01-06T16-13-45|split_class|GitSshKeyManager,GitSshAgentManager,GitCredentialEnvManager|
+ca3682d8-4870-4660-ac29-3ac49d837be9|scripts/vast_srv_http_manager.py|2026-04-13T23-14-54|format_code||Before format
+ca7e0b11-401d-4d70-89e9-ae4a54e0236f|ai_admin/commands/argocd_init_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 8bb110da-132a-4f90-a35d-1b4f989096b2
+ca8ae172-8b95-4c7f-882d-c68945d9a091|add_fallback_logic.py|2026-04-06T00-41-27|restore_backup_file||Before restore from backup
+caeaa4e1-01c0-4c0a-94e8-9c5c2810eba0|add_full_queue_support/__init__.py|2026-04-04T22-16-55|cst_save_tree||Before saving CST tree 2d0b8402-26c7-4344-86f8-3ebece4006e3
+cb02c6b1-ed81-4760-bfcf-519ecfadd200|ai_admin/commands/docker_hub_image_info_command.py|2026-03-04T01-44-52|format_code||Before format
+cb0748e6-f127-4580-8823-862029414b66|ai_admin/core/ssl_context_manager/__init__.py|2026-02-27T15-14-40|cst_save_tree||Before saving CST tree ca2ff090-6778-44c9-9e29-79543ed2a878
+cb7f3705-e23a-4da9-acae-252875163dee|ai_admin/commands/docker_rm_command.py|2026-03-05T01-32-40|format_code||Before format
+cc544388-90f9-43cd-b5d4-4159aa975082|add_fallback_logic.py|2026-03-05T01-21-28|cst_save_tree||Before saving CST tree 2e759c5e-3dc3-41cb-9f7a-6b080fca4395
+ccc7cbb6-7d92-4b3b-9d2b-5773cc5631fc|ai_admin/__main__.py|2026-04-05T16-36-53|format_code||Before format
+ccd7941a-5aba-4096-8a29-482fcdd8e3fe|ai_admin/core/command_registry.py|2026-03-03T01-11-12|cst_save_tree||Before saving CST tree 7f770d0c-3fb5-4d84-9643-8e9f4d08844b
+cd15f251-df98-4b86-ae8b-477a88ecd547|ai_admin/security/security_metrics.py|2026-01-06T16-13-46|format_code||Before format
+cdb82527-311f-472b-a401-db8e69b9e9f8|add_full_queue_support/queue_helpers.py|2026-03-14T18-46-48|cst_save_tree||Before saving CST tree 3fc155b1-0dd9-4f30-9130-38c531200ef3
+cf06aabc-2727-4dec-b70c-8e72d33a52e3|ai_admin/commands/docker_network_connect_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 3689f10c-fd33-46c1-9f25-d3aab7b69b99
+cf3ab96b-fffc-4845-b695-2d9610c29735|ai_admin/security/security_metrics/__init__.py|2026-04-05T12-21-47|format_code||Before format
+d01e2bd6-9b56-48bf-9427-8826d4d9404a|ai_admin/commands/docker_images_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 097612f4-ad40-4700-ae50-78f7ac62b7cb
+d041c3c2-494e-40ea-8c9c-7f70b3cca909|add_fallback_logic.py|2026-02-26T20-10-49|cst_save_tree||Before saving CST tree 67c35e1d-8ec5-4e39-91b8-18a8378cc4b6
+d0d8101e-63d7-4826-9f4a-83edfa5bf7cf|ai_admin/commands/queue_remove_task_command.py|2026-01-06T16-13-46|query_cst_replace||
+d0f0e6f2-f98f-4aae-a490-4b27f7d123e2|scripts/patch_registration_config.py|2026-04-05T15-22-32|format_code||Before format
+d1b55f33-5506-4a09-ba04-0d4f99fd932b|ai_admin/commands/base_unified_command.py|2026-04-13T22-19-02|cst_save_tree||Before saving CST tree e3ef4558-840e-4a3e-bfec-109b51d71378
+d3078370-22e8-4d82-aedf-a6daa946ae66|config/config.json|2026-04-05T20-36-23|json_save_tree||Before saving JSON tree c42df498-75c2-467d-8538-040a6267f5bb
+d34b5687-a4a4-48b7-9cfe-9c7ac1c7d10a|ai_admin/security/security_monitor/event.py|2026-03-01T22-29-47|cst_save_tree||Before saving CST tree ec00c392-0380-42e8-b5e4-7271c70d790e
+d45d581e-db67-4823-8d50-535e94cb1af2|ai_admin/core/mtls_auth_manager.py|2026-01-06T16-13-45|split_file_to_package|types,manager|
+d4ef48b4-c611-4f7d-9c17-863d2017dc88|scripts/live_registration_probe.py|2026-04-05T14-33-13|cst_convert_and_save||Before convert and save
+d55a4c02-5b19-4642-b4b0-65c93e2f13fd|ai_admin/commands/base.py|2026-04-13T22-19-50|cst_save_tree||Before saving CST tree bffa5531-2921-4fd8-a620-bc06675a84a4
+d5967e90-0e9e-4862-9c60-60844b9c3409|ai_admin/core/server/server_manager.py|2026-02-27T15-07-24|cst_save_tree||Before saving CST tree 87498e5b-16c3-4f01-9f32-29e0b4c67305
+d611cc20-73d9-4ab0-aa71-0d40b370da0e|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-24-27|cst_save_tree||Before saving CST tree 2c7d260e-d65e-4f44-aaed-7d363d8ad516
+d6860f29-89ec-4662-8813-c803c7a84c01|_fix_ssl_type.py|2026-04-06T00-52-21|cst_save_tree||Before saving CST tree 6e2b91cf-6620-4189-b64c-6e3c5208b96e
+d74d868d-cf93-4a58-b341-361f5975cabc|add_fallback_logic.py|2026-04-04T10-15-50|restore_backup_file||Before restore from backup
+d7ddd8c9-8107-4650-bdf1-10a543dc2896|ai_admin/task_queue/task_queue/task_error_code.py|2026-03-02T00-12-24|cst_save_tree||Before saving CST tree b0d31167-d448-457b-995c-011f4693c233
+d83d5855-a878-4b49-a512-840ff2327943|requirements.txt|2026-04-06T01-31-34|write_project_text_lines||Before write_project_text_lines 39-41
+d918b524-7a38-4536-ab4c-0ed6b9a4b60b|ai_admin/core/app_factory/app_factory_impl.py|2026-04-05T13-47-16|format_code||Before format
+d9eb6514-c4ab-49d4-b006-f1c0ee4db66e|broken_syntax.py|2026-03-01T19-46-45|format_code||Before format
+d9ff1370-3e7c-42ad-942a-057f3441093e|ai_admin/core/server/factory.py|2026-04-05T12-26-30|format_code||Before format
+da42124f-9956-4e4c-a87a-c28d49cb2dae|ai_admin/core/token_auth_manager.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree f36a6854-a169-414c-8b07-60b35e105afa
+da59e7b4-fe86-4233-aed7-65f219aa765d|test_ftp_commands.py|2025-09-15T14-00-32|format_code||Before format
+da897a54-91e5-46e5-bad7-0af20f2bb4dd|scripts/patch_registration_config.py|2026-04-05T13-55-13|format_code||Before format
+dc277913-025f-4af7-b688-32c455de3319|ai_admin/commands/k8s_namespace_command.py|2026-03-05T01-29-21|format_code||Before format
+dc604b4f-7d91-40fd-89a8-a66c1d06d164|ai_admin/security/security_metrics.py|2026-03-14T22-02-16|split_file_to_package|types,metrics|
+dcb9ee09-25de-4939-a53b-82e5461b632a|scripts/patch_registration_config.py|2026-04-05T15-22-47|cst_save_tree||Before saving CST tree 74acdaab-ea4b-4cdb-bf4c-59b165b5a164
+dd628789-52d6-47ff-a79f-9c2dc7e469a5|add_full_queue_support/queue_helpers.py|2026-04-05T02-06-50|format_code||Before format
+de5e8f76-01d1-4f0d-92ba-f125a932401b|ai_admin/core/mtls_auth_manager/__init__.py|2026-03-15T13-16-47|cst_save_tree||Before saving CST tree 05e71c52-7072-4079-bb16-5896ad44d212
+de7fa5ef-efa0-4822-b4e2-722fd569737b|scripts/live_registration_probe.py|2026-04-05T14-31-46|cst_convert_and_save||Before convert and save
+de8dffc5-9efe-4e54-a618-6596944f066b|ai_admin/__init__.py|2026-04-05T02-10-48|cst_save_tree||Before saving CST tree a9fa0c2c-2254-4756-b62e-4afbdb43b30e
+ded8ff63-d337-4e7f-ae62-3a69a1294e90|scripts/live_registration_probe.py|2026-04-05T14-30-30|cst_convert_and_save||Before convert and save
+df6492ff-ff8c-419f-b2e8-2906a26fe94b|add_full_queue_support/__init__.py|2026-04-04T22-16-55|cst_save_tree||Before saving CST tree 2d0b8402-26c7-4344-86f8-3ebece4006e3
+df7047b3-edb7-46b4-8165-381bbbdab61f|ai_admin/commands/base_unified_command.py|2026-03-04T01-45-17|cst_save_tree||Before saving CST tree 507151b2-63e8-4484-a6b8-47067cbca5ce
+dfc37a13-4e12-4984-9a73-b4b04aaa9518|ai_admin/__init__.py|2026-04-04T22-31-16|cst_save_tree||Before saving CST tree 86eb3e17-063c-4649-98be-6ba5046c29c8
+e0696aeb-b176-4c0b-8ef5-086ac006a4e3|ai_admin/commands/queue_remove_task_command.py|2026-03-02T19-58-15|format_code||Before format
+e0a7fa4e-f4cb-414f-805f-f1c1de55c17d|ai_admin/core/ssl_error_handler.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 4addcbf3-92dc-4f42-86d2-bda075a9548b
+e123b2fb-977f-4789-b970-a567fcc92553|ai_admin/task_queue/task_queue/queue_impl.py|2026-03-01T14-51-43|cst_save_tree||Before saving CST tree 3147527e-aedd-41a2-8362-7c94502a5aab
+e26afbaf-228a-450a-b9b2-e9061b0853dc|tests/ssl_tests/__init__.py|2026-04-07T09-21-35|restore_backup_file||Before restore from backup
+e2e341eb-1549-4bdb-9997-2faf817526ca|ai_admin/task_queue/queue_manager/__init__.py|2026-02-27T15-08-13|cst_save_tree||Before saving CST tree 7a68b49a-02fb-4904-a168-fa9b5941dc52
+e301a602-2df7-41d1-b9db-4523efda4483|add_fallback_logic.py|2026-03-05T01-14-35|cst_save_tree||Before saving CST tree b0623d83-5f34-4297-86f2-09247bdb2678
+e3105948-a4ca-41bb-95cc-ba629361c9c4|ai_admin/core/custom_exceptions/__init__.py|2026-03-15T18-03-19|cst_convert_and_save||Before convert and save
+e383b415-cbb2-4113-8c8d-0f4946fd4a8e|ai_admin/core/ssl_error_handler.py|2026-03-04T00-41-24|cst_save_tree||Before saving CST tree 6acc2ca3-09ad-4742-9a86-877224ae999c
+e3dfd319-5aa1-45f2-ba01-f7423ba96f2d|ai_admin/commands/docker_exec_command.py|2026-03-04T01-44-51|format_code||Before format
+e43c8c5a-550d-430a-86f9-5c047adde875|ai_admin/commands/ssl_cert_generate_command.py|2026-01-06T16-13-46|split_class|CertGeneratorHelpers,CommandRunner|
+e45207aa-f3c5-4777-926e-2aec6e2166d2|ai_admin/commands/docker_volume_command.py|2026-03-05T01-38-58|format_code||Before format
+e4583e22-d2fc-41e8-a72d-234bb7dc1624|ai_admin/commands/base_unified_command.py|2026-04-13T22-22-11|cst_save_tree||Before saving CST tree b5016d3f-f3a8-4618-b84b-196c084383a0
+e482f631-fc1d-45b7-9aed-ede818f6d5dc|ai_admin/commands/base.py|2026-01-06T16-13-46|format_code||Before format
+e4a1473d-4508-480a-9841-b659ad445e12|ai_admin/core/mtls_auth_manager.py|2026-01-06T16-13-45|split_file_to_package|types,manager|
+e4a619c0-f7ce-446f-b882-5e0c24a4cc1b|add_queue_to_docker_commands.py|2025-09-15T10-20-36|format_code||Before format
+e54e1638-55c8-4de9-8f01-b227602c1024|ai_admin/commands/crl_operations_command.py|2026-03-04T00-50-28|format_code||Before format
+e593f5ad-5768-4f99-9f7e-45e26384c118|scripts/run_vast_reg_capture.py|2026-04-11T17-39-59|cst_convert_and_save||Before convert and save
+e5b1cfbc-c13f-468d-9cda-3b432f609274|ai_admin/commands/base.py|2026-03-13T22-38-27|format_code||Before format
+e5bd2333-8f09-47bf-9c2c-dc2fb378fcd5|tests/ssl_tests/__init__.py|2026-04-07T09-25-56|restore_backup_file||Before restore from backup
+e62858b4-5fad-4c43-9239-f68c7868b11d|ai_admin/core/app_factory.py|2026-01-06T16-16-44|cst_save_tree||Before saving CST tree 4006d8be-9857-418a-8890-4fc922241800
+e6334ed0-f7f9-4595-93fe-5dd8c76fe736|scripts/patch_registration_config.py|2026-04-05T16-51-08|format_code||Before format
+e64f40ae-3fcc-49ab-b06a-115e37bfe677|ai_admin/__init__.py|2026-04-04T22-32-32|restore_backup_file||Before restore from backup
+e67ea288-64e6-46e5-bde4-e487e206133e|update_test_files.py|2026-02-28T20-30-40|replace_file_lines||Before replace_file_lines 21-22
+e6b3dbbf-2f10-408f-ae08-520440fb3346|docs/plans/step_2/2_2/TASKS.md|2026-05-01T21-07-08|create_text_file||Before create_text_file overwrite docs/plans/step_2/2_2/TASKS.md
+e6b78cdb-8d3d-49b6-9719-d5452e42ab2c|scripts/patch_registration_config.py|2026-04-05T15-23-52|cst_save_tree||Before saving CST tree 3ed3d1fe-0477-45a0-b420-eb719972b5e8
+e6ba85b2-0e34-412c-a284-8619d4616576|ai_admin/core/app_factory/app_factory_impl.py|2026-03-01T21-36-16|cst_save_tree||Before saving CST tree 2c7d260e-d65e-4f44-aaed-7d363d8ad516
+e7b87654-7828-4992-82f9-f8ab4b03c0e4|add_fallback_logic.py|2026-04-05T00-12-09|cst_save_tree||Before saving CST tree 32b8eb19-cd4d-43c4-a61e-4bb26e1e6b4e
+e7efb5c8-7cd9-462c-9297-1938350cf42d|README.md|2026-04-07T08-59-49|write_project_text_lines||Before write_project_text_lines 1-1
+e8b110a6-80f5-4a4a-bae6-1ba49f05c5a7|ai_admin/commands/base_unified_command.py|2026-04-13T22-24-57|cst_save_tree||Before saving CST tree 8368a452-c60e-4c4e-bf66-c0de11b643a5
+e8d73928-9754-4855-bf37-a47f8cbd133a|README.md|2026-04-07T10-11-46|replace_file_lines||Before replace_file_lines 2-2
+e9165858-f189-4f83-ae2e-10910378c835|scripts/live_registration_probe.py|2026-04-05T14-33-54|cst_convert_and_save||Before convert and save
+e93e052a-92f2-4f15-a087-277728424212|ai_admin/core/token_auth_manager.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree c0e32dbf-adba-4166-9653-561d5853f695
+e9c6e9ea-4a3f-4e32-9016-d012359dc4a6|ai_admin/security/security_monitor/event_type.py|2026-03-01T22-07-29|cst_save_tree||Before saving CST tree 418b6830-57ef-4dc8-bc49-029109f0ff12
+ea286bf2-0549-4e40-8387-93129ea0cd8d|ai_admin/security/security_monitor/severity.py|2026-03-01T22-32-07|cst_save_tree||Before saving CST tree fa393a78-83e0-4c1f-91a6-7802cef1fea0
+eabc669c-3a86-4af4-8c6b-1886f392c03d|_fix_ssl_type.py|2026-04-05T01-38-33|cst_save_tree||Before saving CST tree 8caa2d4a-e5a7-4a3f-8459-f7d8e6ce01c2
+eb6007cd-75ed-4c0a-878f-436c1eb752aa|_fix_ssl_type.py|2026-04-04T20-55-41|cst_save_tree||Before saving CST tree 4daff435-b5f7-43aa-a9fb-384753f0458b
+ebeeba3b-7b3d-4e2f-9cb8-f828b034f111|ai_admin/task_queue/queue_manager.py|2026-01-06T16-13-45|split_file_to_package|queue_manager_impl|
+ebf5c3e6-d410-41a9-b977-18180892c45e|add_fallback_logic.py|2026-04-05T01-03-36|cst_save_tree||Before saving CST tree 32b8eb19-cd4d-43c4-a61e-4bb26e1e6b4e
+ec536bab-4fed-4a03-b60d-50e81aed2fc1|scripts/live_registration_probe.py|2026-04-05T14-34-10|format_code||Before format
+ecb9fbac-e6b3-48df-a907-9126c8dd2c19|add_fallback_logic.py|2026-04-04T23-16-18|restore_backup_file||Before restore from backup
+edb33312-a407-4ea4-8979-9f8f468931b1|ai_admin/core/ssl_error_handler.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree bdb0b90a-57e2-4928-be8e-bab063456120
+edc0b9ac-597f-4037-8d6a-ea98e73057dd|scripts/patch_registration_config.py|2026-04-05T14-50-24|cst_save_tree||Before saving CST tree 0c1501f3-bc5b-4b34-b5b3-bbbe6f44519d
+ee0c06d1-f76e-4266-9f29-a4c3baa9139a|ai_admin/core/mtls_auth_manager.py|2026-01-06T16-13-45|split_file_to_package|types,manager|
+ee645034-978b-4e75-95fd-d340e931eda4|add_full_queue_support/__init__.py|2026-04-04T21-30-44|cst_save_tree||Before saving CST tree 9f854e2b-33f9-43d5-9806-46d7178b9ea3
+ef86ba31-3896-4d7c-9139-f860613ce546|ai_admin/commands/docker_cp_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 99e52fdb-b3b3-42f8-860d-cd23e315e0da
+eff0f984-2430-49bd-bfe7-f59f0d3be4d0|add_full_queue_support/queue_helpers.py|2026-04-05T02-07-37|cst_save_tree||Before saving CST tree 36ca3636-e75e-4ce2-bc44-5013c0343df4
+f027f3bc-317d-479e-839a-d5c9dbc800f1|ai_admin/ftp/ftp_client.py|2026-01-06T16-13-46|split_file_to_package|client|
+f0ff3b9c-fd34-47e7-9fb0-bc96bef9290f|ai_admin/security/security_monitor/alert.py|2026-03-01T22-41-51|cst_save_tree||Before saving CST tree b8e5a354-1c7f-4acc-816a-c1d5f9069150
+f21c86d9-3e37-4fa7-80cf-e79ad3a3e49e|ai_admin/task_queue/task_queue/task_error_code.py|2026-02-27T15-08-01|replace_file_lines||Before replace_file_lines 281-285
+f262cd3f-d6a2-4d64-bc02-6215c8933021|ai_admin/task_queue/task_queue.py|2026-01-06T16-13-45|split_file_to_package|enums,task,queue_impl|
+f3114e4f-6bc8-4138-8336-be2953898c69|ai_admin/security/security_monitor/event.py|2026-03-01T22-06-00|replace_file_lines||Before replace_file_lines 48-52
+f3556eb4-b210-495b-a6dd-44e998295b11|ai_admin/task_queue/task_queue/task_queue/core.py|2026-03-01T20-34-21|query_cst_replace||
+f4474477-5836-491a-a28f-921dae775b79|ai_admin/commands/cert_key_pair_command.py|2026-03-04T00-48-35|format_code||Before format
+f4581fa6-9842-47ac-bdb2-c55c1171789d|remaining_commands_test_results.json|2025-09-15T16-55-43|json_save_tree||Before saving JSON tree f6a1dd1d-52eb-4671-9e9c-2ea324c25677
+f5253ec8-4808-472e-964b-11391424c1a9|ai_admin/__init__.py|2026-03-14T00-43-00|cst_save_tree||Before saving CST tree 86eb3e17-063c-4649-98be-6ba5046c29c8
+f540e0b4-8526-435b-9c5d-39ca0fb5c678|ai_admin/settings_manager/__init__.py|2026-02-27T12-02-16|cst_save_tree||Before saving CST tree b4bb17b6-6dc6-4a1d-b172-9ceb0307ce12
+f5a36491-8c8b-4ccc-b500-c226c741d882|ai_admin/core/app_factory/app_factory_impl.py|2026-04-05T13-56-31|cst_save_tree||Before saving CST tree 0d4cc958-ec1a-49a9-ad88-7dcb59b0da4d
+f5cb92ac-62bd-4b95-a8fa-351ead85ce27|ai_admin/commands/docker_remove_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 8530f809-e150-41f4-a69c-dc7995585c7c
+f60cf26d-1196-44ec-a524-92bc10294a7c|ai_admin/__init__.py|2026-03-04T00-15-00|cst_save_tree||Before saving CST tree b510d35e-e454-4e07-b378-0ff050dccb99
+f6a6976d-1e53-47e9-95fe-35b1abfd4315|add_full_queue_support/__init__.py|2026-04-04T22-17-15|restore_backup_file||Before restore from backup
+f6d854be-9061-499f-911b-f746b503ff13|ai_admin/commands/docker_network_inspect_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 8b7b067a-cd6b-41ee-902d-9aaac0d57349
+f71a427d-e0e0-4b93-b096-502e3b2cbda5|ai_admin/core/token_auth_manager/__init__.py|2026-04-05T12-20-52|format_code||Before format
+f72f5f40-7b47-4345-baf8-170402966333|ai_admin/__main__.py|2026-02-25T19-38-33|format_code||Before format
+f79a6690-8fae-4bab-afbb-24bda6f01f3a|ai_admin/auth/git_auth_manager.py|2026-04-05T02-16-25|format_code||Before format
+f82803b0-118b-4d2f-aa54-a60d0cf06b69|scripts/patch_registration_config.py|2026-04-05T19-08-18|cst_save_tree||Before saving CST tree 915b4283-973e-4867-bf9a-e2f70dcd2e6d
+f8843347-3de3-4dfb-8c1d-e204a50469a4|ai_admin/security/command_security_mixin/mixin_impl.py|2026-03-01T21-45-21|query_cst_replace||
+f91486c9-b871-4c95-86a6-58f8379d1f4d|add_fallback_logic.py|2026-02-26T20-09-01|cst_save_tree||Before saving CST tree 75afffd5-8d51-4e96-bfc2-c5925a5dfcc2
+f9540474-1520-4c54-8c00-07bcdb6f7206|ai_admin/__init__.py|2026-04-04T22-31-37|cst_save_tree||Before saving CST tree 86eb3e17-063c-4649-98be-6ba5046c29c8
+f97a8d25-8830-4108-9693-2e999eab0a8b|ai_admin/commands/docker_images_command.py|2026-03-04T01-45-51|format_code||Before format
+f99e5eca-acd7-4041-953e-b566ee4adea9|add_full_queue_support/__init__.py|2026-04-04T19-56-36|cst_save_tree||Before saving CST tree d215ebe8-4ebe-497a-af80-f21dfdaeecd2
+fa649da4-6499-4e04-99a7-281a5e3e556a|ai_admin/commands/docker_cp_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree 99e52fdb-b3b3-42f8-860d-cd23e315e0da
+fa98cc9a-6e32-4527-a0cd-dc6a31034f60|ai_admin/__init__.py|2026-03-04T00-14-17|format_code||Before format
+fac31193-3108-4fdb-8c57-ba009700dfc0|add_fallback_logic.py|2026-04-05T01-03-57|restore_backup_file||Before restore from backup
+fae7871f-4daf-496e-8024-6f4ef97a1d29|ai_admin/core/ssl_error_handler.py|2026-03-04T00-01-12|restore_backup_file||Before restore from backup
+faea5cc0-aafa-4228-91a3-07f0784fdaca|test_ftp_commands.py|2025-09-15T14-00-32|format_code||Before format
+fb02132e-991b-4ca2-9679-65aa7679e792|add_fallback_logic.py|2026-04-04T22-34-00|restore_backup_file||Before restore from backup
+fb161f73-e9a8-4b25-bc5c-3645360b7b03|_fix_ssl_type.py|2026-04-05T01-38-30|cst_save_tree||Before saving CST tree 8caa2d4a-e5a7-4a3f-8459-f7d8e6ce01c2
+fb6fc145-1f72-4275-a08f-c908baafc34a|ai_admin/security/security_metrics.py|2026-03-14T22-02-16|split_file_to_package|types,metrics|
+fbe0bb39-ca6e-43c2-b264-983d9e262704|ai_admin/core/server_setup.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 2aba29a7-c00e-429d-b285-2cc8a409959b
+fbf8c1f6-3eb1-47fa-bbf8-881b1b834f27|ai_admin/commands/queue_health_command.py|2026-01-06T16-13-46|cst_save_tree||Before saving CST tree a13d3179-cd40-41fb-ba1f-db29c3baaa9f
+fc4c01a4-04c0-4a3d-98fc-9d197dae21b2|ai_admin/settings_manager/settings_core.py|2026-03-13T18-21-00|cst_save_tree||Before saving CST tree cd7aad9e-7bd2-4ec5-94ad-28b1abb64407
+fc88c3bc-1067-439b-8e5c-14cd6e299bb7|update_test_files.py|2026-02-28T21-35-18|replace_file_lines||Before replace_file_lines 21-23
+fcafa09d-6df2-455c-b27b-bcf5df679ac4|ai_admin/commands/ollama_base.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree 779b5f90-0214-46b4-b71f-56d5eefc33c6
+fccef7c7-7069-4407-9355-e4ee5a922364|ai_admin/commands/docker_hub_images_command.py|2026-01-06T16-13-45|cst_save_tree||Before saving CST tree c1c9b106-5761-4f30-95f6-8af153d64ee2
+fcdf30e4-d403-4a9c-9777-d2c2f021f604|ai_admin/core/token_auth_manager.py|2026-03-04T00-01-14|restore_backup_file||Before restore from backup
+fd57265f-78b0-44c1-8a64-85cce9d2686b|ai_admin/commands/ssl_cert_generate_command.py|2026-03-05T01-42-03|split_class|CertGeneratorHelpers,CommandRunner|
+fdfa55e0-09e3-436d-a946-799b0a8219d5|ai_admin/core/server/factory.py|2026-02-27T15-07-25|cst_save_tree||Before saving CST tree 3efdf776-3f89-4588-93ed-8d6732d08c82
+fe02cb2c-dd2f-438a-8a49-75ff9cfca1a0|ai_admin/__init__.py|2026-04-05T02-11-17|format_code||Before format
+fe4f07e2-5725-4e63-9fc9-689eeab27e07|ai_admin/__init__.py|2026-03-14T00-40-45|format_code||Before format
+fe6474c3-732e-4421-92d2-147eb75c7dea|scripts/live_registration_probe.py|2026-04-05T15-15-57|cst_save_tree||Before saving CST tree c881d118-a207-4578-a289-c522e1e12905
+fec978ae-c2a1-408f-b0b9-0a382d1a232a|ai_admin/task_queue/task_queue/queue.py|2026-02-27T14-16-10|split_file_to_package|core,ftp_executor,docker_executor,k8s_executor,kind_executor,ollama_executor,misc_executor,facade|

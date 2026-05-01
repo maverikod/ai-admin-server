@@ -1,0 +1,41 @@
+"""Module task_status."""
+
+from ai_admin.core.custom_exceptions import ConfigurationError, CustomError, NetworkError
+import asyncio
+import json
+import uuid
+import ssl
+import socket
+import ftplib
+from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, field
+from .enums import TaskType
+from .task_error_code import TaskErrorCode
+from .task import Task
+
+class TaskStatus(Enum):
+    """Task execution status with detailed error codes."""
+
+    # Active states
+    PENDING = "pending"
+    RUNNING = "running"
+    PAUSED = "paused"
+
+    # Completion states
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+    TIMEOUT = "timeout"
+
+    # Intermediate states
+    VALIDATING = "validating"
+    PREPARING = "preparing"
+    UPLOADING = "uploading"
+    DOWNLOADING = "downloading"
+    BUILDING = "building"
+    PULLING = "pulling"
+
+
+

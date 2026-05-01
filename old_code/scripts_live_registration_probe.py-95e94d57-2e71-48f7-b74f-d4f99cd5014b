@@ -1,0 +1,36 @@
+"""Live probe: RegistrationManager.register_with_proxy (real HTTPS/mTLS to proxy)."""
+from __future__ import annotations
+
+import logging
+import sys
+from pathlib import Path
+
+from mcp_proxy_adapter.config import get_config
+from mcp_proxy_adapter.api.core.registration_manager.manager import RegistrationManager
+
+ROOT = Path(__file__).resolve().parent.parent
+CFG = ROOT / "config" / "config.json"
+
+
+def main() -> None:
+    logging.basicConfig(level=logging.INFO)
+    log = logging.getLogger("live_registration_probe")
+
+    cfg = get_config()
+    cfg.config_path = str(CFG)
+    cfg.load_config()
+    data = cfg.get_all()
+
+    reg = data.get("registration") or {}
+    if not reg.get("enabled"):
+        print("registration.enabled is false; abort")
+        sys.exit(2)
+
+    mgr = RegistrationManager()
+    ok = mgr.register_with_proxy(data)
+    print("register_with_proxy returned:", ok)
+    sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()

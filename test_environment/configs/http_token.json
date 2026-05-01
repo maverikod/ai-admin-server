@@ -1,0 +1,50 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 20001
+  },
+  "ssl": {
+    "enabled": false
+  },
+  "security": {
+    "enabled": true,
+    "auth": {
+      "enabled": true,
+      "methods": [
+        "api_key"
+      ],
+      "api_keys": {
+        "test-token-123": "admin",
+        "user-token-456": "user",
+        "readonly-token-123": "readonly",
+        "guest-token-123": "guest",
+        "proxy-token-123": "proxy"
+      }
+    },
+    "permissions": {
+      "enabled": true,
+      "roles_file": "configs/roles.json"
+    }
+  },
+  "registration": {
+    "enabled": true,
+    "url": "http://127.0.0.1:3004/proxy",
+    "name": "http_token_adapter",
+    "capabilities": [
+      "http",
+      "token_auth"
+    ],
+    "retry_count": 3,
+    "retry_delay": 5,
+    "heartbeat": {
+      "enabled": true,
+      "interval": 30
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http"
+    ]
+  }
+}

@@ -1,0 +1,117 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError
+"""Docker stop command for stopping containers.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerStopCommand(BaseUnifiedCommand):
+    """Stop Docker container."""
+
+    name = "docker_stop"
+
+    def __init__(self):
+        """Initialize Docker stop command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        container_name: str,
+        timeout: Optional[int] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker stop command with unified security.
+
+        Args:
+            container_name: Name or ID of the container to stop
+            timeout: Timeout in seconds before killing the container
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with stop information
+        """
+        # Validate inputs
+        if not container_name:
+            return ErrorResult(message="Container name is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            container_name=container_name,
+            timeout=timeout,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker stop command."""
+        return "docker:stop"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker stop command logic."""
+        return await self._stop_container(**kwargs)
+
+    async def _stop_container(
+        self,
+        container_name: str,
+        timeout: Optional[int] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Stop Docker container."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "stop"]
+
+            if timeout:
+                cmd.extend(["-t", str(timeout)])
+
+            cmd.append(container_name)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to stop Docker container: {result.stderr}")
+
+            return {
+                "message": f"Successfully stopped container '{container_name}'",
+                "container_name": container_name,
+                "timeout": timeout,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker stop command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker stop failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker stop command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "container_name": {
+                    "type": "string",
+                    "description": "Name or ID of the container to stop",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Timeout in seconds before killing the container",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["container_name"],
+            "additionalProperties": False,
+        }

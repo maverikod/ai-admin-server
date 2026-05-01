@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "common_name": "test.example.com",
+    "csr_path": "test.csr",
+    "key_path": "test.key",
+    "organization": "Test Org",
+    "created_at": "2025-09-10T02:52:43.609180",
+    "status": "pending"
+  }
+]

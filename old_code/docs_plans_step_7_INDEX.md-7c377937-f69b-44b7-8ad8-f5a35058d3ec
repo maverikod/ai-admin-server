@@ -1,0 +1,29 @@
+# Step 7: Tests — Cover New Job Classes and Migrated Commands
+
+## Goal
+Ensure the new queue layer is fully tested before old code is purged.
+
+## Tactical Steps
+
+| # | Task | Detail |
+|---|------|---------|
+| 7.1 | Unit tests for `DockerJob`: mock subprocess, verify params mapping | [7_1/](7_1/INDEX.md) |
+| 7.2 | Unit tests for `GitJob` / `GitHubJob` | [7_2/](7_2/INDEX.md) |
+| 7.3 | Unit tests for `K8sJob`: all 5 operation types | [7_3/](7_3/INDEX.md) |
+| 7.4 | Unit tests for `VastJob`: create/destroy/search/list | [7_4/](7_4/INDEX.md) |
+| 7.5 | Unit tests for `FtpJob`, `OllamaJob`, `SslJob`, `SystemJob` | [7_5/](7_5/INDEX.md) |
+| 7.6 | Integration test: `QueueManagerIntegration` start/add/status/stop lifecycle | [7_6/](7_6/INDEX.md) |
+| 7.7 | Integration test: command → job → queue → result for each domain | [7_7/](7_7/INDEX.md) |
+| 7.8 | Test `_enforce_limits_before_add`: `max_queue_size` eviction | [7_8/](7_8/INDEX.md) |
+| 7.9 | Test `_periodic_cleanup`: TTL expiry of completed jobs | [7_9/](7_9/INDEX.md) |
+| 7.10 | Run `comprehensive_analysis` on whole `vast_srv` — zero critical issues | [7_10/](7_10/INDEX.md) |
+
+## Coverage Targets
+- All Job classes: `run()`, error handling, progress reporting
+- All migrated commands: happy path + error path
+- Queue lifecycle: pending → running → completed / failed / cancelled
+
+## Notes
+- Use `MockQueueStorage` pattern already present in `add_full_queue_support/`
+- Tests live in `tests/queue/`
+- After 7.10 passes — hard-delete trash from Step 5

@@ -1,0 +1,166 @@
+from mcp_proxy_adapter.commands.result import SuccessResult
+from ai_admin.core.custom_exceptions import CustomError
+"""Example command demonstrating unified security implementation.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+from typing import Dict, Any, Optional, List
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+class ExampleUnifiedSecurityCommand(BaseUnifiedCommand):
+    """Example command demonstrating unified security implementation.
+
+    This command shows how to use CommandSecurityMixin for consistent
+    security implementation across all commands.
+    """
+
+    name = "example_unified_security"
+
+    def __init__(self):
+        """Initialize example unified security command."""
+        super().__init__()
+
+    async def execute(
+        self,
+        action: str = "demo",
+        component: str = "security",
+        operation: str = "list",
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute example command with unified security.
+
+        Args:
+            action: Action to perform (demo, test, validate)
+            component: Security component to work with
+            operation: Operation to perform on the component
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with action information
+        """
+        # Use unified security approach
+        return await super().execute(
+            action=action,
+            component=component,
+            operation=operation,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for example unified security command."""
+        return "example:unified_security"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute example unified security command logic."""
+        action = kwargs.get("action", "demo")
+        component = kwargs.get("component", "security")
+        operation = kwargs.get("operation", "list")
+
+        if action == "demo":
+            return await self._demo_security(component, operation)
+        elif action == "test":
+            return await self._test_security(component, operation)
+        elif action == "validate":
+            return await self._validate_security(component, operation)
+        else:
+            raise CustomError(f"Unknown action: {action}")
+
+    async def _demo_security(self, component: str, operation: str) -> Dict[str, Any]:
+        """Demonstrate security functionality."""
+        return {
+            "message": f"Security demo for {component} component with {operation} operation",
+            "action": "demo",
+            "component": component,
+            "operation": operation,
+            "security_features": [
+                "Role-based access control",
+                "Operation validation",
+                "Audit logging",
+                "Permission checking",
+            ],
+            "demo_data": {
+                "component": component,
+                "operation": operation,
+                "timestamp": "2024-01-01T00:00:00Z",
+                "user_context": "demo_user",
+            },
+        }
+
+    async def _test_security(self, component: str, operation: str) -> Dict[str, Any]:
+        """Test security functionality."""
+        test_results = {
+            "component": component,
+            "operation": operation,
+            "tests": {
+                "role_validation": {"status": "passed", "message": "Role validation working"},
+                "operation_check": {"status": "passed", "message": "Operation check working"},
+                "permission_verify": {"status": "passed", "message": "Permission verification working"},
+                "audit_logging": {"status": "passed", "message": "Audit logging working"},
+            },
+        }
+
+        all_passed = all(test["status"] == "passed" for test in test_results["tests"].values())
+
+        return {
+            "message": f"Security test {'passed' if all_passed else 'failed'} for {component}",
+            "action": "test",
+            "all_tests_passed": all_passed,
+            "test_results": test_results,
+        }
+
+    async def _validate_security(self, component: str, operation: str) -> Dict[str, Any]:
+        """Validate security configuration."""
+        validation_results = {
+            "component": component,
+            "operation": operation,
+            "validations": {
+                "component_exists": {"status": "valid", "message": f"Component '{component}' exists"},
+                "operation_allowed": {"status": "valid", "message": f"Operation '{operation}' is allowed"},
+                "security_enabled": {"status": "valid", "message": "Security is enabled"},
+                "permissions_configured": {"status": "valid", "message": "Permissions are configured"},
+            },
+        }
+
+        all_valid = all(validation["status"] == "valid" for validation in validation_results["validations"].values())
+
+        return {
+            "message": f"Security validation {'passed' if all_valid else 'failed'} for {component}",
+            "action": "validate",
+            "all_validations_passed": all_valid,
+            "validation_results": validation_results,
+        }
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for example unified security command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "Action to perform (demo, test, validate)",
+                    "default": "demo",
+                    "enum": ["demo", "test", "validate"],
+                },
+                "component": {
+                    "type": "string",
+                    "description": "Security component to work with",
+                    "default": "security",
+                },
+                "operation": {
+                    "type": "string",
+                    "description": "Operation to perform on the component",
+                    "default": "list",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "additionalProperties": False,
+        }

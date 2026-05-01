@@ -1,0 +1,176 @@
+from ai_admin.core.custom_exceptions import ConfigurationError
+"""Configuration management command.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.settings_manager import AIAdminSettingsManager
+
+class ConfigCommand(BaseUnifiedCommand):
+    """Manage server configuration."""
+
+    name = "config"
+
+    def __init__(self):
+        """Initialize configuration command."""
+        super().__init__()
+        self.settings_manager = AIAdminSettingsManager()
+
+    async def execute(
+        self,
+        action: str = "get",
+        section: Optional[str] = None,
+        key: Optional[str] = None,
+        value: Optional[str] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute configuration operation.
+
+        Args:
+            action: Configuration action (get, set, list, reset)
+            section: Configuration section
+            key: Configuration key
+            value: Configuration value (for set action)
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with configuration information
+        """
+        # Validate inputs
+        if not action:
+            return ErrorResult(message="Action is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            action=action,
+            section=section,
+            key=key,
+            value=value,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for configuration command."""
+        return "config:manage"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute configuration management logic."""
+        return await self._manage_config(**kwargs)
+
+    async def _manage_config(
+        self,
+        action: str = "get",
+        section: Optional[str] = None,
+        key: Optional[str] = None,
+        value: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Manage configuration."""
+        try:
+            if action == "get":
+                if section and key:
+                    result = self.settings_manager.get_setting(section, key)
+                    return {
+                        "message": "Configuration value retrieved",
+                        "section": section,
+                        "key": key,
+                        "value": result,
+                        "action": action
+                    }
+                elif section:
+                    result = self.settings_manager.get_section(section)
+                    return {
+                        "message": "Configuration section retrieved",
+                        "section": section,
+                        "values": result,
+                        "action": action
+                    }
+                else:
+                    result = self.settings_manager.get_all_settings()
+                    return {
+                        "message": "All configuration retrieved",
+                        "values": result,
+                        "action": action
+                    }
+
+            elif action == "set":
+                if not section or not key or value is None:
+                    raise ValueError("Section, key, and value are required for set action")
+
+                self.settings_manager.set_setting(section, key, value)
+                return {
+                    "message": "Configuration value set",
+                    "section": section,
+                    "key": key,
+                    "value": value,
+                    "action": action
+                }
+
+            elif action == "list":
+                sections = self.settings_manager.list_sections()
+                return {
+                    "message": "Configuration sections listed",
+                    "sections": sections,
+                    "action": action
+                }
+
+            elif action == "reset":
+                if section:
+                    self.settings_manager.reset_section(section)
+                    return {
+                        "message": "Configuration section reset",
+                        "section": section,
+                        "action": action
+                    }
+                else:
+                    self.settings_manager.reset_all()
+                    return {
+                        "message": "All configuration reset",
+                        "action": action
+                    }
+
+            else:
+                raise ValueError(f"Unknown action: {action}")
+
+        except ConfigurationError as e:
+            raise ConfigurationError(f"Configuration management failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for configuration command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "Configuration action",
+                    "enum": ["get", "set", "list", "reset"],
+                    "default": "get",
+                },
+                "section": {
+                    "type": "string",
+                    "description": "Configuration section",
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Configuration key",
+                },
+                "value": {
+                    "type": "string",
+                    "description": "Configuration value (for set action)",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["action"],
+            "additionalProperties": False,
+        }

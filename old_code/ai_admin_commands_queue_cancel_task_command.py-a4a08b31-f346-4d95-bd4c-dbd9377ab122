@@ -1,0 +1,122 @@
+"""
+Queue Cancel Task Command
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+
+This command allows canceling a specific task in the queue.
+"""
+
+import logging
+from typing import Dict, Any, Optional, List
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.default_security_adapter import DefaultSecurityAdapter
+from ai_admin.core.custom_exceptions import CustomError, ValidationError
+from ai_admin.task_queue.queue_manager import queue_manager
+
+logger = logging.getLogger(__name__)
+
+
+class QueueCancelTaskCommand(BaseUnifiedCommand):
+    """Command to cancel a specific task in the queue."""
+
+    def __init__(self):
+        """Initialize QueueCancelTaskCommand."""
+        super().__init__()
+        self.security_adapter = DefaultSecurityAdapter()
+        self.name = "queue_cancel_task"
+
+    async def execute(
+        self,
+        task_id: str,
+        force: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Cancel a specific task in the queue.
+
+        Args:
+            task_id: ID of the task to cancel
+            force: Force cancel even if task is running
+            user_roles: User roles for security validation
+            **kwargs: Additional parameters
+
+        Returns:
+            Dict containing the result of the cancel operation
+        """
+        try:
+            # Validate required parameters
+            if not task_id:
+                raise ValidationError("Task ID is required")
+
+            # Security validation
+            is_valid, error_msg = await self._validate_security(
+                operation="queue_cancel_task",
+                user_roles=user_roles,
+                **kwargs
+            )
+            if not is_valid:
+                raise CustomError(f"Security validation failed: {error_msg}")
+
+            # Get task information
+            task = await queue_manager.get_task(task_id)
+            if not task:
+                raise CustomError(f"Task {task_id} not found")
+
+            # Check if task can be cancelled
+            if task.status in ["completed", "failed", "cancelled"]:
+                raise CustomError(f"Task {task_id} is already {task.status} and cannot be cancelled")
+
+            if task.status == "running" and not force:
+                raise CustomError(f"Task {task_id} is currently running. Use force=True to cancel it")
+
+            # Cancel the task
+            success = await queue_manager.cancel_task(task_id, force=force)
+            
+            if not success:
+                raise CustomError(f"Failed to cancel task {task_id}")
+
+            # Get updated task status
+            updated_task = await queue_manager.get_task(task_id)
+            
+            return {
+                "message": f"Task {task_id} cancelled successfully",
+                "task_id": task_id,
+                "previous_status": task.status,
+                "current_status": updated_task.status if updated_task else "unknown",
+                "force_cancelled": force and task.status == "running",
+                "cancelled_at": updated_task.updated_at if updated_task else None,
+            }
+
+        except ValidationError as e:
+            logger.error(f"Validation error in queue_cancel_task: {e}")
+            raise CustomError(f"Validation error: {str(e)}")
+        except CustomError:
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in queue_cancel_task: {e}")
+            raise CustomError(f"Failed to cancel task: {str(e)}")
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Get the command schema."""
+        return {
+            "name": self.name,
+            "description": "Cancel a specific task in the queue",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string",
+                        "description": "ID of the task to cancel",
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Force cancel even if task is running",
+                        "default": False,
+                    },
+                },
+                "required": ["task_id"],
+            },
+        }

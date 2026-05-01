@@ -1,0 +1,976 @@
+"""Module manager."""
+
+from ai_admin.core.custom_exceptions import AuthenticationError, ConfigurationError, ValidationError
+import json
+import os
+from datetime import datetime
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.core.settings import (
+    add_custom_settings,
+    get_custom_settings,
+    get_custom_setting_value,
+    set_custom_setting_value,
+)
+import logging
+from .config.ssl_config import SSLConfig
+from .config.roles_config import RolesConfig
+from .config.token_config import TokenManager
+from .helpers import get_app_name, get_command_config, get_docker_creds, get_ftp_creds, get_settings_manager, get_vast_creds, is_feature_enabled
+
+class AIAdminSettingsManager:
+    """
+    Settings manager for AI Admin server.
+
+    This class provides:
+    1. Loading of custom settings from JSON files
+    2. Management of credentials and sensitive data
+    3. Feature toggles and configuration validation
+    4. Integration with the framework's settings system
+    """
+
+    def __init__(
+        self,
+        config_file: str = "config/config.json",
+        credentials_file: str = "config/auth.json",
+    ):
+        """
+        Initialize the AI Admin settings manager.
+
+        Args:
+            config_file: Path to main configuration JSON file
+            credentials_file: Path to credentials JSON file
+        """
+        self.config_file = config_file
+        self.credentials_file = credentials_file
+        self.logger = logging.getLogger("ai_admin.settings")
+        self._ssl_config: Optional[SSLConfig] = None
+        self._roles_config: Optional[RolesConfig] = None
+        self._token_manager: Optional[TokenManager] = None
+        self._load_settings()
+
+    def _load_settings(self) -> None:
+        """Load settings from configuration and credentials files."""
+        try:
+            # Load main configuration
+            if os.path.exists(self.config_file):
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    config_settings = json.load(f)
+
+                self.logger.info(f"📁 Loaded configuration from: {self.config_file}")
+
+                # Add to framework's settings system
+                add_custom_settings(config_settings)
+
+            else:
+                self.logger.warning(
+                    f"⚠️  Configuration file not found: {self.config_file}"
+                )
+
+            # Load credentials
+            if os.path.exists(self.credentials_file):
+                with open(self.credentials_file, "r", encoding="utf-8") as f:
+                    credentials = json.load(f)
+
+                self.logger.info(f"🔐 Loaded credentials from: {self.credentials_file}")
+
+                # Add credentials to settings system
+                add_custom_settings({"credentials": credentials})
+
+            else:
+                self.logger.warning(
+                    f"⚠️  Credentials file not found: {self.credentials_file}"
+                )
+
+        except ConfigurationError as e:
+            self.logger.error(f"❌ Failed to load settings: {e}")
+
+        # Load SSL configuration
+        self.load_ssl_config()
+
+        # Load roles configuration
+        self.load_roles_config()
+
+        # Load token configuration
+        self.load_token_config()
+
+    def get_application_name(self) -> str:
+        """Get application name."""
+        return str(get_custom_setting_value(
+            "ai_admin.application.name", "AI Admin - Enhanced MCP Server"
+        ))
+
+    def get_application_version(self) -> str:
+        """Get application version."""
+        return str(get_custom_setting_value("ai_admin.application.version", "2.0.0"))
+
+    def get_environment(self) -> str:
+        """Get application environment."""
+        return str(get_custom_setting_value(
+            "ai_admin.application.environment", "production"
+        ))
+
+    def is_feature_enabled(self, feature_name: str) -> bool:
+        """Check if a feature is enabled."""
+        return bool(get_custom_setting_value(f"ai_admin.features.{feature_name}", False))
+
+    def get_docker_credentials(self) -> Dict[str, Any]:
+        """Get Docker credentials."""
+        result = get_custom_setting_value("credentials.docker", {})
+        return result if isinstance(result, dict) else {}
+
+    def get_github_credentials(self) -> Dict[str, Any]:
+        """Get GitHub credentials."""
+        result = get_custom_setting_value("credentials.github", {})
+        return result if isinstance(result, dict) else {}
+
+    def get_vast_credentials(self) -> Dict[str, Any]:
+        """Get Vast.ai credentials."""
+        result = get_custom_setting_value("credentials.vast", {})
+        return result if isinstance(result, dict) else {}
+
+    def get_ftp_credentials(self) -> Dict[str, Any]:
+        """Get FTP credentials."""
+        result = get_custom_setting_value("credentials.ftp", {})
+        return result if isinstance(result, dict) else {}
+
+    def get_ollama_credentials(self) -> Dict[str, Any]:
+        """Get Ollama credentials."""
+        result = get_custom_setting_value("credentials.ollama", {})
+        return result if isinstance(result, dict) else {}
+
+    def get_command_setting(
+        self, command_name: str, setting_name: str, default: Any = None
+    ) -> Any:
+        """Get custom command setting."""
+        return get_custom_setting_value(
+            f"ai_admin.custom_commands.{command_name}.{setting_name}", default
+        )
+
+    def get_hook_setting(
+        self, hook_name: str, setting_name: str, default: Any = None
+    ) -> Any:
+        """Get hook setting."""
+        return get_custom_setting_value(
+            f"ai_admin.hooks.{hook_name}.{setting_name}", default
+        )
+
+    def set_custom_setting(self, key: str, value: Any) -> None:
+        """Set a custom setting."""
+        set_custom_setting_value(key, value)
+        self.logger.info(f"🔧 Set custom setting: {key} = {value}")
+
+    def get_custom_setting_value(self, key: str, default: Any = None) -> Any:
+        """Get a custom setting value."""
+        return get_custom_setting_value(key, default)
+
+    def get_all_settings(self) -> Dict[str, Any]:
+        """Get all custom settings."""
+        result = get_custom_settings()
+        return result if isinstance(result, dict) else {}
+
+    def reload_settings(self) -> None:
+        """Reload settings from files."""
+        self.logger.info("🔄 Reloading AI Admin settings...")
+        self._load_settings()
+        self.logger.info("✅ AI Admin settings reloaded")
+
+    def validate_settings(self) -> Dict[str, Any]:
+        """
+        Validate current settings and return validation results.
+
+        Returns:
+            Dictionary with validation results
+        """
+        validation_results: Dict[str, Any] = {"valid": True, "errors": [], "warnings": []}
+
+        # Validate required settings
+        required_settings = [
+            "ai_admin.application.name",
+            "ai_admin.application.version",
+            "ai_admin.features.docker_operations",
+        ]
+
+        for setting in required_settings:
+            if get_custom_setting_value(setting) is None:
+                validation_results["valid"] = False
+                validation_results["errors"].append(
+                    f"Missing required setting: {setting}"
+                )
+
+        # Validate feature dependencies
+        if self.is_feature_enabled("docker_operations"):
+            docker_creds = self.get_docker_credentials()
+            if not docker_creds.get("username") or not docker_creds.get("token"):
+                validation_results["warnings"].append(
+                    "Docker operations enabled but credentials are missing"
+                )
+
+        if self.is_feature_enabled("vast_operations"):
+            vast_creds = self.get_vast_credentials()
+            if not vast_creds.get("api_key"):
+                validation_results["warnings"].append(
+                    "Vast.ai operations enabled but API key is missing"
+                )
+
+        if self.is_feature_enabled("ftp_operations"):
+            ftp_creds = self.get_ftp_credentials()
+            if not ftp_creds.get("host") or not ftp_creds.get("user"):
+                validation_results["warnings"].append(
+                    "FTP operations enabled but credentials are missing"
+                )
+
+        return validation_results
+
+    def print_settings_summary(self) -> None:
+        """Print a summary of current settings."""
+        self.logger.info("📊 AI Admin Settings Summary:")
+        self.logger.info(
+            f"   Application: {self.get_application_name()} v{self.get_application_version()}"
+        )
+        self.logger.info(f"   Environment: {self.get_environment()}")
+
+        # Features
+        features = []
+        feature_list = [
+            "advanced_hooks",
+            "custom_commands",
+            "data_transformation",
+            "command_interception",
+            "performance_monitoring",
+            "custom_settings_manager",
+            "queue_system",
+            "ftp_operations",
+            "docker_operations",
+            "vast_operations",
+            "github_operations",
+            "kubernetes_operations",
+            "ollama_operations",
+        ]
+
+        for feature in feature_list:
+            if self.is_feature_enabled(feature):
+                features.append(feature)
+
+        self.logger.info(
+            f"   Enabled Features: {', '.join(features) if features else 'None'}"
+        )
+
+        # Security
+        auth_enabled = get_custom_setting_value(
+            "ai_admin.security.enable_authentication", False
+        )
+        rate_limiting = get_custom_setting_value(
+            "ai_admin.security.rate_limiting.enabled", False
+        )
+        self.logger.info(
+            f"   Security: Auth={auth_enabled}, Rate Limiting={rate_limiting}"
+        )
+
+        # Monitoring
+        metrics_enabled = get_custom_setting_value(
+            "ai_admin.monitoring.enable_metrics", False
+        )
+        self.logger.info(f"   Monitoring: Metrics={metrics_enabled}")
+
+        # Credentials status
+        creds_status = []
+        if self.get_docker_credentials():
+            creds_status.append("Docker")
+        if self.get_github_credentials():
+            creds_status.append("GitHub")
+        if self.get_vast_credentials():
+            creds_status.append("Vast.ai")
+        if self.get_ftp_credentials():
+            creds_status.append("FTP")
+        if self.get_ollama_credentials():
+            creds_status.append("Ollama")
+
+        self.logger.info(
+            f"   Credentials: {', '.join(creds_status) if creds_status else 'None'}"
+        )
+
+    def load_ssl_config(self) -> None:
+        """
+        Load SSL configuration from settings.
+
+        This method loads SSL configuration from the current settings
+        and creates an SSLConfig instance for validation and management.
+        """
+        try:
+            # Get SSL configuration from settings
+            ssl_settings = get_custom_setting_value("ssl", {})
+            cert_settings = get_custom_setting_value("certificates", {})
+
+            # Combine SSL and certificate settings
+            config_data = {"ssl": ssl_settings, "certificates": cert_settings}
+
+            # Create SSL config instance
+            self._ssl_config = SSLConfig(config_data, auto_validate=False)
+
+            self.logger.info("🔒 SSL configuration loaded successfully")
+
+        except ConfigurationError as e:
+            self.logger.error(f"❌ Failed to load SSL configuration: {e}")
+            self._ssl_config = None
+
+    def validate_ssl_settings(self) -> Dict[str, Any]:
+        """
+        Validate SSL settings and return validation results.
+
+        Returns:
+            Dict[str, Any]: Validation results with status and details.
+        """
+        validation_results: Dict[str, Any] = {
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "ssl_mode": None,
+            "ssl_enabled": False,
+        }
+
+        try:
+            if self._ssl_config is None:
+                self.load_ssl_config()
+
+            if self._ssl_config is None:
+                validation_results["valid"] = False
+                validation_results["errors"].append("SSL configuration not available")
+                return validation_results
+
+            # Validate SSL configuration
+            self._ssl_config.validate_config()
+
+            # Get SSL mode and status
+            validation_results["ssl_mode"] = self._ssl_config.get_ssl_mode().value
+            validation_results["ssl_enabled"] = self._ssl_config.is_ssl_enabled()
+
+            # Check for potential issues
+            if self._ssl_config.is_ssl_enabled():
+                cert_paths = self._ssl_config.get_certificate_paths()
+                if not cert_paths.server_cert:
+                    validation_results["warnings"].append(
+                        "SSL enabled but server certificate not specified"
+                    )
+                if not cert_paths.server_key:
+                    validation_results["warnings"].append(
+                        "SSL enabled but server key not specified"
+                    )
+
+            if self._ssl_config.is_mtls_enabled():
+                cert_paths = self._ssl_config.get_certificate_paths()
+                if not cert_paths.ca_cert:
+                    validation_results["warnings"].append(
+                        "mTLS enabled but CA certificate not specified"
+                    )
+
+            self.logger.info(
+                f"✅ SSL settings validation completed: {validation_results['ssl_mode']}"
+            )
+
+        except ValueError as e:
+            validation_results["valid"] = False
+            validation_results["errors"].append(str(e))
+            self.logger.error(f"❌ SSL settings validation failed: {e}")
+
+        except ValidationError as e:
+            validation_results["valid"] = False
+            validation_results["errors"].append(f"SSL validation error: {e}")
+            self.logger.error(f"❌ SSL settings validation error: {e}")
+
+        return validation_results
+
+    def get_ssl_config(self) -> Optional[SSLConfig]:
+        """
+        Get SSL configuration instance.
+
+        Returns:
+            Optional[SSLConfig]: SSL configuration instance or None if not available.
+        """
+        if self._ssl_config is None:
+            self.load_ssl_config()
+        return self._ssl_config
+
+    def update_ssl_config(self, new_ssl_settings: Dict[str, Any]) -> None:
+        """
+        Update SSL configuration with new settings.
+
+        Args:
+            new_ssl_settings: New SSL settings dictionary.
+        """
+        try:
+            # Update settings in the framework
+            set_custom_setting_value("ssl", new_ssl_settings.get("ssl", {}))
+            set_custom_setting_value(
+                "certificates", new_ssl_settings.get("certificates", {})
+            )
+
+            # Reload SSL configuration
+            self.load_ssl_config()
+
+            self.logger.info("🔒 SSL configuration updated successfully")
+
+        except ConfigurationError as e:
+            self.logger.error(f"❌ Failed to update SSL configuration: {e}")
+            raise
+
+    def is_ssl_enabled(self) -> bool:
+        """
+        Check if SSL is enabled.
+
+        Returns:
+            bool: True if SSL is enabled.
+        """
+        ssl_config = self.get_ssl_config()
+        return ssl_config.is_ssl_enabled() if ssl_config else False
+
+    def is_https_only(self) -> bool:
+        """
+        Check if HTTPS only mode is enabled.
+
+        Returns:
+            bool: True if HTTPS only mode is enabled.
+        """
+        ssl_config = self.get_ssl_config()
+        return ssl_config.is_https_only() if ssl_config else False
+
+    def is_mtls_enabled(self) -> bool:
+        """
+        Check if mTLS is enabled.
+
+        Returns:
+            bool: True if mTLS is enabled.
+        """
+        ssl_config = self.get_ssl_config()
+        return ssl_config.is_mtls_enabled() if ssl_config else False
+
+    def is_token_auth_enabled(self) -> bool:
+        """
+        Check if token authentication is enabled.
+
+        Returns:
+            bool: True if token authentication is enabled.
+        """
+        ssl_config = self.get_ssl_config()
+        return ssl_config.is_token_auth_enabled() if ssl_config else False
+
+    def get_ssl_mode(self) -> Optional[str]:
+        """
+        Get current SSL mode.
+
+        Returns:
+            Optional[str]: SSL mode string or None if not available.
+        """
+        ssl_config = self.get_ssl_config()
+        return ssl_config.get_ssl_mode().value if ssl_config else None
+
+    def get_ssl_summary(self) -> Dict[str, Any]:
+        """
+        Get SSL configuration summary.
+
+        Returns:
+            Dict[str, Any]: SSL configuration summary.
+        """
+        ssl_config = self.get_ssl_config()
+        if ssl_config:
+            return ssl_config.get_config_summary()
+        else:
+            return {
+                "ssl_mode": "http_only",
+                "ssl_enabled": False,
+                "https_only": False,
+                "mtls_enabled": False,
+                "token_auth_enabled": False,
+                "certificate_paths": {},
+                "security_params": {},
+            }
+
+    def load_roles_config(self) -> None:
+        """
+        Load roles configuration from settings.
+
+        This method loads roles configuration from the current settings
+        and creates a RolesConfig instance for validation and management.
+        """
+        try:
+            # Get roles configuration from settings
+            permissions_settings = get_custom_setting_value("permissions", {})
+            security_settings = get_custom_setting_value("security", {})
+
+            # Combine permissions and security settings
+            config_data = {
+                "permissions": permissions_settings,
+                "security": security_settings,
+            }
+
+            # Create roles config instance
+            self._roles_config = RolesConfig(config_data)
+
+            self.logger.info("🔐 Roles configuration loaded successfully")
+
+        except ConfigurationError as e:
+            self.logger.error(f"❌ Failed to load roles configuration: {e}")
+            self._roles_config = None
+
+    def validate_roles_settings(self) -> Dict[str, Any]:
+        """
+        Validate roles settings.
+
+        Returns:
+            Dict[str, Any]: Validation results with errors and warnings.
+        """
+        validation_result: Dict[str, Any] = {
+            "is_valid": True,
+            "errors": [],
+            "warnings": [],
+            "details": {},
+        }
+
+        try:
+            if self._roles_config:
+                # Validate roles configuration
+                self._roles_config.validate_roles_config()
+
+                # Get configuration summary
+                validation_result["details"] = self._roles_config.get_config_summary()
+                validation_result["is_valid"] = True
+
+                self.logger.info("✅ Roles settings validation passed")
+
+            else:
+                validation_result["is_valid"] = False
+                validation_result["errors"].append("Roles configuration not loaded")
+                self.logger.warning(
+                    "⚠️  Roles configuration not available for validation"
+                )
+
+        except ValueError as e:
+            validation_result["is_valid"] = False
+            validation_result["errors"].append(str(e))
+            self.logger.error(f"❌ Roles settings validation failed: {e}")
+
+        except ValidationError as e:
+            validation_result["is_valid"] = False
+            validation_result["errors"].append(
+                f"Unexpected error during validation: {e}"
+            )
+            self.logger.error(f"❌ Unexpected error during roles validation: {e}")
+
+        return validation_result
+
+    def get_roles_config(self) -> Optional[RolesConfig]:
+        """
+        Get roles configuration instance.
+
+        Returns:
+            Optional[RolesConfig]: Roles configuration instance or None if not loaded.
+        """
+        return self._roles_config
+
+    def update_roles_config(self, new_roles_settings: Dict[str, Any]) -> None:
+        """
+        Update roles configuration.
+
+        Args:
+            new_roles_settings: New roles settings dictionary.
+        """
+        try:
+            if self._roles_config:
+                # Update roles configuration
+                self._roles_config.update_config(new_roles_settings)
+
+                # Update settings in framework
+                for key, value in new_roles_settings.items():
+                    set_custom_setting_value(key, value)
+
+                self.logger.info("✅ Roles configuration updated successfully")
+
+            else:
+                # Create new roles configuration
+                self._roles_config = RolesConfig(new_roles_settings)
+
+                # Add to framework settings
+                add_custom_settings(new_roles_settings)
+
+                self.logger.info("✅ New roles configuration created successfully")
+
+        except ConfigurationError as e:
+            self.logger.error(f"❌ Failed to update roles configuration: {e}")
+            raise
+
+    def get_roles(self) -> List[str]:
+        """
+        Get list of all active roles.
+
+        Returns:
+            List[str]: List of active role names.
+        """
+        if self._roles_config:
+            return self._roles_config.get_roles()
+        return []
+
+    def get_role_permissions(self, role_name: str) -> List[str]:
+        """
+        Get permissions for a specific role.
+
+        Args:
+            role_name: Name of the role.
+
+        Returns:
+            List[str]: List of permission names for the role.
+        """
+        if self._roles_config:
+            permissions = self._roles_config.get_permissions(role_name)
+            return [perm.name for perm in permissions]
+        return []
+
+    def has_role_permission(self, role_name: str, permission_name: str) -> bool:
+        """
+        Check if a role has a specific permission.
+
+        Args:
+            role_name: Name of the role.
+            permission_name: Name of the permission.
+
+        Returns:
+            bool: True if role has the permission.
+        """
+        if self._roles_config:
+            return self._roles_config.has_permission(role_name, permission_name)
+        return False
+
+    def is_role_allowed(self, role_name: str) -> bool:
+        """
+        Check if a role is allowed (active and exists).
+
+        Args:
+            role_name: Name of the role.
+
+        Returns:
+            bool: True if role is allowed.
+        """
+        if self._roles_config:
+            return self._roles_config.is_role_allowed(role_name)
+        return False
+
+    def get_roles_summary(self) -> Dict[str, Any]:
+        """
+        Get roles configuration summary.
+
+        Returns:
+            Dict[str, Any]: Roles configuration summary.
+        """
+        if self._roles_config:
+            return self._roles_config.get_config_summary()
+        else:
+            return {
+                "total_roles": 0,
+                "active_roles": 0,
+                "default_role": "guest",
+                "admin_role": "admin",
+                "certificate_mappings": 0,
+                "roles": [],
+                "hierarchy": {},
+                "certificate_roles_mapping": {},
+            }
+
+    def load_token_config(self) -> None:
+        """
+        Load token configuration from settings.
+
+        This method loads token configuration from the current settings
+        and creates a TokenManager instance for validation and management.
+        """
+        try:
+            # Get token configuration from settings
+            token_settings = get_custom_setting_value("tokens", {})
+
+            # Create token manager instance
+            self._token_manager = TokenManager(token_settings)
+
+            self.logger.info("🔑 Token configuration loaded successfully")
+
+        except AuthenticationError as e:
+            self.logger.error(f"❌ Failed to load token configuration: {e}")
+            self._token_manager = None
+
+    def validate_token_settings(self) -> Dict[str, Any]:
+        """
+        Validate token settings and return validation results.
+
+        Returns:
+            Dict[str, Any]: Validation results with status and details.
+        """
+        validation_results: Dict[str, Any] = {
+            "valid": True,
+            "errors": [],
+            "warnings": [],
+            "enabled": False,
+            "total_tokens": 0,
+            "active_tokens": 0,
+        }
+
+        try:
+            if self._token_manager is None:
+                self.load_token_config()
+
+            if self._token_manager is None:
+                validation_results["valid"] = False
+                validation_results["errors"].append("Token configuration not available")
+                return validation_results
+
+            # Validate token configuration
+            self._token_manager.validate_token_config()
+
+            # Get configuration summary
+            config_summary = self._token_manager.get_config_summary()
+            validation_results["enabled"] = config_summary["enabled"]
+            validation_results["total_tokens"] = config_summary["total_tokens"]
+            validation_results["active_tokens"] = config_summary["active_tokens"]
+
+            # Check for potential issues
+            if config_summary["enabled"]:
+                if config_summary["total_tokens"] == 0:
+                    validation_results["warnings"].append(
+                        "Token authentication enabled but no tokens configured"
+                    )
+
+                if config_summary["expired_tokens"] > 0:
+                    validation_results["warnings"].append(
+                        f"{config_summary['expired_tokens']} expired tokens found"
+                    )
+
+            self.logger.info(
+                f"✅ Token settings validation completed: {validation_results['enabled']}"
+            )
+
+        except ValueError as e:
+            validation_results["valid"] = False
+            validation_results["errors"].append(str(e))
+            self.logger.error(f"❌ Token settings validation failed: {e}")
+
+        except ValidationError as e:
+            validation_results["valid"] = False
+            validation_results["errors"].append(f"Token validation error: {e}")
+            self.logger.error(f"❌ Token settings validation error: {e}")
+
+        return validation_results
+
+    def get_token_config(self) -> Optional[TokenManager]:
+        """
+        Get token configuration instance.
+
+        Returns:
+            Optional[TokenManager]: Token manager instance or None if not available.
+        """
+        if self._token_manager is None:
+            self.load_token_config()
+        return self._token_manager
+
+    def update_token_config(self, new_token_settings: Dict[str, Any]) -> None:
+        """
+        Update token configuration with new settings.
+
+        Args:
+            new_token_settings: New token settings dictionary.
+        """
+        try:
+            # Update settings in the framework
+            set_custom_setting_value("tokens", new_token_settings)
+
+            # Reload token configuration
+            self.load_token_config()
+
+            self.logger.info("🔑 Token configuration updated successfully")
+
+        except AuthenticationError as e:
+            self.logger.error(f"❌ Failed to update token configuration: {e}")
+            raise
+
+
+    def validate_token(self, token_value: str) -> bool:
+        """
+        Validate a token value.
+
+        Args:
+            token_value: Token value to validate.
+
+        Returns:
+            bool: True if token is valid.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.validate_token(token_value)
+        return False
+
+    def is_token_valid(self, token_value: str) -> bool:
+        """
+        Check if a token is valid without incrementing usage.
+
+        Args:
+            token_value: Token value to check.
+
+        Returns:
+            bool: True if token is valid.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.is_token_valid(token_value)
+        return False
+
+    def get_token_roles(self, token_value: str) -> List[str]:
+        """
+        Get roles associated with a token.
+
+        Args:
+            token_value: Token value.
+
+        Returns:
+            List[str]: List of roles for the token.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            # Find token by value
+            for token in token_manager.get_tokens():
+                if token.token_value == token_value:
+                    return token_manager.get_token_roles(token.token_id)
+        return []
+
+    def get_token_permissions(self, token_value: str) -> List[str]:
+        """
+        Get permissions associated with a token.
+
+        Args:
+            token_value: Token value.
+
+        Returns:
+            List[str]: List of permissions for the token.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            # Find token by value
+            for token in token_manager.get_tokens():
+                if token.token_value == token_value:
+                    return token_manager.get_token_permissions(token.token_id)
+        return []
+
+    def get_token_expiry(self, token_value: str) -> Optional[datetime]:
+        """
+        Get expiry time for a token.
+
+        Args:
+            token_value: Token value.
+
+        Returns:
+            Optional[datetime]: Token expiry time or None if no expiry.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.get_token_expiry(token_value)
+        return None
+
+    def create_token(
+        self,
+        token_id: str,
+        roles: List[str],
+        permissions: Optional[List[str]] = None,
+        description: Optional[str] = None,
+        expires_hours: Optional[int] = None,
+        max_usage: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Any]:
+        """
+        Create a new token.
+
+        Args:
+            token_id: Unique token identifier.
+            roles: List of roles for the token.
+            permissions: List of permissions for the token.
+            description: Token description.
+            expires_hours: Token expiry in hours.
+            max_usage: Maximum usage count.
+            metadata: Additional metadata.
+
+        Returns:
+            Optional[TokenDefinition]: Created token definition or None if failed.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            try:
+                return token_manager.create_token(
+                    token_id=token_id,
+                    roles=roles,
+                    permissions=permissions,
+                    description=description,
+                    expires_hours=expires_hours,
+                    max_usage=max_usage,
+                    metadata=metadata,
+                )
+            except AuthenticationError as e:
+                self.logger.error(f"❌ Failed to create token: {e}")
+                return None
+        return None
+
+    def revoke_token(self, token_id: str) -> bool:
+        """
+        Revoke a token.
+
+        Args:
+            token_id: Token identifier.
+
+        Returns:
+            bool: True if token was revoked.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.revoke_token(token_id)
+        return False
+
+    def delete_token(self, token_id: str) -> bool:
+        """
+        Delete a token permanently.
+
+        Args:
+            token_id: Token identifier.
+
+        Returns:
+            bool: True if token was deleted.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.delete_token(token_id)
+        return False
+
+    def get_tokens_summary(self) -> Dict[str, Any]:
+        """
+        Get tokens configuration summary.
+
+        Returns:
+            Dict[str, Any]: Tokens configuration summary.
+        """
+        token_manager = self.get_token_config()
+        if token_manager:
+            return token_manager.get_config_summary()
+        else:
+            return {
+                "enabled": False,
+                "total_tokens": 0,
+                "active_tokens": 0,
+                "expired_tokens": 0,
+                "revoked_tokens": 0,
+                "default_token_type": "api_key",
+                "default_expiry_hours": 24,
+                "max_tokens_per_user": 10,
+                "token_length": 32,
+                "require_https": True,
+                "validate_roles": True,
+                "auto_cleanup_expired": True,
+                "storage_file": "tokens.json",
+                "roles": [],
+            }
+
+
+# Global settings manager instance
+_settings_manager = None
+
+
+

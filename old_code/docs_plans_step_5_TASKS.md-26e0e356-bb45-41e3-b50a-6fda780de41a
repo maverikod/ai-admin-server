@@ -1,0 +1,253 @@
+# STEP 5 TASKS — Atomic Instructions for Haiku
+
+## PRE-CONDITION: All rows in dependency_matrix.md must show DONE
+
+---
+
+## 5.1: Verify zero QueueManager imports
+
+### TASK 1
+```
+find_usages(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  target_name="QueueManager",
+  target_type="class"
+)
+```
+Filter: usage_type=="import", exclude ai_admin/queue/ directory
+Expected: count=0
+If count>0: STOP. Return to Step 4 and fix remaining consumers.
+
+## 5.2: Verify zero QueueClient imports
+
+### TASK 1
+```
+find_usages(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  target_name="QueueClient",
+  target_type="class"
+)
+```
+Expected: count=0. If count>0: STOP, fix first.
+
+## 5.3: Verify zero Executor imports
+
+### TASK 1
+For each executor name in [DockerExecutor, K8sExecutor, K8sKindExecutor, KindExecutor,
+FTPExecutor, FtpExecutor, VastExecutor, OllamaExecutor, GitExecutor,
+GitHubExecutor, SSLExecutor, SystemExecutor]:
+```
+find_usages(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  target_name=<executor_name>,
+  target_type="class"
+)
+```
+Expected each: count=0
+If any count>0: STOP, fix.
+
+## 5.4: Delete ai_admin/task_queue/
+
+### TASK 1
+List all files:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/task_queue/**"
+)
+```
+Save: list of relative paths
+
+### TASK 2
+For EACH file in list, run:
+```
+delete_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<relative_path>
+)
+```
+One call per file. Soft-delete only.
+
+### TASK 3
+Verify directory empty:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/task_queue/**"
+)
+```
+Expected: count=0 (all files deleted)
+
+### TASK 4
+Confirm in trash:
+```
+list_deleted_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9"
+)
+```
+Verify task_queue files appear in deleted list.
+
+## 5.5: Delete ai_admin/queue_management/
+
+### TASK 1
+List files:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/queue_management/**"
+)
+```
+
+### TASK 2
+For each file: delete_file (soft-delete)
+
+### TASK 3
+Verify empty:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/queue_management/**"
+)
+```
+Expected: count=0
+
+## 5.6: Remove QueueDaemon
+
+### TASK 1
+Read queue_daemon_analysis.md to find exact file path:
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="docs/plans/step_1/queue_daemon_analysis.md"
+)
+```
+Extract: File path and CLI entry point paths
+
+### TASK 2
+Delete QueueDaemon source file:
+```
+delete_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<daemon_file_path>
+)
+```
+
+### TASK 3 (only if CLI entry point exists)
+Delete CLI entry point script:
+```
+delete_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<cli_script_path>
+)
+```
+
+## 5.7–5.8: Clean up __init__.py re-exports
+
+### TASK 1
+Read ai_admin/__init__.py:
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/__init__.py"
+)
+```
+Find any lines importing from: task_queue, queue_management, QueueManager, QueueClient
+
+### TASK 2
+For each stale import found, load file into CST:
+```
+cst_load_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/__init__.py"
+)
+```
+
+### TASK 3
+Find stale import node:
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="xpath",
+  query="ImportFrom[module='ai_admin.task_queue*']"
+)
+```
+
+### TASK 4
+Delete stale import node:
+```
+cst_modify_tree(
+  tree_id=<tree_id>,
+  operations=[{"action": "delete", "node_id": <stale_import_node_id>}]
+)
+```
+Repeat for each stale import.
+
+### TASK 5
+Save tree:
+```
+cst_save_tree(
+  tree_id=<tree_id>,
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/__init__.py",
+  backup=True,
+  validate=True
+)
+```
+
+### TASK 6 (same pattern for commands/__init__.py)
+Read, CST load, find stale imports, delete, save.
+
+## 5.9: Run test suite
+
+### TASK 1
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=["tests/", "-x", "-q", "--tb=short"]
+)
+```
+Read output. If any ImportError or ModuleNotFoundError:
+- Identify missing import
+- Trace back to which deleted file it came from
+- Fix by updating the importing file via CST
+- Re-run
+
+### TASK 2 (repeat until all tests pass or failures are unrelated to queue migration)
+
+## 5.10: comprehensive_analysis
+
+### TASK 1
+```
+comprehensive_analysis(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  check_placeholders=True,
+  check_stubs=True,
+  check_empty_methods=True,
+  check_imports=True,
+  check_long_files=True,
+  check_flake8=True,
+  check_mypy=True
+)
+```
+This is queued. Save job_id.
+
+### TASK 2
+```
+queue_get_job_status(job_id=<from TASK 1>)
+```
+Poll until completed.
+
+### TASK 3
+Read summary. Flag any critical issues (stubs, long files >400L in production code).
+Document in `docs/plans/step_5/analysis_results.md`.
+
+## DONE CHECK for Step 5
+- [ ] find_usages(QueueManager) = 0 outside ai_admin/queue/
+- [ ] find_usages(QueueClient) = 0
+- [ ] All Executor find_usages = 0
+- [ ] ai_admin/task_queue/ empty (soft-deleted)
+- [ ] ai_admin/queue_management/ empty (soft-deleted)
+- [ ] __init__.py files clean of stale imports
+- [ ] pytest suite passes (or failures documented as pre-existing)
+- [ ] comprehensive_analysis completed

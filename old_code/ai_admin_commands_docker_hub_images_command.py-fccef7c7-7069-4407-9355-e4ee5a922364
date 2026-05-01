@@ -1,0 +1,167 @@
+from ai_admin.core.custom_exceptions import CustomError
+"""Docker Hub images listing command.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import requests
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerHubImagesCommand(BaseUnifiedCommand):
+    """View and search Docker images in Docker Hub.
+
+    This command allows viewing remote Docker images from Docker Hub,
+    including official images, user repositories, and detailed metadata.
+    """
+
+    name = "docker_hub_images"
+
+    def __init__(self):
+        """Initialize Docker Hub images command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        query: Optional[str] = None,
+        username: Optional[str] = None,
+        repository: Optional[str] = None,
+        limit: int = 25,
+        official_only: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker Hub images listing with unified security.
+
+        Args:
+            query: Search query for images
+            username: Filter by username
+            repository: Filter by repository name
+            limit: Maximum number of results
+            official_only: Show only official images
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with images information
+        """
+        # Use unified security approach
+        return await super().execute(
+            query=query,
+            username=username,
+            repository=repository,
+            limit=limit,
+            official_only=official_only,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker Hub images command."""
+        return "docker:hub_images"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker Hub images listing logic."""
+        return await self._list_images(**kwargs)
+
+    async def _list_images(
+        self,
+        query: Optional[str] = None,
+        username: Optional[str] = None,
+        repository: Optional[str] = None,
+        limit: int = 25,
+        official_only: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """List Docker Hub images."""
+        try:
+            # Docker Hub API endpoint
+            if query:
+                api_url = f"https://hub.docker.com/v2/search/repositories/?q={query}&page_size={limit}"
+            elif username:
+                api_url = f"https://hub.docker.com/v2/repositories/{username}/?page_size={limit}"
+            else:
+                api_url = f"https://hub.docker.com/v2/repositories/?page_size={limit}"
+
+            # Add filters
+            if official_only:
+                api_url += "&is_official=true"
+
+            # Make request
+            response = requests.get(api_url, timeout=30)
+            response.raise_for_status()
+
+            data = response.json()
+
+            # Process results
+            images = []
+            if "results" in data:
+                for repo in data["results"]:
+                    image_info = {
+                        "name": repo.get("name"),
+                        "namespace": repo.get("namespace"),
+                        "description": repo.get("description"),
+                        "star_count": repo.get("star_count", 0),
+                        "pull_count": repo.get("pull_count", 0),
+                        "last_updated": repo.get("last_updated"),
+                        "is_official": repo.get("is_official", False),
+                        "is_private": repo.get("is_private", False),
+                    }
+                    images.append(image_info)
+
+            return {
+                "message": f"Found {len(images)} Docker Hub images",
+                "images": images,
+                "count": len(images),
+                "query": query,
+                "username": username,
+                "repository": repository,
+                "limit": limit,
+                "official_only": official_only,
+                "total_count": data.get("count", 0),
+            }
+
+        except requests.RequestException as e:
+            raise CustomError(f"Failed to retrieve Docker Hub images: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker Hub images listing failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker Hub images command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query for images",
+                },
+                "username": {
+                    "type": "string",
+                    "description": "Filter by username",
+                },
+                "repository": {
+                    "type": "string",
+                    "description": "Filter by repository name",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of results",
+                    "default": 25,
+                },
+                "official_only": {
+                    "type": "boolean",
+                    "description": "Show only official images",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "additionalProperties": False,
+        }

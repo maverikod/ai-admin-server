@@ -1,0 +1,25 @@
+"""Temporary script to fix ssl_context_type.py"""
+
+from pathlib import Path
+
+lines = [
+    chr(34) * 3 + "SSL context type enum." + chr(34) * 3,
+    "",
+    "from enum import Enum",
+    "",
+    "class SSLContextType(Enum):",
+    "    " + chr(34) * 3 + "Types of SSL contexts." + chr(34) * 3,
+    "    HTTPS = " + chr(34) + "https" + chr(34),
+    "    MTLS = " + chr(34) + "mtls" + chr(34),
+    "    TOKEN_AUTH = " + chr(34) + "token_auth" + chr(34),
+    "    MIXED = " + chr(34) + "mixed" + chr(34),
+]
+p = (
+    Path(__file__).parent
+    / "ai_admin"
+    / "core"
+    / "ssl_context_manager"
+    / "ssl_context_type.py"
+)
+p.write_text(chr(10).join(lines), encoding="utf-8")
+print("Fixed")

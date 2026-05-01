@@ -1,0 +1,117 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError
+"""Docker tag command for creating image tags.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerTagCommand(BaseUnifiedCommand):
+    """Create Docker image tags.
+
+    This command creates new tags for existing Docker images,
+    which is useful for preparing images for pushing to registries.
+    """
+
+    name = "docker_tag"
+
+    def __init__(self):
+        """Initialize Docker tag command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        source_image: str,
+        target_image: str,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker tag command with unified security.
+
+        Args:
+            source_image: Source image name with tag (e.g., 'myapp:latest')
+            target_image: Target image name with tag (e.g., 'username/myapp:v1.0.0')
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with tagging information
+        """
+        # Validate inputs
+        if not source_image or not target_image:
+            return ErrorResult(message="Source and target image names are required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            source_image=source_image,
+            target_image=target_image,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker tag command."""
+        return "docker:tag"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker tag command logic."""
+        return await self._tag_image(**kwargs)
+
+    async def _tag_image(
+        self,
+        source_image: str,
+        target_image: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Tag Docker image."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "tag", source_image, target_image]
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to tag Docker image: {result.stderr}")
+
+            return {
+                "message": f"Successfully tagged '{source_image}' as '{target_image}'",
+                "source_image": source_image,
+                "target_image": target_image,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker tag command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker tag failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker tag command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "source_image": {
+                    "type": "string",
+                    "description": "Source image name with tag (e.g., 'myapp:latest')",
+                },
+                "target_image": {
+                    "type": "string",
+                    "description": "Target image name with tag (e.g., 'username/myapp:v1.0.0')",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["source_image", "target_image"],
+            "additionalProperties": False,
+        }

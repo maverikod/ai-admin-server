@@ -1,0 +1,150 @@
+from ai_admin.core.custom_exceptions import CustomError
+"""Docker push command for uploading images to registries.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerPushCommand(BaseUnifiedCommand):
+    """Push Docker images to registries like Docker Hub.
+
+    This command uploads Docker images to container registries with
+    support for multiple tags and platforms.
+    """
+
+    name = "docker_push"
+
+    def __init__(self):
+        """Initialize Docker push command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        image_name: str,
+        tag: str = "latest",
+        all_tags: bool = False,
+        disable_content_trust: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker push command with unified security.
+
+        Args:
+            image_name: Name of the image to push
+            tag: Tag to push (default: latest)
+            all_tags: Push all tags of the image
+            disable_content_trust: Disable content trust
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with push information
+        """
+        # Validate inputs
+        if not image_name:
+            return ErrorResult(message="Image name is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            image_name=image_name,
+            tag=tag,
+            all_tags=all_tags,
+            disable_content_trust=disable_content_trust,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker push command."""
+        return "docker:push"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker push command logic."""
+        return await self._push_image(**kwargs)
+
+    async def _push_image(
+        self,
+        image_name: str,
+        tag: str = "latest",
+        all_tags: bool = False,
+        disable_content_trust: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Push Docker image to registry."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "push"]
+
+            # Add options
+            if all_tags:
+                cmd.append("--all-tags")
+
+            if disable_content_trust:
+                cmd.append("--disable-content-trust")
+
+            # Add image name with tag
+            full_image_name = f"{image_name}:{tag}"
+            cmd.append(full_image_name)
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to push Docker image: {result.stderr}")
+
+            return {
+                "message": f"Successfully pushed image '{full_image_name}'",
+                "image_name": image_name,
+                "tag": tag,
+                "full_image_name": full_image_name,
+                "all_tags": all_tags,
+                "disable_content_trust": disable_content_trust,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker push command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker push failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker push command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "image_name": {
+                    "type": "string",
+                    "description": "Name of the image to push",
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Tag to push",
+                    "default": "latest",
+                },
+                "all_tags": {
+                    "type": "boolean",
+                    "description": "Push all tags of the image",
+                    "default": False,
+                },
+                "disable_content_trust": {
+                    "type": "boolean",
+                    "description": "Disable content trust",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["image_name"],
+            "additionalProperties": False,
+        }

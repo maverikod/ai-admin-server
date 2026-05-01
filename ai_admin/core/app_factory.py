@@ -1,0 +1,1265 @@
+"""Application factory for ai_admin core module."""
+
+from ai_admin.core.custom_exceptions import (
+    AuthenticationError,
+    ConfigurationError,
+    CustomError,
+    SSLError,
+    ValidationError,
+)
+
+"""Application factory for creating and configuring AI Admin FastAPI app.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import os
+from typing import Dict, Any, List, Optional, Type, Callable, Tuple
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from mcp_proxy_adapter import create_app
+import logging
+from mcp_proxy_adapter.commands.command_registry import registry
+
+from ai_admin.settings_manager import get_settings_manager
+from ai_admin.config.ssl_config import SSLConfig
+from ai_admin.config.roles_config import RolesConfig
+from ai_admin.security_integration import initialize_security
+from ai_admin.middleware.mtls_roles_middleware import MTLSRolesMiddleware
+from ai_admin.middleware.token_auth_middleware import TokenAuthMiddleware
+from .ssl_context_manager import SSLContextManager, SSLContextType
+from .mtls_auth_manager import MTLSAuthManager
+from .token_auth_manager import TokenAuthManager
+
+from .factory_exceptions import (
+    AppCreationError,
+    MiddlewareSetupError,
+    CommandRegistrationError,
+)
+
+
+class AppFactory:
+    """Factory for creating and configuring AI Admin FastAPI application."""
+
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        settings_manager: Optional[Any] = None,
+    ):
+        """
+        Initialize application factory.
+
+        Args:
+            config_path: Path to configuration file
+            settings_manager: Settings manager instance
+        """
+        self.config_path = config_path
+        self.settings_manager = settings_manager or get_settings_manager()
+        self.logger = logging.getLogger("ai_admin.factory")
+        self.ssl_config: Optional[SSLConfig] = None
+        self.roles_config: Optional[RolesConfig] = None
+        self.security_integration: Optional[Any] = None
+        self.ssl_context_manager: Optional[SSLContextManager] = None
+        self.mtls_auth_manager: Optional[MTLSAuthManager] = None
+        self.token_auth_manager: Optional[TokenAuthManager] = None
+
+        # Initialize configuration
+        self._load_configuration()
+
+    async def create_app(
+        self,
+        app_name: str = "AI Admin",
+        app_version: str = "1.0.0",
+        description: str = "AI Admin API Server",
+        custom_commands: Optional[List[Type]] = None,
+        custom_middleware: Optional[List[Callable]] = None,
+        enable_ssl: bool = True,
+        enable_mtls: bool = True,
+        enable_cors: bool = True,
+        enable_token_auth: bool = True,
+    ) -> FastAPI:
+        """
+        Create and configure FastAPI application.
+
+        Args:
+            app_name: Application name
+            app_version: Application version
+            description: Application description
+            custom_commands: List of custom command classes
+            custom_middleware: List of custom middleware functions
+            enable_ssl: Whether to enable SSL support
+            enable_mtls: Whether to enable mTLS support
+            enable_cors: Whether to enable CORS support
+            enable_token_auth: Whether to enable token-based authentication
+
+        Returns:
+            Configured FastAPI application
+
+        Raises:
+            AppCreationError: If application creation fails
+            MiddlewareSetupError: If middleware setup fails
+            CommandRegistrationError: If command registration fails
+        """
+        try:
+            self.logger.info(f"Creating FastAPI application: {app_name}")
+
+            # Create basic FastAPI application using mcp_proxy_adapter
+            app = self._create_fastapi_app(app_name, app_version, description)
+
+            # Initialize SSL context manager
+            await self._initialize_ssl_context_manager(
+                enable_ssl, enable_mtls, enable_token_auth
+            )
+
+            # Initialize mTLS authentication manager
+            await self._initialize_mtls_auth_manager(enable_mtls)
+
+            # Initialize token authentication manager
+            await self._initialize_token_auth_manager(enable_token_auth)
+
+            # Setup middleware
+            await self._setup_ssl_middleware(app, enable_ssl, enable_mtls)
+            await self._setup_cors_middleware(app, enable_cors)
+            await self._setup_token_auth_middleware(app, enable_token_auth)
+            if custom_middleware:
+                await self._setup_custom_middleware(app, custom_middleware)
+
+            # Setup routes and endpoints
+            self._setup_routes(app)
+            self._setup_health_endpoints(app)
+            self._setup_ssl_endpoints(app)
+
+            # Configure logging
+            self._configure_logging(app)
+
+            # Setup error handlers
+            self._setup_error_handlers(app)
+
+            # Setup request/response middleware
+            self._setup_request_middleware(app)
+            self._setup_response_middleware(app)
+
+            # Register commands
+            await self._register_commands(app, custom_commands)
+
+            self.logger.info("FastAPI application created successfully")
+            return app
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to create FastAPI application: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"name": app_name, "version": app_version},
+                details={"exception": str(e)},
+            )
+
+    async def _initialize_ssl_context_manager(
+        self, enable_ssl: bool, enable_mtls: bool, enable_token_auth: bool
+    ) -> None:
+        """
+        Initialize SSL context manager based on configuration.
+
+        Args:
+            enable_ssl: Whether to enable SSL support
+            enable_mtls: Whether to enable mTLS support
+            enable_token_auth: Whether to enable token authentication
+
+        Raises:
+            AppCreationError: If SSL context manager initialization fails
+        """
+        try:
+            if not enable_ssl:
+                self.logger.info("SSL context manager disabled - SSL not enabled")
+                return
+
+            # Create SSL context manager
+            self.ssl_context_manager = SSLContextManager(self.ssl_config)
+
+            # Determine SSL context type based on configuration
+            ssl_mode = self.ssl_config.get_ssl_mode() if self.ssl_config else None
+
+            if ssl_mode:
+                if ssl_mode.value == "mtls" or enable_mtls:
+                    context_type = SSLContextType.MTLS
+                elif ssl_mode.value == "token_auth" or enable_token_auth:
+                    context_type = SSLContextType.TOKEN_AUTH
+                elif ssl_mode.value == "mixed":
+                    context_type = SSLContextType.MIXED
+                else:
+                    context_type = SSLContextType.HTTPS
+            else:
+                # Default to HTTPS if no specific mode
+                context_type = SSLContextType.HTTPS
+
+            # Create SSL context
+            await self.ssl_context_manager.create_ssl_context(context_type)
+
+            self.logger.info(
+                f"SSL context manager initialized with {context_type.value} context"
+            )
+
+        except SSLError as e:
+            error_msg = f"Failed to initialize SSL context manager: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"ssl_enabled": enable_ssl, "mtls_enabled": enable_mtls},
+                details={"exception": str(e)},
+            )
+
+    async def _initialize_mtls_auth_manager(self, enable_mtls: bool) -> None:
+        """
+        Initialize mTLS authentication manager.
+
+        Args:
+            enable_mtls: Whether to enable mTLS support
+
+        Raises:
+            AppCreationError: If mTLS authentication manager initialization fails
+        """
+        try:
+            if not enable_mtls:
+                self.logger.info(
+                    "mTLS authentication manager disabled - mTLS not enabled"
+                )
+                return
+
+            # Create mTLS authentication manager
+            self.mtls_auth_manager = MTLSAuthManager(
+                ssl_config=self.ssl_config,
+                roles_config=self.roles_config,
+                ssl_context_manager=self.ssl_context_manager,
+            )
+
+            self.logger.info("mTLS authentication manager initialized successfully")
+
+        except SSLError as e:
+            error_msg = f"Failed to initialize mTLS authentication manager: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"mtls_enabled": enable_mtls},
+                details={"exception": str(e)},
+            )
+
+    async def _initialize_token_auth_manager(self, enable_token_auth: bool) -> None:
+        """
+        Initialize token authentication manager.
+
+        Args:
+            enable_token_auth: Whether to enable token authentication
+
+        Raises:
+            AppCreationError: If token authentication manager initialization fails
+        """
+        try:
+            if not enable_token_auth:
+                self.logger.info(
+                    "Token authentication manager disabled - token auth not enabled"
+                )
+                return
+
+            # Get token configuration
+            token_config = self._get_token_auth_config()
+
+            # Create token manager if needed
+            token_manager = None
+            if token_config.get("use_token_manager", True):
+                from ..config.token_config import TokenManager
+
+                token_manager = TokenManager(
+                    config_data={"tokens": token_config},
+                    tokens_file=token_config.get("storage_file", "tokens.json"),
+                )
+
+            # Create token authentication manager
+            self.token_auth_manager = TokenAuthManager(
+                token_manager=token_manager,
+                roles_config=self.roles_config,
+                secret_key=token_config.get("secret_key"),
+                algorithm=token_config.get("algorithm", "HS256"),
+                token_expire_minutes=token_config.get("token_expire_minutes", 30),
+            )
+
+            self.logger.info("Token authentication manager initialized successfully")
+
+        except AuthenticationError as e:
+            error_msg = f"Failed to initialize token authentication manager: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"token_auth_enabled": enable_token_auth},
+                details={"exception": str(e)},
+            )
+
+    def _create_fastapi_app(
+        self, app_name: str, app_version: str, description: str
+    ) -> FastAPI:
+        """
+        Create basic FastAPI application.
+
+        Args:
+            app_name: Application name
+            app_version: Application version
+            description: Application description
+
+        Returns:
+            FastAPI application instance
+        """
+        try:
+            # Use mcp_proxy_adapter's create_app function
+            app = create_app(
+                title=app_name, description=description, version=app_version
+            )
+            if not isinstance(app, FastAPI):
+                raise AppCreationError(
+                    "create_app did not return a FastAPI instance",
+                    app_config={"name": app_name, "version": app_version},
+                )
+
+            self.logger.info(f"Created FastAPI app: {app_name} v{app_version}")
+            return app
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to create FastAPI app: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"name": app_name, "version": app_version},
+                details={"exception": str(e)},
+            )
+
+    async def _setup_ssl_middleware(
+        self, app: FastAPI, enable_ssl: bool, enable_mtls: bool
+    ) -> None:
+        """
+        Setup SSL/mTLS middleware.
+
+        Args:
+            app: FastAPI application
+            enable_ssl: Whether to enable SSL
+            enable_mtls: Whether to enable mTLS
+
+        Raises:
+            MiddlewareSetupError: If middleware setup fails
+        """
+        try:
+            if not enable_ssl:
+                self.logger.info("SSL middleware disabled")
+                return
+
+            # Validate SSL configuration
+            is_valid, error_messages = self._validate_ssl_config()
+            if not is_valid:
+                error_msg = f"Invalid SSL configuration: {', '.join(error_messages)}"
+                self.logger.error(error_msg)
+                raise MiddlewareSetupError(
+                    error_msg,
+                    middleware_type="ssl",
+                    details={"errors": error_messages},
+                )
+
+            # Get SSL configuration
+            ssl_config = self._get_ssl_config()
+
+            # Setup mTLS middleware if enabled
+            if enable_mtls:
+                await self._setup_mtls_middleware(app, ssl_config)
+                await self._setup_mtls_roles_middleware(app)
+
+            self.logger.info("SSL/mTLS middleware setup completed")
+
+        except MiddlewareSetupError:
+            raise
+        except CustomError as e:
+            error_msg = f"Failed to setup SSL middleware: {e}"
+            self.logger.error(error_msg)
+            raise MiddlewareSetupError(
+                error_msg, middleware_type="ssl", details={"exception": str(e)}
+            )
+
+    async def _setup_cors_middleware(self, app: FastAPI, enable_cors: bool) -> None:
+        """
+        Setup CORS middleware.
+
+        Args:
+            app: FastAPI application
+            enable_cors: Whether to enable CORS
+        """
+        if not enable_cors:
+            self.logger.info("CORS middleware disabled")
+            return
+
+        try:
+            # Get CORS configuration from settings
+            cors_config = self._get_middleware_config().get("cors", {})
+
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=cors_config.get("allow_origins", ["*"]),
+                allow_credentials=cors_config.get("allow_credentials", True),
+                allow_methods=cors_config.get("allow_methods", ["*"]),
+                allow_headers=cors_config.get("allow_headers", ["*"]),
+            )
+
+            self.logger.info("CORS middleware setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup CORS middleware: {e}")
+
+    async def _setup_token_auth_middleware(
+        self, app: FastAPI, enable_token_auth: bool
+    ) -> None:
+        """
+        Setup token authentication middleware.
+
+        Args:
+            app: FastAPI application
+            enable_token_auth: Whether to enable token authentication
+
+        Raises:
+            MiddlewareSetupError: If middleware setup fails
+        """
+        if not enable_token_auth:
+            self.logger.info("Token authentication middleware disabled")
+            return
+
+        try:
+            # Get token authentication configuration
+            token_config = self._get_token_auth_config()
+
+            # Get roles configuration path
+            roles_config_path = self._get_roles_config_path()
+
+            # Get default policy
+            default_policy = self._get_default_roles_policy()
+
+            # Add token authentication middleware
+            app.add_middleware(
+                TokenAuthMiddleware,
+                secret_key=token_config.get("secret_key"),
+                algorithm=token_config.get("algorithm", "HS256"),
+                token_expire_minutes=token_config.get("token_expire_minutes", 30),
+                public_endpoints=token_config.get("public_endpoints"),
+                require_token=token_config.get("require_token", True),
+                token_header=token_config.get("token_header", "Authorization"),
+                token_prefix=token_config.get("token_prefix", "Bearer"),
+                roles_config_path=roles_config_path,
+                default_policy=default_policy,
+            )
+
+            self.logger.info("Token authentication middleware setup completed")
+
+        except AuthenticationError as e:
+            error_msg = f"Failed to setup token authentication middleware: {e}"
+            self.logger.error(error_msg)
+            raise MiddlewareSetupError(
+                error_msg, middleware_type="token_auth", details={"exception": str(e)}
+            )
+
+    async def _setup_custom_middleware(
+        self, app: FastAPI, custom_middleware: List[Callable]
+    ) -> None:
+        """
+        Setup custom middleware.
+
+        Args:
+            app: FastAPI application
+            custom_middleware: List of custom middleware functions
+
+        Raises:
+            MiddlewareSetupError: If middleware setup fails
+        """
+        try:
+            for middleware_func in custom_middleware:
+                is_valid, error_msg = self._validate_middleware_function(
+                    middleware_func
+                )
+                if not is_valid:
+                    raise MiddlewareSetupError(
+                        f"Invalid middleware function: {error_msg}",
+                        middleware_type="custom",
+                        details={"function": str(middleware_func)},
+                    )
+
+                app.add_middleware(middleware_func)
+                self.logger.info(f"Added custom middleware: {middleware_func.__name__}")
+
+            self.logger.info("Custom middleware setup completed")
+
+        except MiddlewareSetupError:
+            raise
+        except CustomError as e:
+            error_msg = f"Failed to setup custom middleware: {e}"
+            self.logger.error(error_msg)
+            raise MiddlewareSetupError(
+                error_msg,
+                middleware_type="custom",
+                details={"exception": str(e)},
+            )
+
+    async def _register_commands(
+        self, app: FastAPI, custom_commands: Optional[List[Type]] = None
+    ) -> None:
+        """
+        Register commands with the application.
+
+        Args:
+            app: FastAPI application
+            custom_commands: List of custom command classes
+
+        Raises:
+            CommandRegistrationError: If command registration fails
+        """
+        try:
+            # Register built-in commands
+            await self._register_builtin_commands(app)
+
+            # Register custom commands if provided
+            if custom_commands:
+                await self._register_custom_commands(app, custom_commands)
+
+            self.logger.info("Command registration completed")
+
+        except CustomError as e:
+            error_msg = f"Failed to register commands: {e}"
+            self.logger.error(error_msg)
+            raise CommandRegistrationError(error_msg, details={"exception": str(e)})
+
+    async def _register_builtin_commands(self, app: FastAPI) -> None:
+        """
+        Register built-in commands.
+
+        Args:
+            app: FastAPI application
+
+        Raises:
+            CommandRegistrationError: If command registration fails
+        """
+        try:
+            # Initialize commands using the registry
+            command_count = await registry.reload_system()
+
+            self.logger.info(
+                f"Registered {command_count['total_commands']} " f"built-in commands"
+            )
+
+        except CustomError as e:
+            error_msg = f"Failed to register built-in commands: {e}"
+            self.logger.error(error_msg)
+            raise CommandRegistrationError(error_msg, details={"exception": str(e)})
+
+    async def _register_custom_commands(
+        self, app: FastAPI, custom_commands: List[Type]
+    ) -> None:
+        """
+        Register custom commands.
+
+        Args:
+            app: FastAPI application
+            custom_commands: List of custom command classes
+
+        Raises:
+            CommandRegistrationError: If command registration fails
+        """
+        try:
+            for command_class in custom_commands:
+                is_valid, error_msg = self._validate_command_class(command_class)
+                if not is_valid:
+                    raise CommandRegistrationError(
+                        f"Invalid command class: {error_msg}",
+                        command_class=command_class.__name__,
+                        details={"error": error_msg},
+                    )
+
+                # Register command with registry
+                registry.register_command(command_class)
+                self.logger.info(f"Registered custom command: {command_class.__name__}")
+
+            self.logger.info("Custom command registration completed")
+
+        except CommandRegistrationError:
+            raise
+        except CustomError as e:
+            error_msg = f"Failed to register custom commands: {e}"
+            self.logger.error(error_msg)
+            raise CommandRegistrationError(error_msg, details={"exception": str(e)})
+
+    def _setup_routes(self, app: FastAPI) -> None:
+        """
+        Setup application routes.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Routes are automatically set up by mcp_proxy_adapter
+            self.logger.info("Application routes setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup routes: {e}")
+
+    def _setup_health_endpoints(self, app: FastAPI) -> None:
+        """
+        Setup health check endpoints.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Health endpoints are automatically set up by mcp_proxy_adapter
+            self.logger.info("Health endpoints setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup health endpoints: {e}")
+
+    def _setup_ssl_endpoints(self, app: FastAPI) -> None:
+        """
+        Setup SSL/mTLS related endpoints.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # SSL endpoints are handled by the SSL configuration
+            self.logger.info("SSL endpoints setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup SSL endpoints: {e}")
+
+    def _configure_logging(self, app: FastAPI) -> None:
+        """
+        Configure application logging.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Logging is configured by mcp_proxy_adapter
+            self.logger.info("Application logging configured")
+
+        except ConfigurationError as e:
+            self.logger.warning(f"Failed to configure logging: {e}")
+
+    def _validate_ssl_config(self) -> Tuple[bool, List[str]]:
+        """
+        Validate SSL configuration.
+
+        Returns:
+            Tuple of (is_valid, error_messages)
+        """
+        try:
+            # Check if SSL is disabled in configuration
+            current_config = getattr(self.settings_manager, "current_config", {})
+            if isinstance(current_config, dict):
+                ssl_config_data = current_config.get("ssl", {})
+                if not ssl_config_data.get("enabled", False):
+                    return True, []  # SSL is disabled, validation passes
+
+            if not self.ssl_config:
+                return False, ["SSL configuration not loaded"]
+
+            # Validate SSL configuration
+            validation_result = self.ssl_config.validate_config()
+            if isinstance(validation_result, dict) and validation_result.get(
+                "is_valid"
+            ):
+                return True, []
+            else:
+                return False, (
+                    validation_result.get("errors", ["Unknown SSL validation error"])
+                    if isinstance(validation_result, dict)
+                    else ["Unknown SSL validation error"]
+                )
+
+        except ValidationError as e:
+            return False, [f"SSL validation failed: {e}"]
+
+    def _get_ssl_config(self) -> SSLConfig:
+        """
+        Get SSL configuration.
+
+        Returns:
+            SSL configuration instance
+        """
+        if not self.ssl_config:
+            # Create default SSL configuration
+            self.ssl_config = SSLConfig()
+
+        return self.ssl_config
+
+    async def get_ssl_context(
+        self, context_type: Optional[SSLContextType] = None
+    ) -> Optional[Any]:
+        """
+        Get SSL context from SSL context manager.
+
+        Args:
+            context_type: Type of SSL context to retrieve. If None, returns based
+                on SSL mode.
+
+        Returns:
+            SSL context if available, None otherwise
+        """
+        if not self.ssl_context_manager:
+            return None
+
+        if context_type is None:
+            # Determine context type based on SSL mode
+            ssl_mode = self.ssl_config.get_ssl_mode() if self.ssl_config else None
+            if ssl_mode:
+                if ssl_mode.value == "mtls":
+                    context_type = SSLContextType.MTLS
+                elif ssl_mode.value == "token_auth":
+                    context_type = SSLContextType.TOKEN_AUTH
+                elif ssl_mode.value == "mixed":
+                    context_type = SSLContextType.MIXED
+                else:
+                    context_type = SSLContextType.HTTPS
+            else:
+                context_type = SSLContextType.HTTPS
+
+        return await self.ssl_context_manager.get_ssl_context(context_type)
+
+    async def get_ssl_context_summary(self) -> Dict[str, Any]:
+        """
+        Get SSL context manager summary.
+
+        Returns:
+            SSL context summary information
+        """
+        if not self.ssl_context_manager:
+            return {"ssl_context_manager": None}
+
+        return await self.ssl_context_manager.get_context_summary()
+
+    async def get_mtls_auth_manager(self) -> Optional[MTLSAuthManager]:
+        """
+        Get mTLS authentication manager.
+
+        Returns:
+            mTLS authentication manager if available, None otherwise
+        """
+        return self.mtls_auth_manager
+
+    async def get_mtls_auth_summary(self) -> Dict[str, Any]:
+        """
+        Get mTLS authentication manager summary.
+
+        Returns:
+            mTLS authentication summary information
+        """
+        if not self.mtls_auth_manager:
+            return {"mtls_auth_manager": None}
+
+        return {
+            "mtls_auth_manager": "available",
+            "cache_stats": self.mtls_auth_manager.get_cache_stats(),
+            "security_settings": self.mtls_auth_manager.get_security_settings(),
+        }
+
+    async def get_token_auth_manager(self) -> Optional[TokenAuthManager]:
+        """
+        Get token authentication manager.
+
+        Returns:
+            Token authentication manager if available, None otherwise
+        """
+        return self.token_auth_manager
+
+    async def get_token_auth_summary(self) -> Dict[str, Any]:
+        """
+        Get token authentication manager summary.
+
+        Returns:
+            Token authentication summary information
+        """
+        if not self.token_auth_manager:
+            return {"token_auth_manager": None}
+
+        return {
+            "token_auth_manager": "available",
+            "cache_stats": self.token_auth_manager.get_cache_stats(),
+            "security_settings": self.token_auth_manager.get_security_settings(),
+        }
+
+    async def _setup_mtls_middleware(self, app: FastAPI, ssl_config: SSLConfig) -> None:
+        """
+        Setup mTLS middleware.
+
+        Args:
+            app: FastAPI application
+            ssl_config: SSL configuration
+        """
+        try:
+            # mTLS is handled at the server level with hypercorn
+            # No additional middleware needed for mTLS
+            self.logger.info("mTLS middleware setup completed")
+
+        except SSLError as e:
+            self.logger.warning(f"Failed to setup mTLS middleware: {e}")
+
+    async def _setup_mtls_roles_middleware(self, app: FastAPI) -> None:
+        """
+        Setup mTLS roles middleware for role-based authentication.
+
+        Args:
+            app: FastAPI application
+
+        Raises:
+            MiddlewareSetupError: If middleware setup fails
+        """
+        try:
+            # Get roles configuration path
+            roles_config_path = self._get_roles_config_path()
+
+            # Get middleware configuration
+            middleware_config = self._get_middleware_config()
+            mtls_config = middleware_config.get("mtls_roles", {})
+
+            # Create default policy if needed
+            default_policy = self._get_default_roles_policy()
+
+            # Add middleware to FastAPI app using ASGI middleware pattern
+            from starlette.middleware.base import BaseHTTPMiddleware
+
+            class MTLSRolesMiddlewareWrapper(BaseHTTPMiddleware):
+                """Wrapper for MTLSRolesMiddleware to work with FastAPI."""
+
+                def __init__(self, app: Any, **kwargs: Any) -> None:
+                    super().__init__(app)
+                    self.mtls_middleware = MTLSRolesMiddleware(app, **kwargs)
+
+                async def dispatch(self, request: Any, call_next: Any) -> Any:
+                    """Process request through MTLS middleware."""
+                    # Convert FastAPI request to ASGI scope
+                    scope = request.scope
+                    receive = request.receive
+                    send = request.send
+
+                    # Use the MTLS middleware
+                    await self.mtls_middleware(scope, receive, send)
+                    return await call_next(request)
+
+            # Use add_middleware with proper typing - create middleware factory
+            def create_mtls_middleware(app: Any) -> MTLSRolesMiddlewareWrapper:
+                """Create MTLS middleware instance."""
+                return MTLSRolesMiddlewareWrapper(
+                    app,
+                    roles_config_path=roles_config_path,
+                    default_policy=default_policy,
+                    require_certificate=mtls_config.get("require_certificate", True),
+                    allow_no_cert_endpoints=mtls_config.get(
+                        "allow_no_cert_endpoints",
+                        ["/health", "/docs", "/openapi.json", "/favicon.ico"],
+                    ),
+                )
+
+            # Add middleware using the factory function
+            app.add_middleware(create_mtls_middleware)
+
+            self.logger.info("MTLS roles middleware setup completed")
+
+        except SSLError as e:
+            error_msg = f"Failed to setup MTLS roles middleware: {e}"
+            self.logger.error(error_msg)
+            raise MiddlewareSetupError(
+                error_msg, middleware_type="mtls_roles", details={"exception": str(e)}
+            )
+
+    def _get_builtin_commands(self) -> List[Type]:
+        """
+        Get list of built-in command classes.
+
+        Returns:
+            List of built-in command classes
+        """
+        try:
+            # Commands are managed by the registry
+            return []
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to get built-in commands: {e}")
+            return []
+
+    def _validate_command_class(self, command_class: Type) -> Tuple[bool, str]:
+        """
+        Validate command class.
+
+        Args:
+            command_class: Command class to validate
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Check if class has required methods
+            required_methods = ["execute"]
+            for method in required_methods:
+                if not hasattr(command_class, method):
+                    return False, f"Missing required method: {method}"
+
+            return True, ""
+
+        except ValidationError as e:
+            return False, f"Validation error: {e}"
+
+    def _get_roles_config_path(self) -> str:
+        """
+        Get roles configuration file path.
+
+        Returns:
+            Path to roles configuration file
+        """
+        try:
+            # Try to get from settings
+            roles_path = self.settings_manager.get_custom_setting_value(
+                "roles_config_path", "config/roles.json"
+            )
+            if isinstance(roles_path, str):
+                # Check if file exists
+                if os.path.exists(roles_path):
+                    return roles_path
+
+            # Try alternative paths
+            alternative_paths = [
+                "config/roles.json",
+                "roles.json",
+                "config/mtls_roles_config.json",
+            ]
+
+            for alt_path in alternative_paths:
+                if os.path.exists(alt_path):
+                    return alt_path
+
+            # Return default path
+            return "config/roles.json"
+
+        except ConfigurationError as e:
+            self.logger.warning(f"Failed to get roles config path: {e}")
+            return "config/roles.json"
+
+    def _get_default_roles_policy(self) -> Dict[str, Any]:
+        """
+        Get default roles policy configuration.
+
+        Returns:
+            Default roles policy dictionary
+        """
+        try:
+            return {
+                "default_policy": {
+                    "allow_all": False,
+                    "public_endpoints": [
+                        "/health",
+                        "/docs",
+                        "/openapi.json",
+                        "/favicon.ico",
+                    ],
+                },
+                "roles": {
+                    "admin": {
+                        "description": "Administrator with full access",
+                        "permissions": ["read", "write", "delete", "admin"],
+                    },
+                    "operator": {
+                        "description": "Operator with limited access",
+                        "permissions": ["read", "write"],
+                    },
+                    "monitor": {
+                        "description": "Monitoring role with read-only access",
+                        "permissions": ["read"],
+                    },
+                },
+            }
+        except CustomError as e:
+            self.logger.warning(f"Failed to get default roles policy: {e}")
+            return {}
+
+    def _get_app_config(self) -> Dict[str, Any]:
+        """
+        Get application configuration.
+
+        Returns:
+            Application configuration dictionary
+        """
+        try:
+            return {
+                "config_path": self.config_path,
+                "ssl_enabled": self.ssl_config is not None,
+                "security_enabled": self.security_integration is not None,
+            }
+
+        except ConfigurationError as e:
+            self.logger.warning(f"Failed to get app config: {e}")
+            return {}
+
+    def _setup_error_handlers(self, app: FastAPI) -> None:
+        """
+        Setup error handlers.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Error handlers are set up by mcp_proxy_adapter
+            self.logger.info("Error handlers setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup error handlers: {e}")
+
+    def _setup_request_middleware(self, app: FastAPI) -> None:
+        """
+        Setup request processing middleware.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Request middleware is handled by mcp_proxy_adapter
+            self.logger.info("Request middleware setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup request middleware: {e}")
+
+    def _setup_response_middleware(self, app: FastAPI) -> None:
+        """
+        Setup response processing middleware.
+
+        Args:
+            app: FastAPI application
+        """
+        try:
+            # Response middleware is handled by mcp_proxy_adapter
+            self.logger.info("Response middleware setup completed")
+
+        except CustomError as e:
+            self.logger.warning(f"Failed to setup response middleware: {e}")
+
+    def _get_middleware_config(self) -> Dict[str, Any]:
+        """
+        Get middleware configuration.
+
+        Returns:
+            Middleware configuration dictionary
+        """
+        try:
+            config = self.settings_manager.get_custom_setting_value("middleware", {})
+            if isinstance(config, dict):
+                return config
+            return {}
+
+        except ConfigurationError as e:
+            self.logger.warning(f"Failed to get middleware config: {e}")
+            return {}
+
+    def _get_token_auth_config(self) -> Dict[str, Any]:
+        """
+        Get token authentication configuration.
+
+        Returns:
+            Token authentication configuration dictionary
+        """
+        try:
+            # Get token auth configuration from middleware config
+            middleware_config = self._get_middleware_config()
+            token_config = middleware_config.get("token_auth", {})
+            if not isinstance(token_config, dict):
+                token_config = {}
+
+            # Set default values if not configured
+            if not token_config:
+                token_config = {
+                    "secret_key": os.getenv("JWT_SECRET_KEY"),
+                    "algorithm": "HS256",
+                    "token_expire_minutes": 30,
+                    "public_endpoints": [
+                        "/health",
+                        "/docs",
+                        "/openapi.json",
+                        "/favicon.ico",
+                        "/auth/login",
+                        "/auth/refresh",
+                    ],
+                    "require_token": True,
+                    "token_header": "Authorization",
+                    "token_prefix": "Bearer",
+                }
+
+            return token_config
+
+        except AuthenticationError as e:
+            self.logger.warning(f"Failed to get token auth config: {e}")
+            return {
+                "secret_key": os.getenv("JWT_SECRET_KEY"),
+                "algorithm": "HS256",
+                "token_expire_minutes": 30,
+                "public_endpoints": [
+                    "/health",
+                    "/docs",
+                    "/openapi.json",
+                    "/favicon.ico",
+                    "/auth/login",
+                    "/auth/refresh",
+                ],
+                "require_token": True,
+                "token_header": "Authorization",
+                "token_prefix": "Bearer",
+            }
+
+    def _validate_middleware_function(
+        self, middleware_func: Callable
+    ) -> Tuple[bool, str]:
+        """
+        Validate middleware function.
+
+        Args:
+            middleware_func: Middleware function to validate
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Check if function is callable
+            if not callable(middleware_func):
+                return False, "Function is not callable"
+
+            # Check if function has required signature
+            import inspect
+
+            sig = inspect.signature(middleware_func)
+            if len(sig.parameters) < 2:
+                return (
+                    False,
+                    "Middleware function must accept at least 2 parameters",
+                )
+
+            return True, ""
+
+        except ValidationError as e:
+            return False, f"Validation error: {e}"
+
+    def _load_configuration(self) -> None:
+        """Load configuration from file or settings."""
+        try:
+            # Load configuration using mcp_proxy_adapter config system
+            if self.config_path and os.path.exists(self.config_path):
+                from mcp_proxy_adapter.config import config
+
+                config.load_from_file(self.config_path)
+                self.logger.info(f"Loaded configuration from: {self.config_path}")
+
+            # Initialize SSL configuration
+            try:
+                ssl_config_data = self.settings_manager.get_custom_setting_value(
+                    "ssl", {}
+                )
+                if ssl_config_data:
+                    self.ssl_config = SSLConfig(ssl_config_data)
+                    self.logger.info("SSL configuration loaded")
+            except ConfigurationError as e:
+                self.logger.warning(f"Failed to load SSL configuration: {e}")
+
+            # Initialize roles configuration
+            try:
+                roles_config_data = self.settings_manager.get_custom_setting_value(
+                    "permissions", {}
+                )
+                if roles_config_data:
+                    self.roles_config = RolesConfig(roles_config_data)
+                    self.logger.info("Roles configuration loaded")
+                else:
+                    # Try to load from roles file
+                    roles_file_path = self._get_roles_config_path()
+                    if os.path.exists(roles_file_path):
+                        self.roles_config = RolesConfig(roles_file=roles_file_path)
+                        self.logger.info(
+                            f"Roles configuration loaded from file: {roles_file_path}"
+                        )
+            except ConfigurationError as e:
+                self.logger.warning(f"Failed to load roles configuration: {e}")
+
+            # Initialize security integration
+            try:
+                self.security_integration = initialize_security("config/security.json")
+                self.logger.info("Security integration initialized")
+            except CustomError as e:
+                self.logger.warning(f"Failed to initialize security integration: {e}")
+
+        except ConfigurationError as e:
+            self.logger.warning(f"Failed to load configuration: {e}")
+
+    async def run_server(
+        self,
+        app: FastAPI,
+        host: str = "0.0.0.0",
+        port: int = 8000,
+        workers: int = 1,
+        reload: bool = False,
+        log_level: str = "info",
+    ) -> None:
+        """
+        Run server using hypercorn.
+
+        Args:
+            app: FastAPI application
+            host: Server host
+            port: Server port
+            workers: Number of worker processes
+            reload: Whether to enable auto-reload
+            log_level: Logging level
+        """
+        try:
+            # Use UnifiedServerRunner from mcp_proxy_adapter
+            from mcp_proxy_adapter.core.server_adapter import (
+                UnifiedServerRunner,
+            )
+
+            # Prepare server configuration
+            server_config = {
+                "host": host,
+                "port": port,
+                "log_level": log_level.lower(),
+                "reload": reload,
+            }
+
+            # Add SSL configuration if available
+            if self.ssl_config and self.ssl_context_manager:
+                ssl_config_data = self.settings_manager.get_custom_setting_value(
+                    "ssl", {}
+                )
+                if ssl_config_data.get("enabled", False):
+                    # Get SSL context for server configuration
+                    ssl_context = await self.get_ssl_context()
+                    if ssl_context:
+                        server_config.update(
+                            {
+                                "ssl_enabled": True,
+                                "ssl_context": ssl_context,
+                                "ssl_cert_file": ssl_config_data.get("cert_file"),
+                                "ssl_key_file": ssl_config_data.get("key_file"),
+                                "ssl_ca_cert": ssl_config_data.get("ca_cert"),
+                                "ssl_verify_mode": ssl_config_data.get(
+                                    "verify_mode", "CERT_NONE"
+                                ),
+                            }
+                        )
+                        self.logger.info("SSL context configured for server")
+                    else:
+                        self.logger.warning("SSL enabled but no SSL context available")
+
+            # Run server with hypercorn
+            runner = UnifiedServerRunner()
+            runner.run_server(app, server_config)
+
+        except ConfigurationError as e:
+            error_msg = f"Failed to run server: {e}"
+            self.logger.error(error_msg)
+            raise AppCreationError(
+                error_msg,
+                app_config={"host": host, "port": port},
+                details={"exception": str(e)},
+            )

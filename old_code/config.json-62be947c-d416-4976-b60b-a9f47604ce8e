@@ -1,0 +1,81 @@
+{
+  "server": {
+    "host": "172.28.0.1",
+    "port": 20000,
+    "protocol": "http",
+    "servername": "127.0.0.1",
+    "ssl": null,
+    "rules": null,
+    "log_dir": "./logs",
+    "debug": false,
+    "log_level": "INFO",
+    "advertised_host": "172.28.0.1"
+  },
+  "client": {
+    "enabled": false,
+    "protocol": "http",
+    "ssl": null
+  },
+  "registration": {
+    "enabled": true,
+    "protocol": "mtls",
+    "register_url": "https://172.28.0.2:3004/register",
+    "unregister_url": "https://172.28.0.2:3004/unregister",
+    "heartbeat_interval": 30,
+    "ssl": {
+      "cert": "certificates/proxy/client.crt",
+      "key": "certificates/proxy/client.key",
+      "ca": "certificates/proxy/ca.crt",
+      "crl": null,
+      "dnscheck": false,
+      "check_hostname": false
+    },
+    "server_id": null,
+    "server_name": "ai_admin_server",
+    "instance_uuid": "3bf6dcd8-627e-410f-b3de-f5e26a4095ba",
+    "auto_on_startup": true,
+    "auto_on_shutdown": true,
+    "heartbeat": {
+      "url": "https://172.28.0.2:3004/proxy/heartbeat",
+      "interval": 30
+    }
+  },
+  "server_validation": {
+    "enabled": false,
+    "protocol": "http",
+    "ssl": null,
+    "timeout": 10,
+    "use_token": false,
+    "use_roles": false,
+    "tokens": {},
+    "roles": {},
+    "auth_header": "X-API-Key",
+    "roles_header": "X-Roles",
+    "health_path": "/health",
+    "check_hostname": false
+  },
+  "auth": {
+    "use_token": false,
+    "use_roles": false,
+    "tokens": {},
+    "roles": {}
+  },
+  "queue_manager": {
+    "enabled": true,
+    "in_memory": true,
+    "registry_path": null,
+    "shutdown_timeout": 30.0,
+    "max_concurrent_jobs": 10,
+    "max_queue_size": null,
+    "per_job_type_limits": null,
+    "completed_job_retention_seconds": 21600,
+    "default_poll_interval": 0.0,
+    "default_max_wait_time": null
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http"
+    ]
+  }
+}

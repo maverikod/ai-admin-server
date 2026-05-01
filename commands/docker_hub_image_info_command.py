@@ -1,0 +1,173 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError
+"""Docker Hub image information command.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import requests
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerHubImageInfoCommand(BaseUnifiedCommand):
+    """Get detailed information about Docker Hub images.
+
+    This command retrieves comprehensive information about a Docker Hub image
+    including metadata, tags, layers, and usage statistics.
+    """
+
+    name = "docker_hub_image_info"
+
+    def __init__(self):
+        """Initialize Docker Hub image info command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        image_name: str,
+        tag: Optional[str] = None,
+        include_layers: bool = False,
+        include_usage: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker Hub image info retrieval with unified security.
+
+        Args:
+            image_name: Name of the Docker Hub image
+            tag: Specific tag to get info for (default: latest)
+            include_layers: Include layer information
+            include_usage: Include usage statistics
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with image information
+        """
+        # Validate inputs
+        if not image_name:
+            return ErrorResult(message="Image name is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            image_name=image_name,
+            tag=tag,
+            include_layers=include_layers,
+            include_usage=include_usage,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker Hub image info command."""
+        return "docker:hub_image_info"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker Hub image info retrieval logic."""
+        return await self._get_image_info(**kwargs)
+
+    async def _get_image_info(
+        self,
+        image_name: str,
+        tag: Optional[str] = None,
+        include_layers: bool = False,
+        include_usage: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Get Docker Hub image information."""
+        try:
+            if not tag:
+                tag = "latest"
+
+            # Docker Hub API endpoint
+            api_url = f"https://hub.docker.com/v2/repositories/{image_name}"
+
+            # Get repository information
+            response = requests.get(api_url, timeout=30)
+            response.raise_for_status()
+
+            repo_data = response.json()
+
+            # Get tag information
+            tags_url = f"{api_url}/tags/{tag}"
+            tag_response = requests.get(tags_url, timeout=30)
+
+            tag_data = None
+            if tag_response.status_code == 200:
+                tag_data = tag_response.json()
+
+            # Build result
+            result = {
+                "message": f"Retrieved information for Docker Hub image '{image_name}'",
+                "image_name": image_name,
+                "tag": tag,
+                "repository": {
+                    "name": repo_data.get("name"),
+                    "namespace": repo_data.get("namespace"),
+                    "description": repo_data.get("description"),
+                    "star_count": repo_data.get("star_count", 0),
+                    "pull_count": repo_data.get("pull_count", 0),
+                    "last_updated": repo_data.get("last_updated"),
+                    "is_private": repo_data.get("is_private", False),
+                }
+            }
+
+            if tag_data:
+                result["tag_info"] = {
+                    "name": tag_data.get("name"),
+                    "last_updated": tag_data.get("last_updated"),
+                    "images": tag_data.get("images", []),
+                }
+
+                if include_layers and tag_data.get("images"):
+                    result["layers"] = tag_data["images"]
+
+            if include_usage:
+                result["usage_stats"] = {
+                    "pull_count": repo_data.get("pull_count", 0),
+                    "star_count": repo_data.get("star_count", 0),
+                }
+
+            return result
+
+        except requests.RequestException as e:
+            raise CustomError(f"Failed to retrieve Docker Hub image info: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker Hub image info retrieval failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker Hub image info command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "image_name": {
+                    "type": "string",
+                    "description": "Name of the Docker Hub image",
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Specific tag to get info for",
+                    "default": "latest",
+                },
+                "include_layers": {
+                    "type": "boolean",
+                    "description": "Include layer information",
+                    "default": False,
+                },
+                "include_usage": {
+                    "type": "boolean",
+                    "description": "Include usage statistics",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["image_name"],
+            "additionalProperties": False,
+        }

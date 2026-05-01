@@ -1,0 +1,405 @@
+# STEP 7 TASKS — Atomic Instructions for Haiku
+
+## 7.1–7.5: Unit Tests Per Job Class
+## Pattern (repeat for each Job class):
+
+### Variables
+```
+JOB_CLASS = "DockerJob"          # change per domain
+TEST_FILE = "tests/queue/test_docker_job.py"
+MOCK_TARGET = "subprocess.run"   # what to mock inside _push/_pull/_build
+```
+
+### TASK A: Create test file stub
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<TEST_FILE>,
+  content="""\
+\"\"\"Unit tests for DockerJob.\"\"\"
+
+import asyncio
+from unittest.mock import patch, MagicMock
+import pytest
+from ai_admin.jobs.docker_job import DockerJob
+
+
+class TestDockerJobPush:
+    \"\"\"Tests for DockerJob push operation.\"\"\"
+
+    def test_push_success(self):
+        \"\"\"Test successful Docker push.\"\"\"
+        job = DockerJob(params={
+            'op': 'push',
+            'image_name': 'myapp',
+            'tag': 'v1.0'
+        })
+        with patch('<MOCK_TARGET>') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout='pushed', stderr='')
+            result = job.run()
+        assert result['success'] is True
+
+    def test_push_failure(self):
+        \"\"\"Test Docker push failure handling.\"\"\"
+        job = DockerJob(params={
+            'op': 'push',
+            'image_name': 'myapp',
+            'tag': 'v1.0'
+        })
+        with patch('<MOCK_TARGET>') as mock_run:
+            mock_run.return_value = MagicMock(returncode=1, stdout='', stderr='denied')
+            result = job.run()
+        assert result['success'] is False
+        assert 'denied' in result.get('error', '')
+
+
+class TestDockerJobUnknownOp:
+    \"\"\"Tests for unknown operation handling.\"\"\"
+
+    def test_unknown_op_raises(self):
+        \"\"\"Test that unknown op raises ValueError.\"\"\"
+        job = DockerJob(params={'op': 'invalid'})
+        with pytest.raises(ValueError):
+            job.run()
+"""
+)
+```
+
+### TASK B: Run tests (expect failures until Job is fully implemented)
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=[<TEST_FILE>, "-v", "--tb=short"]
+)
+```
+Read output. Note failures.
+
+### TASK C: Fix test file based on actual Job implementation
+If mock target is wrong: find correct import path for subprocess in the Job file.
+Update MOCK_TARGET.
+Load test file into CST, update mock path.
+Save tree.
+
+### TASK D: Re-run tests
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=[<TEST_FILE>, "-v"]
+)
+```
+Expected: all tests pass (green)
+
+### TASK E: Lint test file
+```
+lint_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<TEST_FILE>
+)
+```
+
+## Repeat TASKS A-E for each Job:
+- tests/queue/test_git_job.py — mock: subprocess.run, ops: clone/push/pull
+- tests/queue/test_github_job.py — mock: requests.post/get, ops: create_repo/etc.
+- tests/queue/test_k8s_job.py — mock: subprocess.run (kubectl), 5 ops
+- tests/queue/test_vast_job.py — mock: requests session, 4 ops
+- tests/queue/test_ftp_job.py — mock: ftplib.FTP, ops: upload/download/list/delete
+- tests/queue/test_ollama_job.py — mock: OllamaClient, ops: pull/run
+- tests/queue/test_ssl_job.py — mock: subprocess (openssl), 4 ops
+- tests/queue/test_system_job.py — mock: psutil, op: system_monitor
+
+---
+
+## 7.6: Integration test — Queue lifecycle
+
+### TASK 1: Create test file
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="tests/queue/test_integration_lifecycle.py",
+  content="""\
+\"\"\"Integration tests for queue lifecycle.\"\"\"
+
+import asyncio
+import pytest
+from mcp_proxy_adapter.queue.integration import QueueManagerIntegration
+from ai_admin.jobs.system_job import SystemJob
+
+
+@pytest.mark.asyncio
+async def test_job_lifecycle_pending_to_completed():
+    \"\"\"Test full job lifecycle: add → run → complete.\"\"\"
+    q = QueueManagerIntegration(in_memory=True, max_concurrent_jobs=1)
+    await q.start()
+    try:
+        result = await q.add_job(SystemJob, 'test_lifecycle_1', {
+            'operation_type': 'system_monitor',
+            'include_gpu': False,
+            'include_temperature': False,
+            'include_processes': False,
+        })
+        assert result.job_id == 'test_lifecycle_1'
+        # Poll for completion
+        for _ in range(20):
+            status = await q.get_job_status('test_lifecycle_1')
+            if status.status in ('completed', 'failed'):
+                break
+            await asyncio.sleep(0.5)
+        assert status.status == 'completed'
+    finally:
+        await q.stop()
+
+
+@pytest.mark.asyncio
+async def test_stop_running_job():
+    \"\"\"Test stopping a running job.\"\"\"
+    q = QueueManagerIntegration(in_memory=True, max_concurrent_jobs=1)
+    await q.start()
+    try:
+        await q.add_job(SystemJob, 'test_stop_1', {'operation_type': 'system_monitor',
+            'include_gpu': False, 'include_temperature': False, 'include_processes': False})
+        await asyncio.sleep(0.2)
+        stop_result = await q.stop_job('test_stop_1')
+        assert stop_result.status in ('stopped', 'completed')
+    finally:
+        await q.stop()
+"""
+)
+```
+
+### TASK 2: Run integration tests
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=["tests/queue/test_integration_lifecycle.py", "-v", "--tb=long"]
+)
+```
+Expected: 2 tests pass.
+
+## 7.7: Integration test — Command → queue
+
+### TASK 1: Create test file
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="tests/queue/test_command_integration.py",
+  content="""\
+\"\"\"Integration tests: command → queue submission.\"\"\"
+
+from unittest.mock import AsyncMock, patch, MagicMock
+import pytest
+from ai_admin.jobs.vast_job import VastJob
+
+
+@pytest.mark.asyncio
+async def test_vast_create_command_submits_job():
+    \"\"\"Test VastCreateCommand submits VastJob to queue.\"\"\"
+    from ai_admin.commands.vast_create_command import VastCreateCommand
+
+    mock_integration = AsyncMock()
+    mock_integration.add_job.return_value = MagicMock(job_id='vast_test_1', status='pending')
+
+    with patch('ai_admin.commands.vast_create_command.get_queue_integration',
+               return_value=mock_integration):
+        cmd = VastCreateCommand()
+        result = await cmd.execute(
+            project_id='c86dded6-6f93-4fb0-be54-b6d7b739eeb9',
+            bundle_id=12345,
+            image='ubuntu:22.04',
+            disk=10.0
+        )
+
+    mock_integration.add_job.assert_called_once()
+    call_args = mock_integration.add_job.call_args
+    assert call_args[0][0] == VastJob  # first positional arg is job class
+    assert call_args[0][2]['operation'] == 'create'
+    assert call_args[0][2]['bundle_id'] == 12345
+    assert result.data['job_id'] == 'vast_test_1'
+"""
+)
+```
+
+### TASK 2: Run command integration tests
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=["tests/queue/test_command_integration.py", "-v"]
+)
+```
+Expected: tests pass.
+
+## 7.8: Test queue size limits
+
+### TASK 1: Create test file
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="tests/queue/test_queue_limits.py",
+  content="""\
+\"\"\"Tests for queue size and per-type limits.\"\"\"
+
+import asyncio
+import pytest
+from mcp_proxy_adapter.queue.integration import QueueManagerIntegration
+from ai_admin.jobs.system_job import SystemJob
+
+
+@pytest.mark.asyncio
+async def test_max_queue_size_eviction():
+    \"\"\"Test that oldest job is evicted when max_queue_size is reached.\"\"\"
+    q = QueueManagerIntegration(in_memory=True, max_concurrent_jobs=0, max_queue_size=2)
+    await q.start()
+    try:
+        await q.add_job(SystemJob, 'job_1', {'operation_type': 'system_monitor',
+            'include_gpu': False, 'include_temperature': False, 'include_processes': False})
+        await q.add_job(SystemJob, 'job_2', {'operation_type': 'system_monitor',
+            'include_gpu': False, 'include_temperature': False, 'include_processes': False})
+        await q.add_job(SystemJob, 'job_3', {'operation_type': 'system_monitor',
+            'include_gpu': False, 'include_temperature': False, 'include_processes': False})
+        jobs = await q.list_jobs()
+        job_ids = [j.job_id for j in jobs]
+        # job_1 should be evicted (oldest)
+        assert 'job_1' not in job_ids
+        assert 'job_2' in job_ids
+        assert 'job_3' in job_ids
+    finally:
+        await q.stop()
+"""
+)
+```
+
+### TASK 2: Run
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=["tests/queue/test_queue_limits.py", "-v"]
+)
+```
+
+## 7.9: Test completed job retention (TTL)
+
+### TASK 1: Create test file
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="tests/queue/test_queue_cleanup.py",
+  content="""\
+\"\"\"Tests for completed job retention and cleanup.\"\"\"
+
+import asyncio
+import pytest
+from mcp_proxy_adapter.queue.integration import QueueManagerIntegration
+from ai_admin.jobs.system_job import SystemJob
+
+
+@pytest.mark.asyncio
+async def test_completed_job_cleaned_up_after_retention():
+    \"\"\"Test that completed jobs are removed after retention period.\"\"\"
+    q = QueueManagerIntegration(
+        in_memory=True,
+        max_concurrent_jobs=1,
+        completed_job_retention_seconds=1  # 1 second for test
+    )
+    await q.start()
+    try:
+        await q.add_job(SystemJob, 'cleanup_test_1', {
+            'operation_type': 'system_monitor',
+            'include_gpu': False, 'include_temperature': False, 'include_processes': False
+        })
+        # Wait for completion
+        for _ in range(20):
+            s = await q.get_job_status('cleanup_test_1')
+            if s.status == 'completed':
+                break
+            await asyncio.sleep(0.3)
+        # Wait for retention to expire + cleanup cycle
+        await asyncio.sleep(3)
+        # Job should be gone
+        jobs = await q.list_jobs()
+        job_ids = [j.job_id for j in jobs]
+        assert 'cleanup_test_1' not in job_ids
+    finally:
+        await q.stop()
+"""
+)
+```
+
+### TASK 2: Run
+```
+run_project_module(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  module="pytest",
+  args=["tests/queue/test_queue_cleanup.py", "-v", "-s"]
+)
+```
+
+## 7.10: Final comprehensive_analysis
+
+### TASK 1
+```
+comprehensive_analysis(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  check_placeholders=True,
+  check_stubs=True,
+  check_empty_methods=True,
+  check_imports=True,
+  check_long_files=True,
+  check_flake8=True,
+  check_mypy=True
+)
+```
+Save job_id. Poll until completed.
+
+### TASK 2
+Read summary from job result.
+Check: `total_stubs` in production code = 0
+Check: No file in ai_admin/jobs/ or ai_admin/commands/ exceeds 400 lines
+Check: flake8 errors in ai_admin/ = 0
+
+### TASK 3
+If checks pass: hard-delete trash
+```
+cleanup_deleted_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  hard_delete=True
+)
+```
+This permanently removes all soft-deleted files from Step 5.
+
+### TASK 4
+Write final report:
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="docs/plans/REFACTORING_COMPLETE.md",
+  content="""\
+# Queue Refactoring Complete
+
+## Date
+{today}
+
+## Summary
+- Removed: ai_admin/task_queue/ ({N} files)
+- Removed: ai_admin/queue_management/ ({N} files)
+- Added: ai_admin/jobs/ (9 Job classes)
+- Added: ai_admin/queue/integration.py
+- Migrated: {N} commands to QueueManagerIntegration
+- Tests: {N} unit + {N} integration tests passing
+- Comprehensive analysis: 0 stubs, 0 critical issues
+"""
+)
+```
+
+## DONE CHECK for Step 7 (and entire refactoring)
+- [ ] Unit tests: 9 test files, all passing
+- [ ] Integration lifecycle tests: passing
+- [ ] Command integration tests: passing
+- [ ] Queue size limit tests: passing
+- [ ] Cleanup/TTL tests: passing
+- [ ] comprehensive_analysis: 0 stubs in production
+- [ ] Trash hard-deleted
+- [ ] REFACTORING_COMPLETE.md written

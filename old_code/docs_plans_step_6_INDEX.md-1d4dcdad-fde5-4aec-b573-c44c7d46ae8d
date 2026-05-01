@@ -1,0 +1,24 @@
+# Step 6: Deduplicate & Clean
+
+## Goal
+Fix structural issues independent of the queue migration:
+duplicate `QueueManager` files, duplicate FTP executor, stale imports.
+
+## Tactical Steps
+
+| # | Task | Detail |
+|---|------|---------|
+| 6.1 | Diff `queue_manager.py` vs `queue_manager_impl.py` line by line | [6_1/](6_1/INDEX.md) |
+| 6.2 | Decide canonical file (keep `queue_manager_impl.py`, delete `queue_manager.py`) | [6_2/](6_2/INDEX.md) |
+| 6.3 | Update all imports pointing to `queue_manager.py` | [6_3/](6_3/INDEX.md) |
+| 6.4 | Diff `FTPExecutor` vs `FtpExecutor` — identify unique logic | [6_4/](6_4/INDEX.md) |
+| 6.5 | Merge into single `FtpJob` (already done in Step 2.7, verify completeness) | [6_5/](6_5/INDEX.md) |
+| 6.6 | Remove `QueueManagerError` subclasses no longer needed | [6_6/](6_6/INDEX.md) |
+| 6.7 | Audit `commands/` for direct `QueueManager()` instantiation — all must go through `get_queue_integration()` | [6_7/](6_7/INDEX.md) |
+| 6.8 | Remove `validate_log_path` duplication in `core/config_server.py` (3 copies) | [6_8/](6_8/INDEX.md) |
+| 6.9 | Run `format_code` + `lint_code` across touched modules | [6_9/](6_9/INDEX.md) |
+| 6.10 | Run `type_check_code` and fix `arg-type` / `override` errors in migrated files | [6_10/](6_10/INDEX.md) |
+
+## Notes
+- Steps 6.1–6.5 can be done in parallel with Step 4
+- Steps 6.8–6.10 are final polish before Step 7

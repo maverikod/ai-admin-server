@@ -1,0 +1,9 @@
+"""Main entry point for ai_admin package (python -m ai_admin)."""
+
+from __future__ import annotations
+
+from ai_admin.server import main
+
+
+if __name__ == "__main__":
+    main()

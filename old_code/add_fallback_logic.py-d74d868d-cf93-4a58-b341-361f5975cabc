@@ -1,0 +1,887 @@
+"""Script to add fallback logic to Python files."""
+
+#!/usr/bin/env python3
+
+# mypy: ignore-errors  # replace_file_lines ok
+
+"""
+Script to add fallback logic to all Docker commands.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import os
+
+import re
+
+import glob
+
+
+def add_fallback_logic_to_file(file_path):
+    """Add fallback logic to a Docker command file."""
+
+    print(f"Processing {file_path}...")
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Check if file already has fallback logic
+    if "fallback from direct execution" in content:
+        print(f"  ✅ Already has fallback logic")
+        return False
+
+    # Find the direct execution section
+    direct_exec_pattern = r"# Direct execution without queue\\n\\n"
+
+    fallback_pattern = r"# Direct execution without queue - try first, fallback to queue on error\\n            try:\\n"
+
+    if direct_exec_pattern in content:
+        # Replace the comment
+        content = content.replace(direct_exec_pattern, fallback_pattern)
+
+        # Find the end of direct execution and wrap it in try-except
+        # Look for the return statement in direct execution
+        return_pattern = r"(\\s+return \\{[^}]+\\})\\n\\n\\s+except docker\\.errors\\.DockerException as e:"
+        def replace_return(match: re.Match[str]) -> str:  # type: ignore[name-defined]
+            return_statement = match.group(1)
+            template = """{return_statement}
+                    
+                except Exception as direct_error:
+                    # If direct execution fails, automatically fallback to queue
+                    self.logger.warning(f"Direct execution failed: {{direct_error}}. Falling back to queue.")
+                    
+                    from ai_admin.task_queue.queue_manager import queue_manager
+                    from ai_admin.task_queue.task_queue import TaskType, Task
+                    
+                    # Determine task type based on command
+                    task_type_map = {{
+                    'docker_build': TaskType.DOCKER_BUILD,
+                        'docker_pull': TaskType.DOCKER_PULL,
+                        'docker_push': TaskType.DOCKER_PUSH,
+                        'docker_run': TaskType.DOCKER_RUN,
+                        'docker_stop': TaskType.DOCKER_STOP,
+                        'docker_remove': TaskType.DOCKER_REMOVE,
+                        'docker_tag': TaskType.DOCKER_TAG,
+                    }}
+                    
+                    task_type = task_type_map.get(self.name, TaskType.DOCKER_RUN)
+                    
+                    # Add task to queue
+                    task_id = await queue_manager.add_task(Task(
+                        task_type=task_type,
+                        params=kwargs
+                    ))
+                    
+                    return {{
+                    "message": f"{{self.name}} task queued successfully (fallback from direct execution)",
+                        "task_id": task_id,
+                        "use_queue": True,
+                        "status": "queued",
+                        "command": self.name,
+                        "fallback_reason": str(direct_error),
+                    }}
+    
+            except docker.errors.DockerException as e:"""
+            return template.format(return_statement=return_statement)
+
+        content = re.sub(return_pattern, replace_return, content, flags=re.DOTALL)
+
+        # Write back to file
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        print(f"  ✅ Added fallback logic")
+        return True
+    else:
+        print(f"  ⚠️  No direct execution section found")
+        return False
+
+
+def main() -> None:
+    """Main function to process all Docker command files."""
+    print("Adding fallback logic to Docker commands...")
+
+    # Find all Docker command files
+    docker_files = glob.glob("ai_admin/commands/docker_*.py")
+
+    processed = 0
+    for file_path in docker_files:
+        if add_fallback_logic_to_file(file_path):
+            processed += 1
+
+    print(f"\n✅ Processed {processed} files with fallback logic")
+    # realusecmd verification
+
+
+if __name__ == "__main__":
+    main()
+
+# CST realusecmd test - server-only workflow
+
+# cst-node-ids: begin
+# cst-node-ids: version=1
+# cst-node-id 0 Module 51116a23-ea1c-487f-bf42-0d774d9361ce
+# cst-node-id 0.0 SimpleStatementLine 840fac18-8515-49f5-94ad-46436f5d6287
+# cst-node-id 0.0.0 Expr 4b93d6cf-c2b0-4b2d-9eb0-455637ea9c85
+# cst-node-id 0.0.0.0 SimpleString e03fd990-c054-4d07-abb1-13487e1a89ed
+# cst-node-id 0.0.1 TrailingWhitespace cc2cf421-4398-4231-8573-1057d3b87729
+# cst-node-id 0.0.1.0 SimpleWhitespace d686a9cc-ccce-4895-a8d8-f0220ba864e4
+# cst-node-id 0.0.1.1 Newline 0ce8f036-d0a0-4dc1-8ee4-2008e73d40ae
+# cst-node-id 0.1 SimpleStatementLine 5a21db9e-1367-4363-a202-f3bb436429c3
+# cst-node-id 0.1.0 EmptyLine c10184b5-b034-4244-a1df-a5121e088041
+# cst-node-id 0.1.0.0 SimpleWhitespace 2894fe77-dbe2-445e-8503-6f9b4a428038
+# cst-node-id 0.1.0.1 Newline a55d6946-44fe-420d-834f-6e20a19727b5
+# cst-node-id 0.1.1 EmptyLine c75c22a2-858b-48b4-be7e-5f9e656d6288
+# cst-node-id 0.1.1.0 SimpleWhitespace 94011fcc-767a-4b98-9681-365751574a72
+# cst-node-id 0.1.1.1 Comment 97cbd4be-569a-42d5-be95-f38828523a1d
+# cst-node-id 0.1.1.2 Newline ddd929a6-f65f-4fd2-8bb5-f56b54dabbbf
+# cst-node-id 0.1.2 EmptyLine 077d6cc1-00bb-4ce5-8b83-df35d3d19003
+# cst-node-id 0.1.2.0 SimpleWhitespace f909ead5-ea17-47ba-8172-bc05bf0ff806
+# cst-node-id 0.1.2.1 Newline 368fb788-80a3-4e73-a0e6-115766d0c531
+# cst-node-id 0.1.3 EmptyLine 44c0ee15-6d51-47d3-85c9-45fb2c132ae3
+# cst-node-id 0.1.3.0 SimpleWhitespace 001c8251-9dd8-4ae2-8648-990748835e4b
+# cst-node-id 0.1.3.1 Comment 5bcbd242-4883-453f-a010-4046d6f3dcc2
+# cst-node-id 0.1.3.2 Newline 9a609070-adac-4c1f-8415-ef1bef11c58c
+# cst-node-id 0.1.4 EmptyLine 1f7718f2-1940-4682-a7f7-6e4612633259
+# cst-node-id 0.1.4.0 SimpleWhitespace 03a2ce38-1409-4fe2-9a1e-d4e031b9041a
+# cst-node-id 0.1.4.1 Newline a991403d-871b-4e2a-a561-609225bb22f5
+# cst-node-id 0.1.5 Expr 07ccc657-5459-47ef-9fc8-e691120b9ec4
+# cst-node-id 0.1.5.0 SimpleString 566efac5-edd8-42b9-bfc7-bfd4b7431d4d
+# cst-node-id 0.1.6 TrailingWhitespace 0e1fcc7d-9e90-4c72-8ae7-e0507031620b
+# cst-node-id 0.1.6.0 SimpleWhitespace 2631f5ce-d29f-4f0f-87f8-a438475c0d4a
+# cst-node-id 0.1.6.1 Newline 916b460b-0fe0-4767-9e5a-5e7fa6495360
+# cst-node-id 0.2 SimpleStatementLine e949d923-1db6-4fd1-a821-d50421c6180a
+# cst-node-id 0.2.0 EmptyLine 4a119ed6-7dab-4a4a-9af3-808c9bc94794
+# cst-node-id 0.2.0.0 SimpleWhitespace 7279a843-db45-4572-9368-e21654a281e6
+# cst-node-id 0.2.0.1 Newline e5d08729-cb0d-49c1-a5ea-d0b4d7a4c15c
+# cst-node-id 0.2.1 EmptyLine 75c320e7-0f68-41b0-a2b8-e4b7474c3ba8
+# cst-node-id 0.2.1.0 SimpleWhitespace 13584f9c-d4ee-4d24-a370-596b23ee6723
+# cst-node-id 0.2.1.1 Newline 1c22a606-e9af-489e-a35d-fae42cf5a4e0
+# cst-node-id 0.2.2 Import c72a2798-1689-4bc4-aef5-9312128dfd54
+# cst-node-id 0.2.2.0 SimpleWhitespace b295c124-eb3f-4b82-8cf1-465e9ec54419
+# cst-node-id 0.2.2.1 ImportAlias b8860060-9316-4d11-9ac3-531e302cca7c
+# cst-node-id 0.2.2.1.0 Name a94b12af-85f6-4d83-bfa6-42b1c3b97447
+# cst-node-id 0.2.3 TrailingWhitespace f2717a60-e2f9-4436-bf21-542ff5e3196f
+# cst-node-id 0.2.3.0 SimpleWhitespace 4cc24472-c469-4652-99c8-9db6d0b8a766
+# cst-node-id 0.2.3.1 Newline 7690375e-70fb-4958-a026-5c5b7a29010a
+# cst-node-id 0.3 SimpleStatementLine 5177d77d-ab30-4bc5-ba81-69a25a4ea1a8
+# cst-node-id 0.3.0 EmptyLine 30dad968-bc69-4368-aa97-51b550cf51a0
+# cst-node-id 0.3.0.0 SimpleWhitespace 3880499e-d757-439b-b292-8128a1e06749
+# cst-node-id 0.3.0.1 Newline 3a910a08-863e-423f-9ff8-37b8527be967
+# cst-node-id 0.3.1 Import 0f3216de-d45e-4af7-ac69-d6d8602c6f6a
+# cst-node-id 0.3.1.0 SimpleWhitespace e5ef33cc-25fd-44ca-98b0-cb38c5481359
+# cst-node-id 0.3.1.1 ImportAlias bd83c94e-5a6e-458f-bd2e-d8c10ae127b7
+# cst-node-id 0.3.1.1.0 Name d9d44cdf-95c1-4c5d-b563-f4d306580730
+# cst-node-id 0.3.2 TrailingWhitespace d8326dbb-4e21-4a6c-98a6-2cb02e901137
+# cst-node-id 0.3.2.0 SimpleWhitespace 7f13a1cc-a726-4d03-a898-442204056ed8
+# cst-node-id 0.3.2.1 Newline e0276f97-a52e-4875-917e-de68e95578b9
+# cst-node-id 0.4 SimpleStatementLine 102636eb-9ffe-4aa6-a75c-bda7a99dd16f
+# cst-node-id 0.4.0 EmptyLine 4b681ca3-99a9-41c9-b618-677e505cf815
+# cst-node-id 0.4.0.0 SimpleWhitespace 5b4d6e79-e6c1-49a4-8756-453c165255f0
+# cst-node-id 0.4.0.1 Newline 2764d0f6-bb85-43a0-b16a-fb60d5b1ce4c
+# cst-node-id 0.4.1 Import 8558a022-db3a-4195-8078-21474cad4dab
+# cst-node-id 0.4.1.0 SimpleWhitespace 1ff72a62-8d5a-43a3-8932-b4df85f7f17c
+# cst-node-id 0.4.1.1 ImportAlias 0189bc41-741e-4900-9694-b9c12e5a6c2e
+# cst-node-id 0.4.1.1.0 Name 98fcfa05-e695-4a3e-88d7-08ebd3b3bbb2
+# cst-node-id 0.4.2 TrailingWhitespace d6a64aa8-5e61-473f-906c-5a542296eb86
+# cst-node-id 0.4.2.0 SimpleWhitespace b206f028-e3ee-43b1-be39-50bc7690e96c
+# cst-node-id 0.4.2.1 Newline 8d085a92-cead-4ed0-847a-8e414ccc2712
+# cst-node-id 0.5 FunctionDef 1e5a38a1-4776-4b80-aab5-fd17b0ee1bf6
+# cst-node-id 0.5.0 EmptyLine 121ce101-c77c-4bbe-8e2c-347256f5a576
+# cst-node-id 0.5.0.0 SimpleWhitespace aa9bfbbc-3306-4e8b-8cb8-0d179e771542
+# cst-node-id 0.5.0.1 Newline 7c967475-8cc6-4595-ad47-abac0ff7b2df
+# cst-node-id 0.5.1 EmptyLine 9469461f-71f8-49f2-bf61-f61e1c51433f
+# cst-node-id 0.5.1.0 SimpleWhitespace ac0f68b1-c1c2-4eeb-a3bd-f5d0108882e1
+# cst-node-id 0.5.1.1 Newline 0abfcc65-bc36-4da9-babd-c9cded85a797
+# cst-node-id 0.5.2 SimpleWhitespace b43a5fe8-6213-4c96-8bee-43149d91747b
+# cst-node-id 0.5.3 Name 943f86b8-386c-4eac-99fd-77cd75a1d058
+# cst-node-id 0.5.4 SimpleWhitespace b5abd9fb-951d-4e47-926c-6ee8b9e46151
+# cst-node-id 0.5.5 SimpleWhitespace 94f1b883-07f4-4f74-ab25-a8211e49bff0
+# cst-node-id 0.5.6 SimpleWhitespace a225cf44-3559-4595-9b38-b25f2f079f80
+# cst-node-id 0.5.7 Parameters ffb3822c-134c-40a3-bb5d-70defe10bb46
+# cst-node-id 0.5.7.0 Param f9ef7bd1-6775-4ddc-ad44-d5ad29969d78
+# cst-node-id 0.5.7.0.0 SimpleWhitespace 54339d66-7f9b-4083-a46c-0745017bea25
+# cst-node-id 0.5.7.0.1 Name bc30159c-1b53-414d-8228-ce3f61a82737
+# cst-node-id 0.5.7.0.2 SimpleWhitespace 4e58cbd9-57bc-480c-82ae-9c90d79d1081
+# cst-node-id 0.5.8 SimpleWhitespace 7ffdf825-e83c-41dc-af48-836ed0e3700f
+# cst-node-id 0.5.9 IndentedBlock 0baf2593-5e76-45a6-aa9c-0008d09d3f49
+# cst-node-id 0.5.9.0 TrailingWhitespace be50e262-5b5a-429c-8bc5-2e1828dc1a6a
+# cst-node-id 0.5.9.0.0 SimpleWhitespace 11051e20-986a-4a3c-bb5a-3e80d13e3ca9
+# cst-node-id 0.5.9.0.1 Newline 3b3d89e9-66ad-4f41-a1ee-e9cd8b536bed
+# cst-node-id 0.5.9.1 SimpleStatementLine 9e3e5702-9096-430e-9260-70cac6d9920a
+# cst-node-id 0.5.9.1.0 Expr f9a09287-8327-4c7b-8607-1c18677d58f3
+# cst-node-id 0.5.9.1.0.0 SimpleString c4e29f80-dd79-4dca-8575-c82078d32db1
+# cst-node-id 0.5.9.1.1 TrailingWhitespace 11a788d0-a072-478e-8970-0c368cf6533c
+# cst-node-id 0.5.9.1.1.0 SimpleWhitespace 9a7c0c11-f2f2-4d7a-930f-95c347366f07
+# cst-node-id 0.5.9.1.1.1 Newline 1981268d-8088-49e4-9128-530a7d353fa8
+# cst-node-id 0.5.9.2 SimpleStatementLine d7cb5b89-0699-41ee-94d4-1cf54f5b4804
+# cst-node-id 0.5.9.2.0 EmptyLine baca986a-ccad-4209-be1d-eb0a58522e96
+# cst-node-id 0.5.9.2.0.0 SimpleWhitespace 57aaaf7a-479f-4935-9aee-de064406dff0
+# cst-node-id 0.5.9.2.0.1 Newline 7579fc4f-9d38-475e-8337-4a913b61be83
+# cst-node-id 0.5.9.2.1 Expr 0e4b9c81-f4f4-4cfe-97b7-b1707de809dc
+# cst-node-id 0.5.9.2.1.0 Call 23a93358-f6a5-470e-8213-e26099d5608d
+# cst-node-id 0.5.9.2.1.0.0 Name a705e7d0-12e1-4d9d-97a7-29f0d99ceefc
+# cst-node-id 0.5.9.2.1.0.1 SimpleWhitespace c15cea42-632b-4681-8ed7-36d2e99f6c7b
+# cst-node-id 0.5.9.2.1.0.2 SimpleWhitespace 3b7528e3-1501-421b-b53c-72d10718a1b5
+# cst-node-id 0.5.9.2.1.0.3 Arg 22e58491-79f2-486c-98d2-e55618ed205e
+# cst-node-id 0.5.9.2.1.0.3.0 SimpleWhitespace a6769b72-783e-4aa9-81ce-743f20638aa8
+# cst-node-id 0.5.9.2.1.0.3.1 FormattedString e9db4adc-b61a-486f-98d7-0b234979a8c0
+# cst-node-id 0.5.9.2.1.0.3.1.0 FormattedStringText 352ea333-0693-4ead-9f0a-83d431a65f25
+# cst-node-id 0.5.9.2.1.0.3.1.1 FormattedStringExpression e5b4b39d-4d34-493d-b9dc-8fbc8d28f25b
+# cst-node-id 0.5.9.2.1.0.3.1.1.0 SimpleWhitespace af8372d5-202c-4c64-a24b-d60b9c3fb548
+# cst-node-id 0.5.9.2.1.0.3.1.1.1 Name c3604128-fc2b-4a9a-bcfc-b31bda4b57a6
+# cst-node-id 0.5.9.2.1.0.3.1.1.2 SimpleWhitespace 66ace1d2-7d8a-4b5f-8909-46d1da68be6c
+# cst-node-id 0.5.9.2.1.0.3.1.2 FormattedStringText 31c043c0-4f88-468a-b0e9-bbebd3967202
+# cst-node-id 0.5.9.2.1.0.3.2 SimpleWhitespace 22cac8b1-257f-4319-8dcc-d617b83cccd6
+# cst-node-id 0.5.9.2.2 TrailingWhitespace f292ba34-384a-428f-883c-5c1ceb64b8ec
+# cst-node-id 0.5.9.2.2.0 SimpleWhitespace 6cb4f9b9-c4e2-4b6b-b423-0368682082ff
+# cst-node-id 0.5.9.2.2.1 Newline 7181c462-a482-47b1-8318-47b874603f84
+# cst-node-id 0.5.9.3 With c17b0659-b416-4ccb-82af-aa010a5b88c7
+# cst-node-id 0.5.9.3.0 EmptyLine 26b60e1b-e547-44c3-b397-7049ce1abc82
+# cst-node-id 0.5.9.3.0.0 SimpleWhitespace 0bc5aa97-e686-4031-9dd8-d84b488a8a44
+# cst-node-id 0.5.9.3.0.1 Newline ffd4cb15-d75d-4df5-a04e-2363c2806abc
+# cst-node-id 0.5.9.3.1 SimpleWhitespace 615068f0-7269-48dd-80d8-cd4e6ff01c63
+# cst-node-id 0.5.9.3.2 WithItem 659b9841-af9f-440e-a375-605ce8220a4c
+# cst-node-id 0.5.9.3.2.0 Call 69356fcf-6202-479f-8319-161a8270af02
+# cst-node-id 0.5.9.3.2.0.0 Name 96ab158c-7eef-4e86-a7ec-926de9689a4e
+# cst-node-id 0.5.9.3.2.0.1 SimpleWhitespace 29c1517a-f691-4c43-9322-11d0ea207b0a
+# cst-node-id 0.5.9.3.2.0.2 SimpleWhitespace db19083e-e221-4abd-a54f-f2a5ce80a7ac
+# cst-node-id 0.5.9.3.2.0.3 Arg 77bb435d-6aa9-4750-8816-8edb1c593eb9
+# cst-node-id 0.5.9.3.2.0.3.0 SimpleWhitespace 8225caa7-bcf9-4ad7-87b2-ecb2d9e88bd4
+# cst-node-id 0.5.9.3.2.0.3.1 Name 9cd72e81-a12e-4790-8407-6476fb4f1df8
+# cst-node-id 0.5.9.3.2.0.3.2 Comma 865fdf62-bae3-48fd-a5dc-fd33793d7cfd
+# cst-node-id 0.5.9.3.2.0.3.2.0 SimpleWhitespace d0168569-650a-4fbf-a2c1-005808006236
+# cst-node-id 0.5.9.3.2.0.3.2.1 SimpleWhitespace 2e4d511f-140d-4519-9907-e44934c6d7a1
+# cst-node-id 0.5.9.3.2.0.3.3 SimpleWhitespace 36d699e6-f0a6-41a6-a3ac-1d4f8247bd1d
+# cst-node-id 0.5.9.3.2.0.4 Arg 0ee12aea-7636-42c8-9b9e-1e78d551c501
+# cst-node-id 0.5.9.3.2.0.4.0 SimpleWhitespace 1d647db1-d78c-43eb-8bb1-90abdd0e48af
+# cst-node-id 0.5.9.3.2.0.4.1 SimpleString 67fd2f59-3325-43dc-9a20-c03fa7776cff
+# cst-node-id 0.5.9.3.2.0.4.2 Comma c6c10ac5-46c6-4a70-8447-88ca5e2c6d09
+# cst-node-id 0.5.9.3.2.0.4.2.0 SimpleWhitespace aaae003d-31e8-4994-99ff-17fbc0488000
+# cst-node-id 0.5.9.3.2.0.4.2.1 SimpleWhitespace 355577b2-6175-43bb-a423-96630a7282ee
+# cst-node-id 0.5.9.3.2.0.4.3 SimpleWhitespace bab3f0af-2602-402e-a8c4-ee18ddceb88b
+# cst-node-id 0.5.9.3.2.0.5 Arg bb155a26-470a-4a76-aaec-f4282db89c12
+# cst-node-id 0.5.9.3.2.0.5.0 SimpleWhitespace d62ff214-5d50-4ecc-b0f4-86c4e479d053
+# cst-node-id 0.5.9.3.2.0.5.1 Name 83255251-8c9c-49b8-950d-e9f3ea6e39df
+# cst-node-id 0.5.9.3.2.0.5.2 AssignEqual d0770d53-a6e8-4c2d-a442-25bc3bef0bb0
+# cst-node-id 0.5.9.3.2.0.5.2.0 SimpleWhitespace 74d30d88-336a-4397-99b2-985f74ba6091
+# cst-node-id 0.5.9.3.2.0.5.2.1 SimpleWhitespace 2895d173-18a0-4908-8b2e-93edee770b87
+# cst-node-id 0.5.9.3.2.0.5.3 SimpleString 90914234-9fba-4a6e-8ff2-45885d71bf7d
+# cst-node-id 0.5.9.3.2.0.5.4 SimpleWhitespace ccf01f4a-8b49-4cf4-9607-952f58fef3d3
+# cst-node-id 0.5.9.3.2.1 AsName 16bee493-cbb4-4e54-8203-39fa39f472f5
+# cst-node-id 0.5.9.3.2.1.0 SimpleWhitespace 4607796d-88b1-426e-acc2-4c2df662bed3
+# cst-node-id 0.5.9.3.2.1.1 Name e8f167d4-9af1-4cbc-b319-40bb17c136d3
+# cst-node-id 0.5.9.3.2.1.2 SimpleWhitespace 707a6842-f106-4cea-8514-a8411b8df248
+# cst-node-id 0.5.9.3.3 SimpleWhitespace 3dfaecbd-2c72-4638-a34a-2706668885bc
+# cst-node-id 0.5.9.3.4 IndentedBlock aaa826f8-7b3e-443d-9cf9-459a753ee4a2
+# cst-node-id 0.5.9.3.4.0 TrailingWhitespace b5b7123a-a5d7-4fda-8173-ab6dd33adcf2
+# cst-node-id 0.5.9.3.4.0.0 SimpleWhitespace 3fd36828-a4a1-4d18-bfee-228d394ca4c7
+# cst-node-id 0.5.9.3.4.0.1 Newline 7ec28c6c-1063-4af8-8dc6-d754dcbd6d1e
+# cst-node-id 0.5.9.3.4.1 SimpleStatementLine 827785e1-d7c0-45d1-bef2-d82446316439
+# cst-node-id 0.5.9.3.4.1.0 Assign cd94c231-e1ac-4303-ab0e-574d78771ac1
+# cst-node-id 0.5.9.3.4.1.0.0 AssignTarget 31e6e413-418e-4881-a334-d8e63093e7df
+# cst-node-id 0.5.9.3.4.1.0.0.0 Name 0c6ac0ea-1dcd-415d-ad05-3b29f34205ec
+# cst-node-id 0.5.9.3.4.1.0.0.1 SimpleWhitespace 2c8e96ca-62e4-443e-91a8-c9705315c274
+# cst-node-id 0.5.9.3.4.1.0.0.2 SimpleWhitespace 1264efa8-50e8-4029-a220-4ee4d8b7fa84
+# cst-node-id 0.5.9.3.4.1.0.1 Call db3e721f-242d-4290-a2d9-7090e53cc27d
+# cst-node-id 0.5.9.3.4.1.0.1.0 Attribute e0550559-8608-4ec8-9bce-1b3f2e9d9883
+# cst-node-id 0.5.9.3.4.1.0.1.0.0 Name b5577aac-754e-4e45-9207-c1731309cb49
+# cst-node-id 0.5.9.3.4.1.0.1.0.1 Dot a58fdfeb-28b7-46e7-9d91-ca232493dee4
+# cst-node-id 0.5.9.3.4.1.0.1.0.1.0 SimpleWhitespace 67340857-7d95-4ab3-8b83-295e41031368
+# cst-node-id 0.5.9.3.4.1.0.1.0.1.1 SimpleWhitespace 60c72449-cc34-4e53-8811-d3cc6d60a14a
+# cst-node-id 0.5.9.3.4.1.0.1.0.2 Name d54faa84-a917-4d5e-9213-20a8726c8487
+# cst-node-id 0.5.9.3.4.1.0.1.1 SimpleWhitespace 3e17015e-3d16-4dbd-8fc1-829efb2d7e52
+# cst-node-id 0.5.9.3.4.1.0.1.2 SimpleWhitespace f8f26d0f-da93-482a-8c0b-d72c1e0b907e
+# cst-node-id 0.5.9.3.4.1.1 TrailingWhitespace 5e32e95e-97af-4a66-b7f7-edd526b46bc9
+# cst-node-id 0.5.9.3.4.1.1.0 SimpleWhitespace b7fffcf0-39dc-4fc9-908d-d66fece1c862
+# cst-node-id 0.5.9.3.4.1.1.1 Newline 53702518-fb2f-4528-bfb8-e250cd7f2fbe
+# cst-node-id 0.5.9.4 If 2506197c-b8f4-43da-a7d9-3e889f3adde2
+# cst-node-id 0.5.9.4.0 EmptyLine c28fd283-4934-4a15-b4b9-15e93d07b733
+# cst-node-id 0.5.9.4.0.0 SimpleWhitespace 7eca32c0-6fec-4313-8a6a-1aacf6b1ac5f
+# cst-node-id 0.5.9.4.0.1 Newline 820c8cb7-e1fe-4655-a7a1-3f4558cc7f6d
+# cst-node-id 0.5.9.4.1 EmptyLine a4bbdea3-2ac3-4191-b1b3-95480b30ff85
+# cst-node-id 0.5.9.4.1.0 SimpleWhitespace 17d45756-f81d-40ce-a783-26bb0557d7f0
+# cst-node-id 0.5.9.4.1.1 Comment b89fd76c-028e-43db-9b6f-199ebdf19b77
+# cst-node-id 0.5.9.4.1.2 Newline b296105e-1dcb-480b-be2c-79d11965fd9d
+# cst-node-id 0.5.9.4.2 SimpleWhitespace eca83999-f5e3-4905-9ff3-d284d2c884c3
+# cst-node-id 0.5.9.4.3 Comparison 6b42b3af-109b-46b2-8ee9-c659959dadcc
+# cst-node-id 0.5.9.4.3.0 SimpleString f15a2e95-921c-4817-b639-ab0d31ee9dd6
+# cst-node-id 0.5.9.4.3.1 ComparisonTarget 964b96bc-ea9d-4b94-b456-6f08c127e1b0
+# cst-node-id 0.5.9.4.3.1.0 In 021b6263-c8a6-4709-a8d3-15d5f99915e1
+# cst-node-id 0.5.9.4.3.1.0.0 SimpleWhitespace f756ed40-7265-46d7-90be-c51662fb24a8
+# cst-node-id 0.5.9.4.3.1.0.1 SimpleWhitespace b5b257c8-b992-4743-abdc-2da6e4f2df7a
+# cst-node-id 0.5.9.4.3.1.1 Name e2d0680a-0a0a-4167-b7bb-583a0d50fa9b
+# cst-node-id 0.5.9.4.4 SimpleWhitespace 4894aae8-7386-4439-8548-32a8721bda35
+# cst-node-id 0.5.9.4.5 IndentedBlock 860a95ae-f142-4775-9b3b-94505eb2e034
+# cst-node-id 0.5.9.4.5.0 TrailingWhitespace fe8c8ced-8b54-468b-a0f4-d583516cef9a
+# cst-node-id 0.5.9.4.5.0.0 SimpleWhitespace 53b1c654-5024-42b6-96c8-420ac9588dd0
+# cst-node-id 0.5.9.4.5.0.1 Newline 28b4af63-f15c-4b38-aad8-f5046eea7ba4
+# cst-node-id 0.5.9.4.5.1 SimpleStatementLine 36434b14-0960-4940-b5a8-f45e00055738
+# cst-node-id 0.5.9.4.5.1.0 Expr 5e3ba470-de85-4fd7-87c1-b25cfa334691
+# cst-node-id 0.5.9.4.5.1.0.0 Call 122e42b5-ca4f-4e01-8045-39a30e06606b
+# cst-node-id 0.5.9.4.5.1.0.0.0 Name 1697a42e-d384-4f1f-9af0-b6babaee4641
+# cst-node-id 0.5.9.4.5.1.0.0.1 SimpleWhitespace 01c0266c-3cfb-49a0-8233-09353f7c2a1e
+# cst-node-id 0.5.9.4.5.1.0.0.2 SimpleWhitespace dea47cb1-ad02-48f9-bdf1-ac54423c33ae
+# cst-node-id 0.5.9.4.5.1.0.0.3 Arg a76007d5-e4d4-4cec-8a72-435f874091de
+# cst-node-id 0.5.9.4.5.1.0.0.3.0 SimpleWhitespace 849daa7d-d5d2-4a1b-be1c-6acd6bff38f3
+# cst-node-id 0.5.9.4.5.1.0.0.3.1 FormattedString d1459202-dfec-40ec-82cf-e821c36226a1
+# cst-node-id 0.5.9.4.5.1.0.0.3.1.0 FormattedStringText e8ffc4d5-f8c3-4972-a2a5-a6257d7e78c7
+# cst-node-id 0.5.9.4.5.1.0.0.3.2 SimpleWhitespace 15ec86ec-f4dd-4f74-b8f4-63feccb3e9c8
+# cst-node-id 0.5.9.4.5.1.1 TrailingWhitespace c6048206-a01e-4468-9912-2272b82796a2
+# cst-node-id 0.5.9.4.5.1.1.0 SimpleWhitespace eeaf75c2-51cf-4f72-8dc9-b447cf18a943
+# cst-node-id 0.5.9.4.5.1.1.1 Newline 93cccaab-9d60-4b8b-84fb-f069ebe6a06d
+# cst-node-id 0.5.9.4.5.2 SimpleStatementLine 77106b48-1ca3-4f1f-8a2e-76a5567afc22
+# cst-node-id 0.5.9.4.5.2.0 Return 14bf9499-55d7-469b-a687-e40ab4e23774
+# cst-node-id 0.5.9.4.5.2.0.0 SimpleWhitespace 91a8b4c8-12ac-48a8-84f1-9b6901f02d53
+# cst-node-id 0.5.9.4.5.2.0.1 Name 56261df0-e0bc-436a-9873-dd9c7e62477b
+# cst-node-id 0.5.9.4.5.2.1 TrailingWhitespace 93c3bcc8-4bdf-4ebf-aac1-13b0ef159187
+# cst-node-id 0.5.9.4.5.2.1.0 SimpleWhitespace 5ecb6982-dc9f-4e1d-9b43-8b26a511bf8a
+# cst-node-id 0.5.9.4.5.2.1.1 Newline 3bbe0c0d-b8af-4172-8dc9-3e17597a4d94
+# cst-node-id 0.5.9.5 SimpleStatementLine 6f503f35-79e7-4a57-bfaf-05c2506b6739
+# cst-node-id 0.5.9.5.0 EmptyLine 9d72f991-856f-4efe-a8c2-2c11508a77bc
+# cst-node-id 0.5.9.5.0.0 SimpleWhitespace 8258f671-86ad-4567-b5e8-9e2a62c08e3e
+# cst-node-id 0.5.9.5.0.1 Newline 1128b472-3333-49b5-b381-72311aafab32
+# cst-node-id 0.5.9.5.1 EmptyLine f83ac1b9-e042-419a-9518-4b4be76ecd27
+# cst-node-id 0.5.9.5.1.0 SimpleWhitespace bf401833-c42c-4626-ac12-94d03cfa6ae7
+# cst-node-id 0.5.9.5.1.1 Comment 390f3dc2-4a31-45fb-88ff-70d6cb1a31f3
+# cst-node-id 0.5.9.5.1.2 Newline 1d17f1a6-7498-4675-bc06-17ff67e4b944
+# cst-node-id 0.5.9.5.2 Assign f9a835b4-b24d-49e3-a91d-fce0c694b03d
+# cst-node-id 0.5.9.5.2.0 AssignTarget 98e39e0c-44d3-4fee-a445-7ce6bb7a63f7
+# cst-node-id 0.5.9.5.2.0.0 Name f3460677-cb28-4047-8c9d-43137a9121a5
+# cst-node-id 0.5.9.5.2.0.1 SimpleWhitespace f70516f0-1614-4557-b610-d1ea2185e0dd
+# cst-node-id 0.5.9.5.2.0.2 SimpleWhitespace bff15817-6ec4-4527-ac88-45746da45b16
+# cst-node-id 0.5.9.5.2.1 SimpleString dd978777-450c-4d95-9e98-d8b6fa7d9885
+# cst-node-id 0.5.9.5.3 TrailingWhitespace 1e34fa79-3000-401b-9ed1-ec766066b674
+# cst-node-id 0.5.9.5.3.0 SimpleWhitespace 911881ef-7e41-4a79-9fb7-e0bdd76a68e4
+# cst-node-id 0.5.9.5.3.1 Newline aff238ba-94c1-4994-91f0-7683e0b9e094
+# cst-node-id 0.5.9.6 SimpleStatementLine dbff1ef7-151e-42f3-9939-636b803f4234
+# cst-node-id 0.5.9.6.0 EmptyLine 2158a2ad-8f81-4d2c-83fd-6045d90e88c2
+# cst-node-id 0.5.9.6.0.0 SimpleWhitespace 79a2f0c6-b4ea-436e-af20-1be649f6ee2b
+# cst-node-id 0.5.9.6.0.1 Newline 9cfc1de4-0b1a-48ee-b60a-307d982abaa0
+# cst-node-id 0.5.9.6.1 Assign b4528521-03ba-470f-a4a2-2aa5e97c440f
+# cst-node-id 0.5.9.6.1.0 AssignTarget e504b294-5ac7-4476-a296-d7fb1bd89cba
+# cst-node-id 0.5.9.6.1.0.0 Name 0c6b04e4-52aa-4b2f-b128-b9c9617f3596
+# cst-node-id 0.5.9.6.1.0.1 SimpleWhitespace 5bf69862-4075-44be-83e1-376bbe6bea0b
+# cst-node-id 0.5.9.6.1.0.2 SimpleWhitespace 54cde339-a610-4724-90c1-eb825f9a784e
+# cst-node-id 0.5.9.6.1.1 SimpleString 95db77b0-1877-4412-80cb-0d637f378a61
+# cst-node-id 0.5.9.6.2 TrailingWhitespace 5852d98b-1a4c-4c55-9be3-0bcb9c3c3dbf
+# cst-node-id 0.5.9.6.2.0 SimpleWhitespace ae2c28b6-cbc4-4ad6-8253-5a5e2d8958d2
+# cst-node-id 0.5.9.6.2.1 Newline 963ae8b2-32c2-4189-a2a2-2e95cf092459
+# cst-node-id 0.5.9.7 If e74020fb-0fc1-4aad-990e-72675297c84b
+# cst-node-id 0.5.9.7.0 EmptyLine 01de612a-cf07-4007-be70-cd2f87022ac7
+# cst-node-id 0.5.9.7.0.0 SimpleWhitespace 5ebce54d-193b-47fe-8fe7-d0b1250d260e
+# cst-node-id 0.5.9.7.0.1 Newline 77b7960d-c14a-440d-a0f8-0eda7b8a41ee
+# cst-node-id 0.5.9.7.1 SimpleWhitespace 6d4280e4-abab-4936-b1c4-a873b9db49d0
+# cst-node-id 0.5.9.7.2 Comparison fa2d991a-045e-439d-85f5-53ae7ddbfdce
+# cst-node-id 0.5.9.7.2.0 Name b23aa8a4-cf31-4ee3-8458-3fe2f91294a4
+# cst-node-id 0.5.9.7.2.1 ComparisonTarget 15ddecec-0780-46b7-8024-fac7c583b060
+# cst-node-id 0.5.9.7.2.1.0 In 6106a889-59b2-4c17-937b-383f51e27193
+# cst-node-id 0.5.9.7.2.1.0.0 SimpleWhitespace 802f353d-82cc-4682-9cb2-3939bf7bb034
+# cst-node-id 0.5.9.7.2.1.0.1 SimpleWhitespace 7c96731f-feb5-427a-80bb-2e460505be19
+# cst-node-id 0.5.9.7.2.1.1 Name 9af8d8e2-8af9-4f04-8317-bd9ad2cd0645
+# cst-node-id 0.5.9.7.3 SimpleWhitespace 3332b63c-0b24-4b9e-94a9-0c2b54cbb2a1
+# cst-node-id 0.5.9.7.4 IndentedBlock 7aef17da-4d16-4b3c-ae8c-6ae6d702aab2
+# cst-node-id 0.5.9.7.4.0 TrailingWhitespace 617db5e4-e669-4c0c-a7d6-dc01ef7a38eb
+# cst-node-id 0.5.9.7.4.0.0 SimpleWhitespace 79699fd6-70d3-43c4-af9b-2bec413ef3ed
+# cst-node-id 0.5.9.7.4.0.1 Newline df33046b-e9bc-4602-821e-fb6f43c74583
+# cst-node-id 0.5.9.7.4.1 SimpleStatementLine 35c50548-6465-4e68-9655-a5a746b60820
+# cst-node-id 0.5.9.7.4.1.0 EmptyLine 37c2a540-b5d8-4fea-bc5e-045aa0d87211
+# cst-node-id 0.5.9.7.4.1.0.0 SimpleWhitespace 5ee22044-a6b5-465f-a23e-3916cece5263
+# cst-node-id 0.5.9.7.4.1.0.1 Comment ac29aeee-aadf-43d3-8277-d74534758f62
+# cst-node-id 0.5.9.7.4.1.0.2 Newline 45a2d825-9bb1-4a0c-af77-3d037f02ae51
+# cst-node-id 0.5.9.7.4.1.1 Assign 743eabd6-1013-4f99-83df-aa592f46d7a1
+# cst-node-id 0.5.9.7.4.1.1.0 AssignTarget 16661181-7eeb-459c-8eb0-8a207861d00f
+# cst-node-id 0.5.9.7.4.1.1.0.0 Name 914816ca-6e1d-4efa-878c-3da40eb0c8ba
+# cst-node-id 0.5.9.7.4.1.1.0.1 SimpleWhitespace 2c602b6f-b7f5-49f7-b560-77bfa9245b4c
+# cst-node-id 0.5.9.7.4.1.1.0.2 SimpleWhitespace 2ee4d6fd-b900-41e7-9d68-61c22186f0cd
+# cst-node-id 0.5.9.7.4.1.1.1 Call 606b96a0-20ef-40d7-8629-b8faa255d18f
+# cst-node-id 0.5.9.7.4.1.1.1.0 Attribute 218e6988-cfda-4f22-9ac6-620720481767
+# cst-node-id 0.5.9.7.4.1.1.1.0.0 Name 8af92af5-cf8c-4d01-9446-3f40f21ae880
+# cst-node-id 0.5.9.7.4.1.1.1.0.1 Dot 5b621473-4c2f-4731-9dda-f404c8faf169
+# cst-node-id 0.5.9.7.4.1.1.1.0.1.0 SimpleWhitespace 4358bd6f-bc80-4e86-be04-31d424ca69fd
+# cst-node-id 0.5.9.7.4.1.1.1.0.1.1 SimpleWhitespace 73669633-dd8f-4050-8963-d9ca5be15262
+# cst-node-id 0.5.9.7.4.1.1.1.0.2 Name eaa88841-7f03-4e1c-9fd5-37b31d0b3d44
+# cst-node-id 0.5.9.7.4.1.1.1.1 SimpleWhitespace be7b811e-ecf4-48f3-a3df-0fcc3d6817e9
+# cst-node-id 0.5.9.7.4.1.1.1.2 SimpleWhitespace a4088d87-8499-4c9f-8237-463d4288f3e3
+# cst-node-id 0.5.9.7.4.1.1.1.3 Arg a908c4f7-9e2f-4ba0-988e-144149915ea2
+# cst-node-id 0.5.9.7.4.1.1.1.3.0 SimpleWhitespace ae60e871-55f6-4b2a-8593-78a8bc7203f7
+# cst-node-id 0.5.9.7.4.1.1.1.3.1 Name f8c991c0-c9e2-4eba-98a2-22c352720ae4
+# cst-node-id 0.5.9.7.4.1.1.1.3.2 Comma 62b558cf-f384-461f-9709-890bb9786459
+# cst-node-id 0.5.9.7.4.1.1.1.3.2.0 SimpleWhitespace 2c41992e-9d56-430c-a2e2-6118e6db0c13
+# cst-node-id 0.5.9.7.4.1.1.1.3.2.1 SimpleWhitespace deac5c60-69b2-4619-ba92-b3739a80430b
+# cst-node-id 0.5.9.7.4.1.1.1.3.3 SimpleWhitespace c8711ca7-51d4-495b-a64e-0183a7694dbb
+# cst-node-id 0.5.9.7.4.1.1.1.4 Arg 3f2707a1-61db-45ad-96b3-09547ec074a1
+# cst-node-id 0.5.9.7.4.1.1.1.4.0 SimpleWhitespace 4b053b0b-b9b8-4742-8ce6-69d8b2afa745
+# cst-node-id 0.5.9.7.4.1.1.1.4.1 Name 7e3387f1-c1a1-4b04-b5ab-7918cfb56d42
+# cst-node-id 0.5.9.7.4.1.1.1.4.2 SimpleWhitespace f52b7cd5-edc0-42d3-b824-4f3458a5f371
+# cst-node-id 0.5.9.7.4.1.2 TrailingWhitespace cdc65d13-d464-4d21-a152-322e6f2bb793
+# cst-node-id 0.5.9.7.4.1.2.0 SimpleWhitespace b865fe4e-06e6-4c73-a9e8-c7197f84b8e7
+# cst-node-id 0.5.9.7.4.1.2.1 Newline db2f4855-449d-4d15-87a7-d5414b057320
+# cst-node-id 0.5.9.7.4.2 SimpleStatementLine 73b9b04b-0228-40e1-8c3a-5e11a5852d84
+# cst-node-id 0.5.9.7.4.2.0 EmptyLine 3a8fc99a-59a7-4108-88ca-f5a6be09f898
+# cst-node-id 0.5.9.7.4.2.0.0 SimpleWhitespace fc204879-e65c-400e-b201-3f0c05d36c10
+# cst-node-id 0.5.9.7.4.2.0.1 Newline f6dbc913-29a3-46fb-a6ac-11a2b09cb6e5
+# cst-node-id 0.5.9.7.4.2.1 EmptyLine 48aec26b-db55-4ba7-9232-6a5d655272e2
+# cst-node-id 0.5.9.7.4.2.1.0 SimpleWhitespace ba45fa4b-5bca-4ee4-beb8-12df3957124a
+# cst-node-id 0.5.9.7.4.2.1.1 Comment d8192b0c-6d3b-4b72-9859-4bd32f8c3342
+# cst-node-id 0.5.9.7.4.2.1.2 Newline 8d7a04b9-86ab-41f5-a4fe-ec5bd2abad1c
+# cst-node-id 0.5.9.7.4.2.2 EmptyLine 47bb005a-49d8-4f1b-be05-a6c78ce2a990
+# cst-node-id 0.5.9.7.4.2.2.0 SimpleWhitespace 6bdab405-ce1d-41ea-9eb1-1af46417077b
+# cst-node-id 0.5.9.7.4.2.2.1 Comment 1084fc0e-d327-4659-b823-a949729e1486
+# cst-node-id 0.5.9.7.4.2.2.2 Newline 631b86d3-5fec-472a-b503-2f6c9d1b58f9
+# cst-node-id 0.5.9.7.4.2.3 Assign 822c28f7-12f6-406e-a4d3-f13b95b8e7bb
+# cst-node-id 0.5.9.7.4.2.3.0 AssignTarget 30bf7eef-af9e-41bd-81d7-0884bc1b6b79
+# cst-node-id 0.5.9.7.4.2.3.0.0 Name 00bb9f1a-54eb-435d-8ebc-45c5e6a905d0
+# cst-node-id 0.5.9.7.4.2.3.0.1 SimpleWhitespace 0e9621a2-6bef-44d0-875f-26cfa816fb50
+# cst-node-id 0.5.9.7.4.2.3.0.2 SimpleWhitespace 0b382844-e4bb-49c7-98ea-764ff502bc7d
+# cst-node-id 0.5.9.7.4.2.3.1 SimpleString 19334962-ed81-4705-b960-5d00ffa0fc14
+# cst-node-id 0.5.9.7.4.2.4 TrailingWhitespace d9df277f-a295-4d20-826a-8d8b6c2a82ea
+# cst-node-id 0.5.9.7.4.2.4.0 SimpleWhitespace aaa2e113-6410-484d-8e9c-a7cc6d9ab0bc
+# cst-node-id 0.5.9.7.4.2.4.1 Newline b068598d-6d3e-4938-a00e-43c4930e75dd
+# cst-node-id 0.5.9.7.4.3 FunctionDef 436e9270-d9e5-4180-8917-57d821fabfb6
+# cst-node-id 0.5.9.7.4.3.0 SimpleWhitespace e8e880cc-d937-44df-842f-5f3a05ac9663
+# cst-node-id 0.5.9.7.4.3.1 Name 6d5b3ef0-75fe-46c6-ac12-786423cfd97b
+# cst-node-id 0.5.9.7.4.3.2 SimpleWhitespace 83e61486-e2f7-4d30-96c1-1a560d6984ad
+# cst-node-id 0.5.9.7.4.3.3 SimpleWhitespace 8e6481f7-25a5-40dc-9727-c4374ccaae32
+# cst-node-id 0.5.9.7.4.3.4 SimpleWhitespace 9cda7955-b124-40da-a9d9-824bb0210ff7
+# cst-node-id 0.5.9.7.4.3.5 Parameters 8a85e665-361f-400e-98d6-e4b1f1fae58d
+# cst-node-id 0.5.9.7.4.3.5.0 Param 54dac3cb-0bbf-4389-830c-4067f4fcf18e
+# cst-node-id 0.5.9.7.4.3.5.0.0 SimpleWhitespace b50e372f-e83c-414b-9b55-da932dce5242
+# cst-node-id 0.5.9.7.4.3.5.0.1 Name 0d592067-ab73-4706-92f2-ab4c029e73ab
+# cst-node-id 0.5.9.7.4.3.5.0.2 Annotation a401174c-b6d2-4c9c-8991-6ea417b16dfc
+# cst-node-id 0.5.9.7.4.3.5.0.2.0 SimpleWhitespace 3688d641-2dfb-4c2c-a40d-cea349bebeef
+# cst-node-id 0.5.9.7.4.3.5.0.2.1 SimpleWhitespace 6a269769-5c9d-4fe8-9a9d-a1ed6cd4df19
+# cst-node-id 0.5.9.7.4.3.5.0.2.2 Subscript eff69a00-fd5f-4204-b324-7dbde938e558
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0 Attribute 3b160756-bef4-49dd-9aaa-97492bcdae6f
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0.0 Name 2a830966-7e08-4ba6-ae3f-e0dc1ebb4dfb
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0.1 Dot 4bb70223-de59-4327-95a7-147e5e2f0b40
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0.1.0 SimpleWhitespace 19d8d479-4160-4f2a-b0ad-e55767bece0b
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0.1.1 SimpleWhitespace 73a0197e-3d56-4333-9961-c9c297786332
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.0.2 Name 00fee4bd-52be-405d-b388-c434380b35f3
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.1 SimpleWhitespace 852c8cb1-de61-45fe-b809-5c765f8bc915
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.2 LeftSquareBracket 91cb44a6-b6ad-409e-9bf6-0a98d9a38c14
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.2.0 SimpleWhitespace 2cffe23c-66ba-4488-a9a6-7430294b2c5f
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.3 SubscriptElement 273e50f8-6dc9-475a-8810-19a9b59bf93f
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.3.0 Index 030b1129-ed27-4ec0-883a-14b539d344ea
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.3.0.0 Name ba8393dd-bda7-45f6-8020-f99e2e212dd5
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.4 RightSquareBracket bcec95d0-3f96-4544-95e4-2737f55fa89d
+# cst-node-id 0.5.9.7.4.3.5.0.2.2.4.0 SimpleWhitespace 7fc2f0c8-b05f-4f8c-ae03-dc8ff6b3d4e2
+# cst-node-id 0.5.9.7.4.3.5.0.3 SimpleWhitespace 2af0d70f-8f9f-405f-9b5b-cc607757d3de
+# cst-node-id 0.5.9.7.4.3.6 Annotation c35174aa-7fab-405b-b96e-e7b67c775397
+# cst-node-id 0.5.9.7.4.3.6.0 SimpleWhitespace 6ccafb63-8d7b-4f4f-8ac4-ae1a961d3575
+# cst-node-id 0.5.9.7.4.3.6.1 SimpleWhitespace 3c735fbe-c958-4de3-a5a7-8c859be93d36
+# cst-node-id 0.5.9.7.4.3.6.2 Name ca1802a4-8f5f-43e3-8a2b-5e89468409e1
+# cst-node-id 0.5.9.7.4.3.7 SimpleWhitespace f10cf0d5-f3b2-4883-acbb-32019d076f2b
+# cst-node-id 0.5.9.7.4.3.8 IndentedBlock 49dba4c7-6527-416e-9ebe-259fa12d17f3
+# cst-node-id 0.5.9.7.4.3.8.0 TrailingWhitespace 5fb1f480-8164-41ce-be7c-dfd62d7fd5cc
+# cst-node-id 0.5.9.7.4.3.8.0.0 SimpleWhitespace d04c39f9-ecb4-4428-9420-717a0fcd1a7a
+# cst-node-id 0.5.9.7.4.3.8.0.1 Comment 3bfd8c30-c18b-42e1-96e9-4c49236f7aaa
+# cst-node-id 0.5.9.7.4.3.8.0.2 Newline 4f17a990-dc39-451b-9512-c82bdbf83c3e
+# cst-node-id 0.5.9.7.4.3.8.1 SimpleStatementLine 04d830e2-85f9-4135-a268-30984f09156e
+# cst-node-id 0.5.9.7.4.3.8.1.0 Assign 45cb119a-2cff-473f-9d79-9fed81a1c20a
+# cst-node-id 0.5.9.7.4.3.8.1.0.0 AssignTarget acd45b35-eda1-4832-b721-11c9795a9169
+# cst-node-id 0.5.9.7.4.3.8.1.0.0.0 Name 2b297a79-435e-4678-bfb1-8f56afc3e794
+# cst-node-id 0.5.9.7.4.3.8.1.0.0.1 SimpleWhitespace 4025ef6b-a2b1-45ec-9f8b-5f67b6866efe
+# cst-node-id 0.5.9.7.4.3.8.1.0.0.2 SimpleWhitespace e37c7a29-6dea-4d5d-a4e9-a3058b1d2ad0
+# cst-node-id 0.5.9.7.4.3.8.1.0.1 Call 14f015bd-ce36-4648-88b8-b53a89e8b4f9
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0 Attribute 89cd327a-fc50-4fe4-b238-3f5088e1fd9c
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0.0 Name 1bd813fd-5f2a-40e2-8626-2cd1286f1149
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0.1 Dot daae58a2-c61f-483b-84dd-3d6a5c4db061
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0.1.0 SimpleWhitespace 98df02d7-d870-42b7-87c9-da15a73c655e
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0.1.1 SimpleWhitespace 10de9fd4-1e64-47eb-a2d9-418abdfa0cdf
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.0.2 Name 5dbc4dcf-2b01-407f-98af-a724b6db9cd5
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.1 SimpleWhitespace afd56c0a-fcb9-48a4-900a-19a21a49af1e
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.2 SimpleWhitespace b4f85786-4550-478f-879b-3d7c852b58b1
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.3 Arg bb553e77-b32e-4132-9ccb-a8aa01f7430f
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.3.0 SimpleWhitespace d36d270b-7bec-420b-a2de-363a24b376ef
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.3.1 Integer 424162e4-67ce-416a-8c26-81b209a1223a
+# cst-node-id 0.5.9.7.4.3.8.1.0.1.3.2 SimpleWhitespace dd8b65ea-8246-4bf9-99ca-e6943a8aec52
+# cst-node-id 0.5.9.7.4.3.8.1.1 TrailingWhitespace 6a76c3cc-6f33-47de-bd84-f6592fb13c74
+# cst-node-id 0.5.9.7.4.3.8.1.1.0 SimpleWhitespace 6bb96a9c-8209-4737-8557-a2d46088ee84
+# cst-node-id 0.5.9.7.4.3.8.1.1.1 Newline dae39800-66b0-4168-8e36-80bc3f99ac67
+# cst-node-id 0.5.9.7.4.3.8.2 SimpleStatementLine 7ed47f6c-cea3-4110-972f-ac348b00bd3b
+# cst-node-id 0.5.9.7.4.3.8.2.0 Assign 5ddc75e0-2775-45f3-ab29-8579636bd435
+# cst-node-id 0.5.9.7.4.3.8.2.0.0 AssignTarget 3e0ad0bc-ab93-413c-9a41-4fbe8f994f12
+# cst-node-id 0.5.9.7.4.3.8.2.0.0.0 Name 9144a7d0-e300-43d4-a90d-798124b50c78
+# cst-node-id 0.5.9.7.4.3.8.2.0.0.1 SimpleWhitespace a9615e1d-6a73-448a-8c86-56ae95a09701
+# cst-node-id 0.5.9.7.4.3.8.2.0.0.2 SimpleWhitespace 5e2a5ef0-c828-464a-a6d5-4010834d2c4d
+# cst-node-id 0.5.9.7.4.3.8.2.0.1 SimpleString 75f2012d-a5b9-4ca3-8c4a-a409a8ad3eb6
+# cst-node-id 0.5.9.7.4.3.8.2.1 TrailingWhitespace e134c0d4-af1d-41ad-b5fa-8526b366619b
+# cst-node-id 0.5.9.7.4.3.8.2.1.0 SimpleWhitespace 6ec2f068-05ef-41e9-9194-5dbf16017a98
+# cst-node-id 0.5.9.7.4.3.8.2.1.1 Newline 00f9d7d2-6d29-4515-85dc-b5aa82e32e1a
+# cst-node-id 0.5.9.7.4.3.8.3 SimpleStatementLine 373b019c-8515-4338-840c-ba895ef8ed7a
+# cst-node-id 0.5.9.7.4.3.8.3.0 Return 32458516-136f-405f-a0cf-7ef53f8f06bd
+# cst-node-id 0.5.9.7.4.3.8.3.0.0 SimpleWhitespace 9387cf78-8687-40d4-8eab-3269bb5d8cab
+# cst-node-id 0.5.9.7.4.3.8.3.0.1 Call d9c2cb32-3fe2-4095-9afd-f3c967f0c940
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0 Attribute 458e88f8-b9cd-499d-9eb4-4a511959b09d
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0.0 Name b92607d5-8dbb-4976-9a98-9ab48e329ff2
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0.1 Dot 48e438c2-a701-4618-b1a5-0d4eac9bc9e2
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0.1.0 SimpleWhitespace debbb31d-6e95-4828-9785-fcb969bce5bd
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0.1.1 SimpleWhitespace ecbd8125-aacc-40b4-8236-23d6c058a394
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.0.2 Name aebaa611-b80a-425d-aa16-b19ccdd08a4c
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.1 SimpleWhitespace b57e91a4-04b3-444e-ae1a-2a3fdb389720
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.2 SimpleWhitespace 0d2fbbdc-56b0-48cd-b943-1d29f09faa43
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3 Arg 303f98fa-a5a2-45b1-aab6-856a2bbcb15a
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.0 SimpleWhitespace fd7db37b-5fe0-42bd-8c81-280609534285
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.1 Name 25c24ed9-a98a-45c6-8dde-5a0ee6230fff
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.2 AssignEqual aa2425a8-4443-4e7a-a654-9838cbee4ef8
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.2.0 SimpleWhitespace ea07961d-1f94-4938-928d-63be6d71dbbb
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.2.1 SimpleWhitespace ad37b5f6-3ed2-4581-8a6f-108438bdaee3
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.3 Name 486b27fb-1aeb-4430-88cc-e763fc29a821
+# cst-node-id 0.5.9.7.4.3.8.3.0.1.3.4 SimpleWhitespace 19d1c885-666e-4596-997e-5a64416eb3a0
+# cst-node-id 0.5.9.7.4.3.8.3.1 TrailingWhitespace 4422031f-b3d1-400a-b848-1687244dff9d
+# cst-node-id 0.5.9.7.4.3.8.3.1.0 SimpleWhitespace a1c714bb-c49f-4dd8-98c7-a6a61a90c933
+# cst-node-id 0.5.9.7.4.3.8.3.1.1 Newline 815d142b-90a6-4191-9ae4-f83d2db0f8d7
+# cst-node-id 0.5.9.7.4.4 SimpleStatementLine 012c8c8a-9544-405b-9d95-133cf21455da
+# cst-node-id 0.5.9.7.4.4.0 EmptyLine f31eb828-40b1-44e0-be31-28e593084502
+# cst-node-id 0.5.9.7.4.4.0.0 SimpleWhitespace eff7a37c-76f2-44c4-9da4-01e182186085
+# cst-node-id 0.5.9.7.4.4.0.1 Newline 6cc88d0f-bcc9-49d5-92a0-a568307ceb15
+# cst-node-id 0.5.9.7.4.4.1 Assign 38e9767d-604b-494d-b3ee-6b0c28417d1c
+# cst-node-id 0.5.9.7.4.4.1.0 AssignTarget a581bcd7-3829-4e94-a4f0-760856231a82
+# cst-node-id 0.5.9.7.4.4.1.0.0 Name 7bf8ff84-d09a-4c8a-8332-6bd3fa113686
+# cst-node-id 0.5.9.7.4.4.1.0.1 SimpleWhitespace ab30dac7-facf-42ce-a945-6d9c8bb4ea4c
+# cst-node-id 0.5.9.7.4.4.1.0.2 SimpleWhitespace 796f9b8a-3a8c-462a-9346-57d8b094088e
+# cst-node-id 0.5.9.7.4.4.1.1 Call 9c1814ac-e1ee-4dc5-bd7b-760a39f30179
+# cst-node-id 0.5.9.7.4.4.1.1.0 Attribute b82cf107-689a-434c-b085-10f3d016560c
+# cst-node-id 0.5.9.7.4.4.1.1.0.0 Name ad77f621-e634-476f-af9f-22e09dac1a60
+# cst-node-id 0.5.9.7.4.4.1.1.0.1 Dot df670b33-db5f-4646-a376-3461c6983a57
+# cst-node-id 0.5.9.7.4.4.1.1.0.1.0 SimpleWhitespace 7ab8f013-df95-439e-8a82-7da1a7479751
+# cst-node-id 0.5.9.7.4.4.1.1.0.1.1 SimpleWhitespace 0cd65e1a-69d7-4b72-910d-5d9cf2bd8b63
+# cst-node-id 0.5.9.7.4.4.1.1.0.2 Name 996bfc20-f23e-49ae-8966-11eea25f47c9
+# cst-node-id 0.5.9.7.4.4.1.1.1 SimpleWhitespace 0f8b43a6-0477-40ef-8135-23e2dd2a34df
+# cst-node-id 0.5.9.7.4.4.1.1.2 SimpleWhitespace aacb81af-fdb1-47df-81c7-f51ff399a264
+# cst-node-id 0.5.9.7.4.4.1.1.3 Arg 75c8b8ee-4b93-4d55-ad1a-6b9adab6b084
+# cst-node-id 0.5.9.7.4.4.1.1.3.0 SimpleWhitespace c316299a-bfe4-4990-abe7-a6d6243f1922
+# cst-node-id 0.5.9.7.4.4.1.1.3.1 Name c2b58a56-cdf4-4250-8eac-a8a948844d5c
+# cst-node-id 0.5.9.7.4.4.1.1.3.2 Comma 9b38d67e-70f7-4e30-b538-6939334611db
+# cst-node-id 0.5.9.7.4.4.1.1.3.2.0 SimpleWhitespace b1f2c254-7b85-44c9-a5d0-91f922b4ceff
+# cst-node-id 0.5.9.7.4.4.1.1.3.2.1 SimpleWhitespace 20b7f227-3c7d-441e-a7a1-53461e70494c
+# cst-node-id 0.5.9.7.4.4.1.1.3.3 SimpleWhitespace 9ab4a498-8339-496b-be87-a58e8e26a65d
+# cst-node-id 0.5.9.7.4.4.1.1.4 Arg 424038bb-4afb-455c-babd-597c2684278a
+# cst-node-id 0.5.9.7.4.4.1.1.4.0 SimpleWhitespace 1e8c6753-d8b3-41fc-9193-f74b68faac6b
+# cst-node-id 0.5.9.7.4.4.1.1.4.1 Name e8ba3162-e5c6-40aa-9322-513d03ccaeb5
+# cst-node-id 0.5.9.7.4.4.1.1.4.2 Comma de2238b1-5cb5-43c0-88d6-8bb5ccb6be5c
+# cst-node-id 0.5.9.7.4.4.1.1.4.2.0 SimpleWhitespace fde05a1b-23f4-4f53-9e0a-9e2912acfbf1
+# cst-node-id 0.5.9.7.4.4.1.1.4.2.1 SimpleWhitespace 80832fe1-80c5-400a-81aa-8b02f36e8f35
+# cst-node-id 0.5.9.7.4.4.1.1.4.3 SimpleWhitespace 69981184-26ce-41d0-b752-124888ac8c6f
+# cst-node-id 0.5.9.7.4.4.1.1.5 Arg f6776c0c-63e9-43f0-9180-edb54fc2fca2
+# cst-node-id 0.5.9.7.4.4.1.1.5.0 SimpleWhitespace e0f2674a-84b2-409a-83fb-a93fdf90e37f
+# cst-node-id 0.5.9.7.4.4.1.1.5.1 Name 64b40215-6af8-46f2-a3f3-041df752a397
+# cst-node-id 0.5.9.7.4.4.1.1.5.2 Comma 2ccc2b76-af05-401a-95f9-5b3c80e55fea
+# cst-node-id 0.5.9.7.4.4.1.1.5.2.0 SimpleWhitespace 50518a0c-f4ee-4dd1-b6a9-b43e0038eda6
+# cst-node-id 0.5.9.7.4.4.1.1.5.2.1 SimpleWhitespace ce7f3cfa-a7a4-4738-b750-834b71e6216d
+# cst-node-id 0.5.9.7.4.4.1.1.5.3 SimpleWhitespace 2103bfa0-3287-4f43-8821-6f4a42ca5842
+# cst-node-id 0.5.9.7.4.4.1.1.6 Arg 7540b039-668f-41ec-8452-a13c9d896f98
+# cst-node-id 0.5.9.7.4.4.1.1.6.0 SimpleWhitespace 6c3d35e7-6eb6-49ea-8b9b-e06198d36685
+# cst-node-id 0.5.9.7.4.4.1.1.6.1 Name ff51309f-f910-491c-8fb4-ebe14ed05c2f
+# cst-node-id 0.5.9.7.4.4.1.1.6.2 AssignEqual 050d5ddc-2ef0-4f07-b3da-6e8dfd520a4c
+# cst-node-id 0.5.9.7.4.4.1.1.6.2.0 SimpleWhitespace 9d33d64f-57eb-46f8-a2d9-3f980a2b364e
+# cst-node-id 0.5.9.7.4.4.1.1.6.2.1 SimpleWhitespace b33d6c5c-c507-435c-aaf5-83efcabc8b48
+# cst-node-id 0.5.9.7.4.4.1.1.6.3 Attribute 0e843dff-0ae4-444b-b2df-23a50cb22050
+# cst-node-id 0.5.9.7.4.4.1.1.6.3.0 Name 264a96b4-51f8-428d-9595-7da1bd917f86
+# cst-node-id 0.5.9.7.4.4.1.1.6.3.1 Dot 1496785d-5e2d-4c14-bded-4506437dd7e1
+# cst-node-id 0.5.9.7.4.4.1.1.6.3.1.0 SimpleWhitespace 2b47b2c4-b4d0-49c6-ad65-1d239f63f1d8
+# cst-node-id 0.5.9.7.4.4.1.1.6.3.1.1 SimpleWhitespace 6299b574-0619-43a0-9841-9c1775385a47
+# cst-node-id 0.5.9.7.4.4.1.1.6.3.2 Name acc5d03f-87e3-4771-819a-163ed5fc6b95
+# cst-node-id 0.5.9.7.4.4.1.1.6.4 SimpleWhitespace 5382b85b-9356-4a35-b120-55a0959f3148
+# cst-node-id 0.5.9.7.4.4.2 TrailingWhitespace 758394af-36a9-46db-9ccc-bee301661e8f
+# cst-node-id 0.5.9.7.4.4.2.0 SimpleWhitespace 4c04629f-ba36-4cfc-a65c-cb16e438c5fa
+# cst-node-id 0.5.9.7.4.4.2.1 Newline 43be0948-cd51-4730-935e-77af423b2ca1
+# cst-node-id 0.5.9.7.4.5 With 8e15e2b2-d14b-4117-85f6-271edc04a65f
+# cst-node-id 0.5.9.7.4.5.0 EmptyLine 11ce2993-c1a5-4d8b-aeea-6c16f0de3195
+# cst-node-id 0.5.9.7.4.5.0.0 SimpleWhitespace 9123c497-711e-4b46-9f59-91e11dec24a8
+# cst-node-id 0.5.9.7.4.5.0.1 Newline 550d66b9-27c6-40ff-b1b0-210735c0b343
+# cst-node-id 0.5.9.7.4.5.1 EmptyLine 40882baf-adb0-4e1d-a68a-669920e89b2b
+# cst-node-id 0.5.9.7.4.5.1.0 SimpleWhitespace 52530af2-4fc8-4b8f-a8ff-707588ee12e9
+# cst-node-id 0.5.9.7.4.5.1.1 Comment c62ce973-4ccc-4c0d-a2fb-066b5837291f
+# cst-node-id 0.5.9.7.4.5.1.2 Newline 325606cc-fe91-4e66-93af-2b53eb1b92f4
+# cst-node-id 0.5.9.7.4.5.2 SimpleWhitespace d6c41092-a897-423b-8b1e-a8c226c48430
+# cst-node-id 0.5.9.7.4.5.3 WithItem 18b4458a-13f9-4415-9979-cca3d36b730f
+# cst-node-id 0.5.9.7.4.5.3.0 Call f2d85cdf-6e52-40e3-9987-618fa1a3bced
+# cst-node-id 0.5.9.7.4.5.3.0.0 Name 92dd5b9f-98f4-4d9b-a3fe-a9604302a3f7
+# cst-node-id 0.5.9.7.4.5.3.0.1 SimpleWhitespace f8da86cb-d370-4bd8-a041-da2812b53e62
+# cst-node-id 0.5.9.7.4.5.3.0.2 SimpleWhitespace fde5bca5-cdd7-41da-9b24-6ed4ecb7ef0a
+# cst-node-id 0.5.9.7.4.5.3.0.3 Arg 83c3b7fd-8ded-4f98-8c67-38bc1407e919
+# cst-node-id 0.5.9.7.4.5.3.0.3.0 SimpleWhitespace 01339766-02f3-442c-99e1-c2bf4d05cbad
+# cst-node-id 0.5.9.7.4.5.3.0.3.1 Name 0bf37aa2-57f6-4afa-8aef-1c5ec008ff7b
+# cst-node-id 0.5.9.7.4.5.3.0.3.2 Comma 071870e3-e4c4-4910-8ce2-f70be327a983
+# cst-node-id 0.5.9.7.4.5.3.0.3.2.0 SimpleWhitespace 25472fc8-1303-45e3-8ac1-2509413d58b7
+# cst-node-id 0.5.9.7.4.5.3.0.3.2.1 SimpleWhitespace 57bf1c2a-6b05-4e61-8881-21cb215c6f96
+# cst-node-id 0.5.9.7.4.5.3.0.3.3 SimpleWhitespace dea89c24-35ac-4c99-abcb-466ffe62de03
+# cst-node-id 0.5.9.7.4.5.3.0.4 Arg 39c26c3a-12f5-4f1a-96d7-ffb46655897e
+# cst-node-id 0.5.9.7.4.5.3.0.4.0 SimpleWhitespace e97645b6-f190-4c54-addb-a8fe89ee7edf
+# cst-node-id 0.5.9.7.4.5.3.0.4.1 SimpleString 414c3840-c086-4546-ae80-fbc070147044
+# cst-node-id 0.5.9.7.4.5.3.0.4.2 Comma 6bfdc3cc-ce85-49f2-ba67-c032c93fd04a
+# cst-node-id 0.5.9.7.4.5.3.0.4.2.0 SimpleWhitespace d0bc75ac-f879-4bee-b5ce-27ff71c20370
+# cst-node-id 0.5.9.7.4.5.3.0.4.2.1 SimpleWhitespace 50154052-8b6e-4207-8ffe-fa301bd0e689
+# cst-node-id 0.5.9.7.4.5.3.0.4.3 SimpleWhitespace 2b1ba8ae-dd12-4b2f-9725-c778d506742b
+# cst-node-id 0.5.9.7.4.5.3.0.5 Arg 0ab7cd73-41b1-4069-8d7e-9e25eb05908f
+# cst-node-id 0.5.9.7.4.5.3.0.5.0 SimpleWhitespace 3ba2fe01-b659-4feb-a94e-6ee1587102cd
+# cst-node-id 0.5.9.7.4.5.3.0.5.1 Name 32205f8d-4808-4d23-b3a9-5a5847823d5d
+# cst-node-id 0.5.9.7.4.5.3.0.5.2 AssignEqual a264d41d-7f74-4859-8b09-bba15b3d6e18
+# cst-node-id 0.5.9.7.4.5.3.0.5.2.0 SimpleWhitespace 47e8e193-1c41-49f6-89b0-72a13d192b8c
+# cst-node-id 0.5.9.7.4.5.3.0.5.2.1 SimpleWhitespace 13bc6012-414d-4764-ac23-56326568296e
+# cst-node-id 0.5.9.7.4.5.3.0.5.3 SimpleString adc52313-a7a0-414a-b20f-3e2878c547a6
+# cst-node-id 0.5.9.7.4.5.3.0.5.4 SimpleWhitespace 12b4a46b-1528-4271-9ede-60cceb50c4db
+# cst-node-id 0.5.9.7.4.5.3.1 AsName 112f2420-bb94-4a1d-8515-3a32a3f58a78
+# cst-node-id 0.5.9.7.4.5.3.1.0 SimpleWhitespace 67b14000-4a43-4482-b41a-64e68b1419e7
+# cst-node-id 0.5.9.7.4.5.3.1.1 Name 66e0137e-f48f-434e-beb8-17f9a7e361c2
+# cst-node-id 0.5.9.7.4.5.3.1.2 SimpleWhitespace dd274f8e-0adf-40a9-8d8d-6d60e528729e
+# cst-node-id 0.5.9.7.4.5.4 SimpleWhitespace ea03cee7-b70e-47e1-8da5-9190c6fb73fa
+# cst-node-id 0.5.9.7.4.5.5 IndentedBlock d97597db-ea21-4397-8db9-3e743a91f311
+# cst-node-id 0.5.9.7.4.5.5.0 TrailingWhitespace 3843a2bd-df1e-48d4-8f13-e296c5342551
+# cst-node-id 0.5.9.7.4.5.5.0.0 SimpleWhitespace c3865cc9-120a-4b9a-9bfe-43c49fa7b159
+# cst-node-id 0.5.9.7.4.5.5.0.1 Newline 07a58b5f-2283-4387-9b76-f0ed20011543
+# cst-node-id 0.5.9.7.4.5.5.1 SimpleStatementLine c728ceb0-9dc1-42e7-8925-1da418a747e4
+# cst-node-id 0.5.9.7.4.5.5.1.0 Expr 1886aace-8026-4d6c-baa6-3317b287993a
+# cst-node-id 0.5.9.7.4.5.5.1.0.0 Call 8e02c317-2dd6-4d0c-be21-5e36a8cedfb1
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0 Attribute aa550d1f-95bd-429f-82eb-d8cd8fcf3b9f
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0.0 Name 3614156a-4939-4edb-b028-e8ae83b8eefc
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0.1 Dot f68ebbe3-9e0b-4bb1-a05e-0a70dc8bb78d
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0.1.0 SimpleWhitespace e6d0cb2d-8e8b-465a-8aee-92ed9953b425
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0.1.1 SimpleWhitespace fb6e780a-8b4f-412b-8211-54c99de6942e
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.0.2 Name 3b9109b7-af75-47b7-ba19-dda7aaec502e
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.1 SimpleWhitespace 4378c986-7763-4b30-ba24-9c47a5160aa9
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.2 SimpleWhitespace 6751e8d2-e472-4001-b52f-2d1f0455d3aa
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.3 Arg b508c519-efb2-420f-b34c-e60ac3a695d7
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.3.0 SimpleWhitespace 2ee55005-1047-4223-be26-f98a299d7369
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.3.1 Name 12bf2619-b5e0-4f9e-b665-ed82f7cd4b6d
+# cst-node-id 0.5.9.7.4.5.5.1.0.0.3.2 SimpleWhitespace 96fa34d7-dc4a-4b1c-9bf4-1fdd77c58a8c
+# cst-node-id 0.5.9.7.4.5.5.1.1 TrailingWhitespace 26189bf7-5dac-447e-9e4d-83fc7145c95e
+# cst-node-id 0.5.9.7.4.5.5.1.1.0 SimpleWhitespace aad9c696-3fe0-45c3-ac1e-b6dc7def6dad
+# cst-node-id 0.5.9.7.4.5.5.1.1.1 Newline ff5409ef-3328-4f0d-9e46-659963e208e7
+# cst-node-id 0.5.9.7.4.6 SimpleStatementLine 388da7e4-4648-41e0-b7b7-5483817960d5
+# cst-node-id 0.5.9.7.4.6.0 EmptyLine 8d7792a3-3fa9-4de9-beba-d047e5fb72b4
+# cst-node-id 0.5.9.7.4.6.0.0 SimpleWhitespace aec35a8f-bd97-4e0a-9ab5-e94c756605c5
+# cst-node-id 0.5.9.7.4.6.0.1 Newline 0f145ba2-fa75-49c3-b5c4-bf12b6afc319
+# cst-node-id 0.5.9.7.4.6.1 Expr dd32f2d8-eb70-4848-b467-aba7d46ff37e
+# cst-node-id 0.5.9.7.4.6.1.0 Call fe7359e6-b2b5-483f-8aaa-ba93832451a1
+# cst-node-id 0.5.9.7.4.6.1.0.0 Name 9d865731-4651-4a44-a062-fd4c36187270
+# cst-node-id 0.5.9.7.4.6.1.0.1 SimpleWhitespace 20029ecf-9a8a-473d-859d-bd5906294d79
+# cst-node-id 0.5.9.7.4.6.1.0.2 SimpleWhitespace b61ca659-4fb2-4fc6-96ce-14c0c3e69630
+# cst-node-id 0.5.9.7.4.6.1.0.3 Arg f53b725f-44e1-401c-9d51-f643fcbd1973
+# cst-node-id 0.5.9.7.4.6.1.0.3.0 SimpleWhitespace fed68e37-084d-41d0-9cbc-b44571f921c3
+# cst-node-id 0.5.9.7.4.6.1.0.3.1 FormattedString 8b77c28d-0d82-411a-8715-d4a1cda30759
+# cst-node-id 0.5.9.7.4.6.1.0.3.1.0 FormattedStringText 805493a0-ceba-4659-b2b2-597bc263a9df
+# cst-node-id 0.5.9.7.4.6.1.0.3.2 SimpleWhitespace 8f74aaad-a175-45d5-a4e8-b243b4bb1274
+# cst-node-id 0.5.9.7.4.6.2 TrailingWhitespace 301ca6b1-4c79-42b9-ba87-e524f08cfd5b
+# cst-node-id 0.5.9.7.4.6.2.0 SimpleWhitespace 44708fcc-59dd-4cd9-9892-b2f6b8913d93
+# cst-node-id 0.5.9.7.4.6.2.1 Newline c3dd5a22-9b43-4344-9093-dfa5ed28402f
+# cst-node-id 0.5.9.7.4.7 SimpleStatementLine b27a9b41-4827-44a1-8967-241c075667a4
+# cst-node-id 0.5.9.7.4.7.0 Return 2e223298-fb45-44cc-8bd5-b49b5fd75535
+# cst-node-id 0.5.9.7.4.7.0.0 SimpleWhitespace cc935849-b5fe-4d87-b0e3-2a21f1032b16
+# cst-node-id 0.5.9.7.4.7.0.1 Name f986b3a5-00e5-453a-862a-a20ef26c5044
+# cst-node-id 0.5.9.7.4.7.1 TrailingWhitespace fcd4de34-3325-4239-a6a0-90e6af284088
+# cst-node-id 0.5.9.7.4.7.1.0 SimpleWhitespace 7f96d810-309f-4f86-a4c6-17b0fbff481a
+# cst-node-id 0.5.9.7.4.7.1.1 Newline 85598756-8d5e-42a6-aa79-0c9769009810
+# cst-node-id 0.5.9.7.5 Else 91591615-37fa-4964-b06a-50286bacbb56
+# cst-node-id 0.5.9.7.5.0 SimpleWhitespace 8785f54f-27cd-438b-895d-44021fa8fa17
+# cst-node-id 0.5.9.7.5.1 IndentedBlock cf321a71-ba0f-4286-8693-de34f4c7e1dc
+# cst-node-id 0.5.9.7.5.1.0 TrailingWhitespace 79e529d8-65ad-45f8-9715-dd8bb35ba65d
+# cst-node-id 0.5.9.7.5.1.0.0 SimpleWhitespace f4f6e207-51a8-4e9e-83c9-f37cdd04e45e
+# cst-node-id 0.5.9.7.5.1.0.1 Newline 32ed1bda-9833-4993-a30a-cebfa57802eb
+# cst-node-id 0.5.9.7.5.1.1 SimpleStatementLine b3622cd6-42b4-466e-8539-5691a1284c7b
+# cst-node-id 0.5.9.7.5.1.1.0 Expr decfc52d-5214-406b-a0fb-510fc51de16f
+# cst-node-id 0.5.9.7.5.1.1.0.0 Call bc61a16c-3b05-45d1-9a35-196954ba9dff
+# cst-node-id 0.5.9.7.5.1.1.0.0.0 Name 941e9442-331d-4106-ac54-146988da202a
+# cst-node-id 0.5.9.7.5.1.1.0.0.1 SimpleWhitespace 48e8731a-1add-43a7-aaf9-9b4d7a54eb22
+# cst-node-id 0.5.9.7.5.1.1.0.0.2 SimpleWhitespace 842d11e0-fe66-453f-b0a7-1d9ea6dee317
+# cst-node-id 0.5.9.7.5.1.1.0.0.3 Arg 0bd6c52f-64af-4cd3-8fa4-1a9e3c3be136
+# cst-node-id 0.5.9.7.5.1.1.0.0.3.0 SimpleWhitespace e66b1403-1511-47b2-9e44-ce4272b3a2b9
+# cst-node-id 0.5.9.7.5.1.1.0.0.3.1 FormattedString 8ad8652f-cd9b-4324-a980-897b8f0405b3
+# cst-node-id 0.5.9.7.5.1.1.0.0.3.1.0 FormattedStringText 30cbc796-d08c-4997-94b7-470958561b9b
+# cst-node-id 0.5.9.7.5.1.1.0.0.3.2 SimpleWhitespace a0614efc-3bdf-4391-af72-66f4dd345e85
+# cst-node-id 0.5.9.7.5.1.1.1 TrailingWhitespace e1dd7008-5deb-46a0-9a7c-aed9a8bfe6ea
+# cst-node-id 0.5.9.7.5.1.1.1.0 SimpleWhitespace dfadcf92-cffc-48dc-a498-14897de517ea
+# cst-node-id 0.5.9.7.5.1.1.1.1 Newline 51222e54-0db5-49e5-af9b-724ccf1cd940
+# cst-node-id 0.5.9.7.5.1.2 SimpleStatementLine 984f52dd-4b2b-4789-ae23-77eddfe5051f
+# cst-node-id 0.5.9.7.5.1.2.0 Return c49ec48d-5eca-4a9c-b669-94f014985444
+# cst-node-id 0.5.9.7.5.1.2.0.0 SimpleWhitespace 9326f11f-0239-4dad-b7cf-6f118f041069
+# cst-node-id 0.5.9.7.5.1.2.0.1 Name 5e0d64c1-7d05-4146-9ca5-26029885eb25
+# cst-node-id 0.5.9.7.5.1.2.1 TrailingWhitespace 0c9c5ffc-8772-4da8-a1ab-c2d4b6ee077a
+# cst-node-id 0.5.9.7.5.1.2.1.0 SimpleWhitespace 62bfda3e-fbfe-457c-9250-b91d02b7e4d2
+# cst-node-id 0.5.9.7.5.1.2.1.1 Newline f3652602-1bc3-4bfc-8a98-13abadb6cca6
+# cst-node-id 0.6 FunctionDef b244394d-d62b-4ab4-b625-dd4e1b2adaa4
+# cst-node-id 0.6.0 EmptyLine fd0d46e4-d6ca-42f0-b9fb-602361a92728
+# cst-node-id 0.6.0.0 SimpleWhitespace c59b7636-294a-4120-a9b4-929b4fd32b48
+# cst-node-id 0.6.0.1 Newline b2578fd8-17fa-4b50-9c20-382c40a8829b
+# cst-node-id 0.6.1 EmptyLine b3e1a1e8-41a4-41f9-9afe-00513a982363
+# cst-node-id 0.6.1.0 SimpleWhitespace 97f9eff3-6f54-4d08-a0a2-936961533ef0
+# cst-node-id 0.6.1.1 Newline 587dd204-d61a-4435-bad5-3725142457fa
+# cst-node-id 0.6.2 SimpleWhitespace 25988d31-a62e-43ae-a50d-058386d7c51b
+# cst-node-id 0.6.3 Name 7c30fc4c-1568-4723-afc2-eb8d603342bc
+# cst-node-id 0.6.4 SimpleWhitespace 5ea3a4fd-6538-471c-8234-3e33e2f8926f
+# cst-node-id 0.6.5 SimpleWhitespace cdb1cf71-9de8-4659-b6a6-b4c6cbf2941c
+# cst-node-id 0.6.6 SimpleWhitespace 761989ed-0f01-4f85-97a1-22ddc54fe9be
+# cst-node-id 0.6.7 Parameters 1de8ccb7-776c-4485-a4a0-45c24e35d056
+# cst-node-id 0.6.8 Annotation 2a5b967a-f7e9-4096-9d11-943cf88b4d1e
+# cst-node-id 0.6.8.0 SimpleWhitespace 149deb4f-c0c0-4571-8e41-cc83bd1e8c31
+# cst-node-id 0.6.8.1 SimpleWhitespace f5c24439-f130-4521-be05-9638030631b0
+# cst-node-id 0.6.8.2 Name 99e35ed4-3477-4eed-9864-a193abbcc4ce
+# cst-node-id 0.6.9 SimpleWhitespace 079d9c9a-5c66-41c9-a301-3d63704d48d4
+# cst-node-id 0.6.10 IndentedBlock 5d867696-f772-43cf-82ff-d1e393b5a4a2
+# cst-node-id 0.6.10.0 TrailingWhitespace c55bcbc2-75a0-45b7-a7e7-adbf08e04340
+# cst-node-id 0.6.10.0.0 SimpleWhitespace 7b83c124-8033-4d60-95e6-52230d1e2900
+# cst-node-id 0.6.10.0.1 Newline c6e645a7-0b2f-4801-98e1-2c18d5ab515b
+# cst-node-id 0.6.10.1 SimpleStatementLine c391c4a2-3be8-4cd2-bf16-14f2c6a6691b
+# cst-node-id 0.6.10.1.0 Expr 4913fba7-9fb3-4fd4-af00-3b097fd89377
+# cst-node-id 0.6.10.1.0.0 SimpleString 3379fd73-250b-4521-9f7e-025fca05cf4a
+# cst-node-id 0.6.10.1.1 TrailingWhitespace d12c4d92-2c35-4352-9201-6eff0c083ce2
+# cst-node-id 0.6.10.1.1.0 SimpleWhitespace 3ff06615-348c-4aba-9a38-4c70609c6520
+# cst-node-id 0.6.10.1.1.1 Newline 4599aee5-bf8a-4226-af55-879d286f1015
+# cst-node-id 0.6.10.2 SimpleStatementLine 6c366109-8bcb-4326-9ba0-5c91b8764e82
+# cst-node-id 0.6.10.2.0 Expr e680fa5d-ef74-4ff0-9eea-c4ea38e9a31a
+# cst-node-id 0.6.10.2.0.0 Call a91a892a-1066-4c80-a58f-c67df6bef64e
+# cst-node-id 0.6.10.2.0.0.0 Name 8c1d0b18-af61-4702-9c37-b768f4a439b7
+# cst-node-id 0.6.10.2.0.0.1 SimpleWhitespace ecc5a7b3-d82d-4c04-8059-a79fd5df7335
+# cst-node-id 0.6.10.2.0.0.2 SimpleWhitespace a4b36366-e187-4d9f-8743-435124e77aff
+# cst-node-id 0.6.10.2.0.0.3 Arg 6f34860e-7219-44db-a80f-21265a66e63e
+# cst-node-id 0.6.10.2.0.0.3.0 SimpleWhitespace 544806ab-fe52-41ea-ab2e-32f82bed3a2b
+# cst-node-id 0.6.10.2.0.0.3.1 SimpleString c3ddd37d-a6e9-44ee-ade0-39c1ee64d6d2
+# cst-node-id 0.6.10.2.0.0.3.2 SimpleWhitespace f9e7ec1b-85cf-45c7-8eb8-a6e5d2dba035
+# cst-node-id 0.6.10.2.1 TrailingWhitespace 8dee5a77-b06b-4e8e-a006-363b526bea62
+# cst-node-id 0.6.10.2.1.0 SimpleWhitespace 89f16067-589f-42a3-833a-353a78e516fe
+# cst-node-id 0.6.10.2.1.1 Newline cf32ba9c-54a0-4d5f-800b-fa6e4b86411a
+# cst-node-id 0.6.10.3 SimpleStatementLine c5ed2fd7-37de-4d4d-a148-4bed4036d487
+# cst-node-id 0.6.10.3.0 EmptyLine 6ed177ea-74b2-4953-8111-0b9b49df000b
+# cst-node-id 0.6.10.3.0.0 SimpleWhitespace 63a4487d-d694-4875-8beb-a9c40549db90
+# cst-node-id 0.6.10.3.0.1 Newline 72d812ab-a14c-46b4-810e-e957bb79cd71
+# cst-node-id 0.6.10.3.1 EmptyLine c4ce80f8-90a8-422d-bdeb-3b80d5ceaf0d
+# cst-node-id 0.6.10.3.1.0 SimpleWhitespace a093c65c-b2ce-47ed-b798-2719850b437c
+# cst-node-id 0.6.10.3.1.1 Comment 9d1537cf-90b8-4664-83d8-4b0d3805fcd2
+# cst-node-id 0.6.10.3.1.2 Newline af44a135-c52b-490d-a31c-92a4a7f7812a
+# cst-node-id 0.6.10.3.2 Assign c7c277ed-0e33-4a5a-9157-b9915092a2e5
+# cst-node-id 0.6.10.3.2.0 AssignTarget 611f5fbe-4b3a-4626-b7a9-0b3803ba3d44
+# cst-node-id 0.6.10.3.2.0.0 Name b7cf4247-88bf-40fd-be66-5bff7802ad73
+# cst-node-id 0.6.10.3.2.0.1 SimpleWhitespace 46445870-6f06-45b6-a33c-03a35de090aa
+# cst-node-id 0.6.10.3.2.0.2 SimpleWhitespace 49a233ee-fdd7-42d7-97b8-69c3a2882423
+# cst-node-id 0.6.10.3.2.1 Call 0a6ea066-074a-4eae-a380-d9ca3de17281
+# cst-node-id 0.6.10.3.2.1.0 Attribute 9560cc2b-57a3-4076-bfe9-3b5bf23e4244
+# cst-node-id 0.6.10.3.2.1.0.0 Name 10e3fc93-fcc3-44c5-92b5-da168aabf066
+# cst-node-id 0.6.10.3.2.1.0.1 Dot ed4f3831-28df-4c72-ada4-48d22b7adc62
+# cst-node-id 0.6.10.3.2.1.0.1.0 SimpleWhitespace 499d4b22-7b02-49b4-adbe-383f6b318863
+# cst-node-id 0.6.10.3.2.1.0.1.1 SimpleWhitespace 18158926-ce20-4cb6-acf6-15afba3b2a88
+# cst-node-id 0.6.10.3.2.1.0.2 Name 77cd5ad8-8b77-4211-950a-7b6007889735
+# cst-node-id 0.6.10.3.2.1.1 SimpleWhitespace 26d904cb-7a96-4468-a9dd-82f480314287
+# cst-node-id 0.6.10.3.2.1.2 SimpleWhitespace 4a5e3422-137c-4e5d-b755-b6cc70c10221
+# cst-node-id 0.6.10.3.2.1.3 Arg 40d7ccbf-18b4-40a9-ae39-807e55039f27
+# cst-node-id 0.6.10.3.2.1.3.0 SimpleWhitespace 66f54324-9c4a-4adf-819e-45fe97c0f824
+# cst-node-id 0.6.10.3.2.1.3.1 SimpleString 73e440f7-af66-4858-bb1e-48fc501e9c56
+# cst-node-id 0.6.10.3.2.1.3.2 SimpleWhitespace beaff867-ce9a-4e39-8896-8cb6708c8c38
+# cst-node-id 0.6.10.3.3 TrailingWhitespace 6f11407f-aedb-43a1-9d30-827e374ab759
+# cst-node-id 0.6.10.3.3.0 SimpleWhitespace 277ba3b5-4fea-46e7-94a6-86154fa89792
+# cst-node-id 0.6.10.3.3.1 Newline e7d2aeed-8a5d-4a0a-9e05-e43c729291ac
+# cst-node-id 0.6.10.4 SimpleStatementLine 97284bea-4ad3-4fb8-8c90-29cdc8f1f73d
+# cst-node-id 0.6.10.4.0 EmptyLine ca6ca1fc-f74b-45e3-b364-4836a715c28b
+# cst-node-id 0.6.10.4.0.0 SimpleWhitespace 6282d4f0-80b4-438f-a672-1239a64ad473
+# cst-node-id 0.6.10.4.0.1 Newline 851a26f0-6321-4e83-a0e1-d748555743c0
+# cst-node-id 0.6.10.4.1 Assign 7631740a-fb72-4cac-bc51-e6e8fb8272fc
+# cst-node-id 0.6.10.4.1.0 AssignTarget e25e82f5-b4bf-43a3-9df6-a696f2eae608
+# cst-node-id 0.6.10.4.1.0.0 Name 98fb6236-2812-40ca-b0a4-75bb77708070
+# cst-node-id 0.6.10.4.1.0.1 SimpleWhitespace 8052d1fc-6224-420e-a6fd-6335ce01eacb
+# cst-node-id 0.6.10.4.1.0.2 SimpleWhitespace e9e9a0f8-ad38-4d92-b96f-15c17790e5f3
+# cst-node-id 0.6.10.4.1.1 Integer 28630f45-79f0-4c0a-9f05-443bf2b08e1b
+# cst-node-id 0.6.10.4.2 TrailingWhitespace 591b4235-c9e8-41cf-8249-876eb05c8eb3
+# cst-node-id 0.6.10.4.2.0 SimpleWhitespace 14acc7ca-4012-4bf4-b203-6facb7e19bab
+# cst-node-id 0.6.10.4.2.1 Newline fa1e2822-873f-48bb-af80-b46670745057
+# cst-node-id 0.6.10.5 For 173f4334-7f03-4cbb-8ab6-25028a806e28
+# cst-node-id 0.6.10.5.0 SimpleWhitespace 507cb4ad-b7ff-417b-8578-b563c25c3d35
+# cst-node-id 0.6.10.5.1 Name b986c148-a3a3-4bb2-a603-4e5948773924
+# cst-node-id 0.6.10.5.2 SimpleWhitespace cffa13c9-177f-4f17-801f-c086f40c96ff
+# cst-node-id 0.6.10.5.3 SimpleWhitespace aac675f0-a51c-45d5-b9a0-9ae9b41755e6
+# cst-node-id 0.6.10.5.4 Name caa15208-753b-4ff0-98ef-0d0af8342168
+# cst-node-id 0.6.10.5.5 SimpleWhitespace b9708c8c-0762-4186-b5fd-40b28c787734
+# cst-node-id 0.6.10.5.6 IndentedBlock 0e47ea58-aec1-465c-9f2c-5a847cec05d7
+# cst-node-id 0.6.10.5.6.0 TrailingWhitespace b10608fb-5117-4cd4-acb1-506e377e9c40
+# cst-node-id 0.6.10.5.6.0.0 SimpleWhitespace e1e02224-23b9-4233-9427-5cfecc063df6
+# cst-node-id 0.6.10.5.6.0.1 Newline 51a09113-8409-4856-b888-63675cc3ff66
+# cst-node-id 0.6.10.5.6.1 If de0de20d-cd9c-49e4-8a04-52e0314e9b0e
+# cst-node-id 0.6.10.5.6.1.0 SimpleWhitespace b98846cc-c880-417a-b46d-e4d076c42668
+# cst-node-id 0.6.10.5.6.1.1 Call 6f6bd33f-eeb5-4422-ab0a-ee7e0954363f
+# cst-node-id 0.6.10.5.6.1.1.0 Name 81c53bd5-a809-4940-98ab-faa53c2b6d04
+# cst-node-id 0.6.10.5.6.1.1.1 SimpleWhitespace 26433156-7098-4b83-a78d-b2cc6e680566
+# cst-node-id 0.6.10.5.6.1.1.2 SimpleWhitespace 5186a642-9298-4573-85be-af570a618496
+# cst-node-id 0.6.10.5.6.1.1.3 Arg 708ab413-a967-41b9-a3bd-a0210d06a228
+# cst-node-id 0.6.10.5.6.1.1.3.0 SimpleWhitespace 9c192e51-986e-4b4f-8116-ec983fc8e6ac
+# cst-node-id 0.6.10.5.6.1.1.3.1 Name 51286eb5-bcf2-40bd-aa88-b54a6b07bebc
+# cst-node-id 0.6.10.5.6.1.1.3.2 SimpleWhitespace 1593ad87-fd05-45db-a1e0-dad305192eda
+# cst-node-id 0.6.10.5.6.1.2 SimpleWhitespace a93dddb1-72b1-4e2c-9502-e7ee9b976d26
+# cst-node-id 0.6.10.5.6.1.3 IndentedBlock 179560d8-870d-4122-a0cf-e880ea8b0cc7
+# cst-node-id 0.6.10.5.6.1.3.0 TrailingWhitespace b0f04fdd-dfa5-439c-b707-b0738b4f7d4b
+# cst-node-id 0.6.10.5.6.1.3.0.0 SimpleWhitespace 0b5abe5a-de69-4c95-b1b7-d64b0566380a
+# cst-node-id 0.6.10.5.6.1.3.0.1 Newline 372ecced-6d95-4598-950e-db033606a87f
+# cst-node-id 0.6.10.5.6.1.3.1 SimpleStatementLine 25569f28-01a0-40d1-ab34-938fc4a97604
+# cst-node-id 0.6.10.5.6.1.3.1.0 AugAssign c574cfe4-16a7-4f45-9915-06bc4b56391c
+# cst-node-id 0.6.10.5.6.1.3.1.0.0 Name 1b31d14b-5e25-4495-8ec8-024f6ddc685b
+# cst-node-id 0.6.10.5.6.1.3.1.0.1 AddAssign ec41a24c-f4f0-4683-947d-42806d24d10d
+# cst-node-id 0.6.10.5.6.1.3.1.0.1.0 SimpleWhitespace 54a00e3f-0103-44c7-872e-306695aac71f
+# cst-node-id 0.6.10.5.6.1.3.1.0.1.1 SimpleWhitespace 0680c524-57e5-42da-bc5f-023a55d10ce1
+# cst-node-id 0.6.10.5.6.1.3.1.0.2 Integer 62e325e9-aa2a-4811-a46c-e06412665f21
+# cst-node-id 0.6.10.5.6.1.3.1.1 TrailingWhitespace b9674ed6-932f-4a79-8e39-e36b20971681
+# cst-node-id 0.6.10.5.6.1.3.1.1.0 SimpleWhitespace 4352eced-2fbe-446d-9f6d-f58d3ddb29d7
+# cst-node-id 0.6.10.5.6.1.3.1.1.1 Newline b1f85b74-96ef-469f-90a8-30ccd67df2f5
+# cst-node-id 0.6.10.6 SimpleStatementLine 0adb1f6c-47bd-4096-a43c-ef9960523cd7
+# cst-node-id 0.6.10.6.0 EmptyLine 598c59d2-e889-4853-acfe-bf7558b10bf3
+# cst-node-id 0.6.10.6.0.0 SimpleWhitespace eada02f7-5e03-4d2f-afc5-21176e7c5e09
+# cst-node-id 0.6.10.6.0.1 Newline 8ca81173-3144-411e-aca0-ec36153fa0a3
+# cst-node-id 0.6.10.6.1 Expr e77cbcfc-2c8d-478d-8c96-c1d8d2a24f5e
+# cst-node-id 0.6.10.6.1.0 Call 84bec292-cc18-461b-ba56-b29617d3ae7d
+# cst-node-id 0.6.10.6.1.0.0 Name 3b573777-e0d4-4caa-bd55-0ec25f283fdd
+# cst-node-id 0.6.10.6.1.0.1 SimpleWhitespace 43c0d294-e7da-423f-a615-eb4d1baa53fb
+# cst-node-id 0.6.10.6.1.0.2 SimpleWhitespace 82a4d4ea-0714-4b53-8a49-a8b0e16909b8
+# cst-node-id 0.6.10.6.1.0.3 Arg 4e30bf98-cf8b-4581-bf36-0fdc5b77830f
+# cst-node-id 0.6.10.6.1.0.3.0 SimpleWhitespace 8e0285e2-001d-4c41-a619-da9f05eb450f
+# cst-node-id 0.6.10.6.1.0.3.1 FormattedString 90506d52-8176-4251-a1d4-809272d826f1
+# cst-node-id 0.6.10.6.1.0.3.1.0 FormattedStringText 48b4e821-c5c5-4653-a939-a9e87ff0d32b
+# cst-node-id 0.6.10.6.1.0.3.1.1 FormattedStringExpression 2b7463cf-2aa5-4e11-b3ec-0558c3df4cf2
+# cst-node-id 0.6.10.6.1.0.3.1.1.0 SimpleWhitespace d23c673c-d8c4-464e-861a-d518a5ce5673
+# cst-node-id 0.6.10.6.1.0.3.1.1.1 Name 57fe9f2a-554d-48a6-beeb-2d914d62a4bb
+# cst-node-id 0.6.10.6.1.0.3.1.1.2 SimpleWhitespace 806927e9-e13b-49cc-bb7f-d7a84e6ce5c8
+# cst-node-id 0.6.10.6.1.0.3.1.2 FormattedStringText 14de3a60-3ea9-4e84-b24c-603dc1b9c80f
+# cst-node-id 0.6.10.6.1.0.3.2 SimpleWhitespace cdeee50f-82d7-4c6a-9c56-29e0982a87a8
+# cst-node-id 0.6.10.6.2 TrailingWhitespace bf211e51-443f-4ce0-b1e3-e12b21ba8cb2
+# cst-node-id 0.6.10.6.2.0 SimpleWhitespace 76ba5a8f-74b0-468a-80f0-08e6fcb9d53e
+# cst-node-id 0.6.10.6.2.1 Newline 8cd1d6b9-d8b3-4428-9ad4-e8b721f7ad35
+# cst-node-id 0.6.10.7 EmptyLine 3ef2a986-088e-4844-9887-e416a7206878
+# cst-node-id 0.6.10.7.0 SimpleWhitespace ecba9144-938b-4ae6-b956-00a836e49485
+# cst-node-id 0.6.10.7.1 Comment 3dd332e3-f5b1-4534-82ac-76fa0714c0cf
+# cst-node-id 0.6.10.7.2 Newline b6d49c0b-01b4-47f2-8849-4a48a33d7046
+# cst-node-id 0.7 If 3926988d-69f0-4e12-b04f-e4b52fd7c311
+# cst-node-id 0.7.0 EmptyLine 19739214-4eed-4d5e-8c17-8e251fda64e3
+# cst-node-id 0.7.0.0 SimpleWhitespace 039fac9c-9827-4cbd-b93e-7fe93e772e69
+# cst-node-id 0.7.0.1 Newline 1f9e483a-04c0-4dfa-b563-75213cd16635
+# cst-node-id 0.7.1 EmptyLine b45ed6dd-4d29-4303-88a0-ad8aa1a477e3
+# cst-node-id 0.7.1.0 SimpleWhitespace fd9e0bb9-65aa-43d8-a7d5-ec4df06d7856
+# cst-node-id 0.7.1.1 Newline f8e93268-dd1e-4af3-820d-f89bba1af4a5
+# cst-node-id 0.7.2 SimpleWhitespace 4c37f59d-83c9-44fb-9483-779c6a1530ab
+# cst-node-id 0.7.3 Comparison cdb875f4-d786-4f73-bafb-ea469c006283
+# cst-node-id 0.7.3.0 Name ed454907-40df-4c79-b823-310fe02f74e1
+# cst-node-id 0.7.3.1 ComparisonTarget 32cccd68-2582-4f66-8c01-7d98c73a7444
+# cst-node-id 0.7.3.1.0 Equal ee4d6bfb-b2e4-4a33-a03c-cc3e3df3977e
+# cst-node-id 0.7.3.1.0.0 SimpleWhitespace 9529e476-3d14-41ff-b181-e15b23209055
+# cst-node-id 0.7.3.1.0.1 SimpleWhitespace cd6c2e4e-5b87-40ec-ba36-51a0fe668c1d
+# cst-node-id 0.7.3.1.1 SimpleString d4135d74-75ec-4003-b867-568f261109c7
+# cst-node-id 0.7.4 SimpleWhitespace 887baa50-a7f6-4ef1-92c0-a5961d9d824c
+# cst-node-id 0.7.5 IndentedBlock 5e9e9fff-c723-4530-9902-14c96b44ea63
+# cst-node-id 0.7.5.0 TrailingWhitespace d10046c8-bdb8-4436-bd34-8710406d705b
+# cst-node-id 0.7.5.0.0 SimpleWhitespace 98c3b7c9-b5f7-47d5-aa16-bfda08d06a1f
+# cst-node-id 0.7.5.0.1 Newline 57ca6c1a-7f37-42a7-bec2-107ae746a3af
+# cst-node-id 0.7.5.1 SimpleStatementLine 762e3df9-5f61-48d1-9221-a5ec2e46f400
+# cst-node-id 0.7.5.1.0 Expr 89b8e7e3-8e80-4c97-87f1-88d96153879c
+# cst-node-id 0.7.5.1.0.0 Call db160b60-6bce-43e1-99a8-3141a83f0524
+# cst-node-id 0.7.5.1.0.0.0 Name 9b6308bb-7f39-4c80-ad63-2998b2717a55
+# cst-node-id 0.7.5.1.0.0.1 SimpleWhitespace f0c6898d-78f4-460b-96cb-c3fc30e3384e
+# cst-node-id 0.7.5.1.0.0.2 SimpleWhitespace 49904754-d640-4463-a333-3bf3792c4e3b
+# cst-node-id 0.7.5.1.1 TrailingWhitespace bdf039ed-802b-4ac6-8491-7c6466c7738c
+# cst-node-id 0.7.5.1.1.0 SimpleWhitespace 5ab9b779-b1df-475e-b896-d93adcb1f301
+# cst-node-id 0.7.5.1.1.1 Newline 847dbc6b-bf12-45b3-b81c-115d7000dc0b
+# cst-node-id 0.8 EmptyLine 2e29a7f8-bbe9-4c56-a0f5-b08b8123f060
+# cst-node-id 0.8.0 SimpleWhitespace 8e5e61ee-e302-4603-9468-a837068074f3
+# cst-node-id 0.8.1 Newline 1285ce71-89cd-4190-b159-78e8572ad0d8
+# cst-node-id 0.9 EmptyLine 5e43d4a4-ea4d-460e-9ecf-8a4d67213037
+# cst-node-id 0.9.0 SimpleWhitespace c1aba98a-0759-43d7-a509-12d1d6e0d5ce
+# cst-node-id 0.9.1 Comment 5f12763d-5d2b-4408-903e-feed346e573f
+# cst-node-id 0.9.2 Newline aeee69d7-1b3f-448a-a0f2-684581cc5a89
+# cst-node-ids: end

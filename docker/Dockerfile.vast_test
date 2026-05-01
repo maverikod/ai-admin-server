@@ -1,0 +1,50 @@
+FROM ubuntu:22.04
+
+# Устанавливаем базовые инструменты
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    python3 \
+    python3-pip \
+    htop \
+    nano \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Создаем рабочую директорию
+WORKDIR /app
+
+# Создаем простой тестовый скрипт
+RUN echo '#!/bin/bash\n\
+echo "=== Vast.ai Test Container ==="\n\
+echo "Container started at: $(date)"\n\
+echo "Hostname: $(hostname)"\n\
+echo "CPU: $(nproc) cores"\n\
+echo "Memory: $(free -h | grep Mem | awk "{print \$2}")"\n\
+echo "Disk: $(df -h / | tail -1 | awk "{print \$4}") available"\n\
+echo "Current directory: $(pwd)"\n\
+echo "Files in /app:"\n\
+ls -la /app\n\
+echo "=== Container ready ==="\n\
+# Keep container running\n\
+tail -f /dev/null' > /app/start.sh && chmod +x /app/start.sh
+
+# Создаем директорию для данных
+RUN mkdir -p /app/data
+
+# Создаем тестовый файл
+RUN echo "Test data created at $(date)" > /app/data/test.txt
+
+# Устанавливаем Google Drive CLI (gdown для загрузки)
+RUN pip3 install gdown
+
+# Создаем скрипт для работы с Google Drive
+RUN echo '#!/bin/bash\n\
+# Скрипт для загрузки данных в Google Drive\n\
+echo "Uploading data to Google Drive..."\n\
+# Здесь будет логика загрузки\n\
+echo "Data upload completed"' > /app/upload_to_gdrive.sh && chmod +x /app/upload_to_gdrive.sh
+
+# Точка входа
+ENTRYPOINT ["/app/start.sh"] 

@@ -1,0 +1,247 @@
+from ai_admin.core.custom_exceptions import CustomError
+
+"""Docker search command that combines CLI and API methods.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import subprocess
+
+import requests
+
+from typing import Dict, Any, Optional, List
+
+from datetime import datetime
+
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+
+class DockerSearchCommand:
+    """Docker search command that combines CLI and API methods."""
+
+    name = "docker_search"
+
+    def __init__(self):
+        """Initialize Docker search command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        query: str,
+        limit: Optional[int] = None,
+        filter_stars: Optional[int] = None,
+        filter_official: bool = False,
+        filter_automated: bool = False,
+        include_details: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker search command with unified security.
+
+        Args:
+            query: Search query for Docker images
+            limit: Maximum number of results to return
+            filter_stars: Minimum number of stars
+            filter_official: Filter for official images only
+            filter_automated: Filter for automated builds only
+            include_details: Include detailed information
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with search information
+        """
+        # Validate inputs
+        if not query:
+            return ErrorResult(
+                message="Search query is required", code="VALIDATION_ERROR"
+            )
+
+        # Use unified security approach
+        return await super().execute(
+            query=query,
+            limit=limit,
+            filter_stars=filter_stars,
+            filter_official=filter_official,
+            filter_automated=filter_automated,
+            include_details=include_details,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker search command."""
+        return "docker:search"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker search command logic."""
+        return await self._search_images(**kwargs)
+
+    async def _search_images(
+        self,
+        query: str,
+        limit: Optional[int] = None,
+        filter_stars: Optional[int] = None,
+        filter_official: bool = False,
+        filter_automated: bool = False,
+        include_details: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Search Docker images using combined methods."""
+        try:
+            start_time = datetime.now()
+
+            # Step 1: Search using CLI
+            cli_results = await self._search_cli(
+                query, limit, filter_stars, filter_official, filter_automated
+            )
+
+            # Step 2: Get additional details if requested
+            detailed_results = cli_results
+            if include_details and cli_results.get("images"):
+                detailed_results = await self._add_image_details(cli_results["images"])
+
+            execution_time = (datetime.now() - start_time).total_seconds()
+
+            return {
+                "message": f"Found {len(detailed_results.get('images', []))} Docker images for query '{query}'",
+                "query": query,
+                "images": detailed_results.get("images", []),
+                "count": len(detailed_results.get("images", [])),
+                "limit": limit,
+                "filter_stars": filter_stars,
+                "filter_official": filter_official,
+                "filter_automated": filter_automated,
+                "include_details": include_details,
+                "execution_time": execution_time,
+                "search_method": "cli",
+            }
+
+        except CustomError as e:
+            raise CustomError(f"Docker search failed: {str(e)}")
+
+    async def _search_cli(
+        self,
+        query: str,
+        limit: Optional[int] = None,
+        filter_stars: Optional[int] = None,
+        filter_official: bool = False,
+        filter_automated: bool = False,
+    ) -> Dict[str, Any]:
+        """Search using Docker CLI."""
+        try:
+            cmd = ["docker", "search"]
+
+            if limit:
+                cmd.extend(["--limit", str(limit)])
+
+            if filter_stars:
+                cmd.extend(["--filter", f"stars={filter_stars}"])
+
+            if filter_official:
+                cmd.extend(["--filter", "is-official=true"])
+
+            if filter_automated:
+                cmd.extend(["--filter", "is-automated=true"])
+
+            cmd.append(query)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise CustomError(f"CLI search failed: {result.stderr}")
+
+            # Parse CLI output
+            images = []
+            lines = result.stdout.strip().split("\n")
+            if len(lines) > 1:
+                headers = lines[0].split()
+                for line in lines[1:]:
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= len(headers):
+                            image = dict(zip(headers, parts))
+                            images.append(image)
+
+            return {"images": images}
+
+        except CustomError as e:
+            raise CustomError(f"CLI search failed: {str(e)}")
+
+    async def _add_image_details(self, images: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Add detailed information to images."""
+        try:
+            detailed_images = []
+            for image in images:
+                image_name = image.get("NAME", "")
+                if image_name:
+                    # Get additional details from Docker Hub API
+                    try:
+                        api_url = f"https://hub.docker.com/v2/repositories/{image_name}"
+                        response = requests.get(api_url, timeout=10)
+                        if response.status_code == 200:
+                            api_data = response.json()
+                            image["description"] = api_data.get("description", "")
+                            image["star_count"] = api_data.get("star_count", 0)
+                            image["pull_count"] = api_data.get("pull_count", 0)
+                    except CustomError:
+                        pass  # Continue without API details
+
+                detailed_images.append(image)
+
+            return {"images": detailed_images}
+
+        except CustomError as e:
+            raise CustomError(f"Failed to add image details: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker search command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query for Docker images",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Maximum number of results to return",
+                },
+                "filter_stars": {
+                    "type": "integer",
+                    "description": "Minimum number of stars",
+                },
+                "filter_official": {
+                    "type": "boolean",
+                    "description": "Filter for official images only",
+                    "default": False,
+                },
+                "filter_automated": {
+                    "type": "boolean",
+                    "description": "Filter for automated builds only",
+                    "default": False,
+                },
+                "include_details": {
+                    "type": "boolean",
+                    "description": "Include detailed information",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        }
+
+
+"""Module description."""

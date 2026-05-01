@@ -1,0 +1,185 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError
+"""Certificate Signing Request (CSR) generation command.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+import os
+
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.config.ssl_config import SSLConfig
+
+class CertRequestCommand(BaseUnifiedCommand):
+    """Command for generating Certificate Signing Requests (CSR)."""
+
+    name = "cert_request"
+
+    def __init__(self):
+        """Initialize certificate request command."""
+        super().__init__()
+        self.cert_config = SSLConfig()
+
+    async def execute(
+        self,
+        common_name: str = "test-client",
+        organization: str = "Test Organization",
+        organizational_unit: Optional[str] = None,
+        country: str = "US",
+        state: Optional[str] = None,
+        locality: Optional[str] = None,
+        email: Optional[str] = None,
+        key_size: int = 2048,
+        output_dir: Optional[str] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute certificate request generation with unified security.
+
+        Args:
+            common_name: Common name for the certificate
+            organization: Organization name
+            organizational_unit: Organizational unit
+            country: Country code
+            state: State or province
+            locality: Locality (city)
+            email: Email address
+            key_size: Key size in bits
+            output_dir: Output directory for files
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with CSR information
+        """
+        # Validate inputs
+        if not common_name:
+            return ErrorResult(message="Common name is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            common_name=common_name,
+            organization=organization,
+            organizational_unit=organizational_unit,
+            country=country,
+            state=state,
+            locality=locality,
+            email=email,
+            key_size=key_size,
+            output_dir=output_dir,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for certificate request command."""
+        return "ssl:cert_request"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute certificate request generation logic."""
+        return await self._generate_csr(**kwargs)
+
+    async def _generate_csr(
+        self,
+        common_name: str = "test-client",
+        organization: str = "Test Organization",
+        organizational_unit: Optional[str] = None,
+        country: str = "US",
+        state: Optional[str] = None,
+        locality: Optional[str] = None,
+        email: Optional[str] = None,
+        key_size: int = 2048,
+        output_dir: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Generate Certificate Signing Request."""
+        try:
+            # Set default output directory
+            if not output_dir:
+                output_dir = os.path.join(os.getcwd(), "certificates", "csr")
+
+            # Ensure output directory exists
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Generate CSR using certificate config
+            csr_path, key_path = await self.cert_config.generate_csr(
+                common_name=common_name,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                country=country,
+                state=state,
+                locality=locality,
+                email=email,
+                key_size=key_size,
+                output_dir=output_dir,
+            )
+
+            return {
+                "message": f"Certificate Signing Request generated for '{common_name}'",
+                "common_name": common_name,
+                "organization": organization,
+                "csr_path": csr_path,
+                "key_path": key_path,
+                "output_dir": output_dir,
+                "key_size": key_size,
+                "status": "generated"
+            }
+
+        except CustomError as e:
+            raise CustomError(f"CSR generation failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for certificate request command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "common_name": {
+                    "type": "string",
+                    "description": "Common name for the certificate",
+                    "default": "test-client",
+                },
+                "organization": {
+                    "type": "string",
+                    "description": "Organization name",
+                    "default": "Test Organization",
+                },
+                "organizational_unit": {
+                    "type": "string",
+                    "description": "Organizational unit",
+                },
+                "country": {
+                    "type": "string",
+                    "description": "Country code",
+                    "default": "US",
+                },
+                "state": {
+                    "type": "string",
+                    "description": "State or province",
+                },
+                "locality": {
+                    "type": "string",
+                    "description": "Locality (city)",
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address",
+                },
+                "key_size": {
+                    "type": "integer",
+                    "description": "Key size in bits",
+                    "default": 2048,
+                },
+                "output_dir": {
+                    "type": "string",
+                    "description": "Output directory for files",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["common_name"],
+            "additionalProperties": False,
+        }

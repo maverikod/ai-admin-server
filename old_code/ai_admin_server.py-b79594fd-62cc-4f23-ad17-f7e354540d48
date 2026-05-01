@@ -1,0 +1,141 @@
+"""AI Admin MCP server — canonical adapter entry (Hypercorn, global config, hooks)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+from pathlib import Path
+from typing import Any, Dict, Tuple
+
+import ai_admin.adapter_hooks  # noqa: F401
+
+from mcp_proxy_adapter.api.app import create_app  # type: ignore[import-untyped]
+from mcp_proxy_adapter.config import get_config  # type: ignore[import-untyped]
+from mcp_proxy_adapter.core.app_factory.ssl_config import (  # type: ignore[import-untyped]
+    build_server_ssl_config,
+)
+from mcp_proxy_adapter.core.config.simple_config import SimpleConfig  # type: ignore[import-untyped]
+from mcp_proxy_adapter.core.config.simple_config_validator import (  # type: ignore[import-untyped]
+    SimpleConfigValidator,
+)
+from mcp_proxy_adapter.core.server_engine import ServerEngineFactory  # type: ignore[import-untyped]
+
+
+def _apply_global_config(
+    config_path: Path, simple_model: Any, app_config: Dict[str, Any]
+) -> None:
+    """Push validated config into mcp_proxy_adapter global get_config().
+
+    Args:
+        config_path: Absolute path to the active JSON config file.
+        simple_model: Parsed SimpleConfig model instance.
+        app_config: Full merged configuration dictionary.
+
+    Returns:
+        None
+    """
+    cfg = get_config()
+    cfg.config_path = str(config_path)
+    setattr(cfg, "model", simple_model)
+    cfg.config_data = app_config
+    if hasattr(cfg, "feature_manager"):
+        cfg.feature_manager.config_data = cfg.config_data
+
+
+def _load_validate_merge(cfg_path: Path) -> Tuple[Dict[str, Any], Any]:
+    """Load JSON, validate SimpleConfig, merge model sections into app_config.
+
+    Args:
+        cfg_path: Path to server config JSON.
+
+    Returns:
+        Merged ``app_config`` dict and the SimpleConfig model instance.
+    """
+    with cfg_path.open("r", encoding="utf-8") as f:
+        app_config = json.load(f)
+    simple_config = SimpleConfig(str(cfg_path))
+    model = simple_config.load()
+    validator = SimpleConfigValidator(config_path=str(cfg_path))
+    errors = validator.validate(model)
+    if errors:
+        for err in errors:
+            print(f"❌ {err.message}", file=sys.stderr)
+        raise SystemExit(1)
+    simple_config.model = model
+    for section, value in simple_config.to_dict().items():
+        app_config[section] = value
+    app_config.setdefault("server", {})
+    app_config["server"].setdefault("debug", False)
+    app_config["server"].setdefault("log_level", "INFO")
+    return app_config, model
+
+
+def main() -> None:
+    """Parse CLI, build FastAPI app via adapter, run Hypercorn (ServerEngineFactory).
+
+    Returns:
+        None
+    """
+    logging.basicConfig(level=logging.INFO)
+    parser = argparse.ArgumentParser(
+        description="AI Admin MCP Server (canonical adapter / Hypercorn)"
+    )
+    parser.add_argument("--config", required=True, help="Path to configuration JSON")
+    parser.add_argument("--host", help="Bind host (overrides config server.host)")
+    parser.add_argument(
+        "--port", type=int, help="Bind port (overrides config server.port)"
+    )
+    args = parser.parse_args()
+
+    cfg_path = Path(args.config).expanduser().resolve()
+    if not cfg_path.is_file():
+        print(f"❌ Configuration file not found: {cfg_path}", file=sys.stderr)
+        raise SystemExit(1)
+
+    app_config, model = _load_validate_merge(cfg_path)
+    if args.host:
+        app_config.setdefault("server", {})["host"] = args.host
+        model.server.host = args.host
+    if args.port is not None:
+        app_config.setdefault("server", {})["port"] = args.port
+        model.server.port = args.port
+
+    _apply_global_config(cfg_path, model, app_config)
+
+    app = create_app(
+        title="AI Admin",
+        description="AI Admin MCP server (vast_srv / canonical adapter path)",
+        version="1.0.0",
+        app_config=app_config,
+        config_path=str(cfg_path),
+    )
+
+    host = str(app_config.get("server", {}).get("host", "127.0.0.1"))
+    port = int(app_config.get("server", {}).get("port", 8060))
+
+    server_config: Dict[str, Any] = {
+        "host": host,
+        "port": port,
+        "log_level": "info",
+        "reload": False,
+        "workers": 1,
+    }
+    try:
+        ssl_extra = build_server_ssl_config(app_config)
+        if ssl_extra:
+            server_config.update(ssl_extra)
+    except ValueError as exc:
+        print(f"❌ SSL configuration invalid: {exc}", file=sys.stderr)
+        raise SystemExit(1)
+
+    engine = ServerEngineFactory.get_engine("hypercorn")
+    if not engine:
+        print("❌ Hypercorn engine not available", file=sys.stderr)
+        raise SystemExit(1)
+    engine.run_server(app, server_config)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,25 @@
+# Step 5: Delete Legacy Layer
+
+## Goal
+Once all commands are migrated and tests pass, remove the entire old
+Task Queue infrastructure.
+
+## Tactical Steps
+
+| # | Task | Detail |
+|---|------|---------|
+| 5.1 | Verify zero imports of `QueueManager` outside `ai_admin/queue/` | [5_1/](5_1/INDEX.md) |
+| 5.2 | Verify zero imports of `QueueClient` | [5_2/](5_2/INDEX.md) |
+| 5.3 | Verify zero imports of any Executor class | [5_3/](5_3/INDEX.md) |
+| 5.4 | Delete `ai_admin/task_queue/` directory entirely | [5_4/](5_4/INDEX.md) |
+| 5.5 | Delete `ai_admin/queue_management/` directory entirely | [5_5/](5_5/INDEX.md) |
+| 5.6 | Remove `QueueDaemon` and its CLI entry point | [5_6/](5_6/INDEX.md) |
+| 5.7 | Remove `TaskStatus`, `Task`, `QueueAction`, `QueueFilter` from old locations | [5_7/](5_7/INDEX.md) |
+| 5.8 | Clean up `ai_admin/__init__.py` and `ai_admin/task_queue/__init__.py` re-exports | [5_8/](5_8/INDEX.md) |
+| 5.9 | Run full test suite, fix import errors | [5_9/](5_9/INDEX.md) |
+| 5.10 | Run `comprehensive_analysis` on `vast_srv`, confirm no stubs/placeholders left | [5_10/](5_10/INDEX.md) |
+
+## Safety
+- Use `delete_file` MCP command (soft-delete with trash)
+- Do NOT hard-delete until Step 7 tests pass
+- Keep git history as backup

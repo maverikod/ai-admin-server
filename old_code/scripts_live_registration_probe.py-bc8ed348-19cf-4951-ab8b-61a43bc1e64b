@@ -1,0 +1,26 @@
+"""Inspect registration_tasks and registration_manager."""
+from __future__ import annotations
+
+import importlib
+import inspect
+
+for modname in (
+    "mcp_proxy_adapter.api.core.registration_tasks",
+    "mcp_proxy_adapter.api.core.registration_manager.manager",
+    "mcp_proxy_adapter.api.core.lifespan_manager",
+):
+    print("===", modname, "===")
+    try:
+        m = importlib.import_module(modname)
+    except Exception as e:
+        print("import failed", e)
+        continue
+    for n in sorted(dir(m)):
+        if n.startswith("_"):
+            continue
+        obj = getattr(m, n)
+        if callable(obj):
+            try:
+                print(n, inspect.signature(obj))
+            except Exception:
+                print(n)

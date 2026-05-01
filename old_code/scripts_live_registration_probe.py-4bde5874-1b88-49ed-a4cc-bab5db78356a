@@ -1,0 +1,17 @@
+"""Find registration entry points in mcp_proxy_adapter."""
+from __future__ import annotations
+
+import importlib
+
+for name in (
+    "mcp_proxy_adapter",
+    "mcp_proxy_adapter.api",
+    "mcp_proxy_adapter.api.core",
+    "mcp_proxy_adapter.api.core.server_adapter",
+):
+    try:
+        m = importlib.import_module(name)
+        keys = [x for x in dir(m) if "egister" in x.lower() or "lifespan" in x.lower()]
+        print(name, keys)
+    except Exception as e:
+        print(name, "ERR", e)

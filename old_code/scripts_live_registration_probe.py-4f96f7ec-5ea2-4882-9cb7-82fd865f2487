@@ -1,0 +1,7 @@
+"""List registration submodules."""
+import importlib
+import pkgutil
+
+m = importlib.import_module("mcp_proxy_adapter.api.core.registration")
+for info in pkgutil.walk_packages(m.__path__, m.__name__ + "."):
+    print(info.name)

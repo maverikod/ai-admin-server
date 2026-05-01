@@ -1,0 +1,353 @@
+{
+  "SSL (4 команд)": {
+    "category": "SSL (4 команд)",
+    "total_commands": 4,
+    "successful_info": 4,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "ssl_cert_generate": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssl_cert_generate info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssl_cert_generate"
+        }
+      },
+      "ssl_cert_verify": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssl_cert_verify info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssl_cert_verify"
+        }
+      },
+      "ssl_cert_view": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssl_cert_view info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssl_cert_view"
+        }
+      },
+      "ssl_crl": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssl_crl info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssl_crl"
+        }
+      }
+    }
+  },
+  "VAST.AI (4 команд)": {
+    "category": "VAST.AI (4 команд)",
+    "total_commands": 4,
+    "successful_info": 4,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "vast_create": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command vast_create info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute vast_create"
+        }
+      },
+      "vast_destroy": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command vast_destroy info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute vast_destroy"
+        }
+      },
+      "vast_instances": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command vast_instances info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute vast_instances"
+        }
+      },
+      "vast_search": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command vast_search info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute vast_search"
+        }
+      }
+    }
+  },
+  "CERT (2 команд)": {
+    "category": "CERT (2 команд)",
+    "total_commands": 2,
+    "successful_info": 2,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "cert_key_pair": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command cert_key_pair info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute cert_key_pair"
+        }
+      },
+      "cert_request": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command cert_request info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute cert_request"
+        }
+      }
+    }
+  },
+  "GITHUB (2 команд)": {
+    "category": "GITHUB (2 команд)",
+    "total_commands": 2,
+    "successful_info": 2,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "github_create_repo": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command github_create_repo info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute github_create_repo"
+        }
+      },
+      "github_list_repos": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command github_list_repos info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute github_list_repos"
+        }
+      }
+    }
+  },
+  "SSH (2 команд)": {
+    "category": "SSH (2 команд)",
+    "total_commands": 2,
+    "successful_info": 2,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "ssh_connect": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssh_connect info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssh_connect"
+        }
+      },
+      "ssh_exec": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command ssh_exec info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute ssh_exec"
+        }
+      }
+    }
+  },
+  "EXAMPLE (2 команд)": {
+    "category": "EXAMPLE (2 команд)",
+    "total_commands": 2,
+    "successful_info": 2,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "example_di": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command example_di info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute example_di"
+        }
+      },
+      "example_unified_security": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command example_unified_security info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute example_unified_security"
+        }
+      }
+    }
+  },
+  "ОСТАЛЬНЫЕ БЛОКИ (по 1 команде)": {
+    "category": "ОСТАЛЬНЫЕ БЛОКИ (по 1 команде)",
+    "total_commands": 8,
+    "successful_info": 8,
+    "successful_execution": 0,
+    "failed_commands": [],
+    "command_results": {
+      "argocd_init": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command argocd_init info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute argocd_init"
+        }
+      },
+      "base_unified": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command base_unified info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute base_unified"
+        }
+      },
+      "crl_operations": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command crl_operations info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute crl_operations"
+        }
+      },
+      "kind_cluster": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command kind_cluster info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute kind_cluster"
+        }
+      },
+      "llm_inference": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command llm_inference info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute llm_inference"
+        }
+      },
+      "mtls_roles": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command mtls_roles info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute mtls_roles"
+        }
+      },
+      "security": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command security info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute security"
+        }
+      },
+      "system_monitor": {
+        "info": {
+          "status": "success",
+          "data": null,
+          "message": "Command system_monitor info retrieved successfully"
+        },
+        "execution": {
+          "status": "error",
+          "error": "HTTP 404: {\"detail\":\"Not Found\"}",
+          "message": "Failed to execute system_monitor"
+        }
+      }
+    }
+  }
+}

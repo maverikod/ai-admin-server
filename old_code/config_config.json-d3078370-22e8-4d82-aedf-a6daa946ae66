@@ -1,0 +1,419 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8060,
+    "debug": false,
+    "log_level": "INFO",
+    "protocol": "mtls",
+    "advertised_host": "172.28.0.1",
+    "servername": "vast_srv",
+    "ssl": {
+      "cert": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/server/code-analysis-server.crt",
+      "key": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/server/code-analysis-server.key",
+      "ca": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/ca/ca.crt",
+      "crl": null,
+      "dnscheck": false,
+      "check_hostname": false
+    }
+  },
+  "github": {
+    "username": "maverikod",
+    "token": "<REDACTED>"
+  },
+  "git": {
+    "ssh_keys_dir": "~/.ssh",
+    "default_ssh_key": "id_ed25519",
+    "ssh_agent_timeout": 300,
+    "auto_setup_ssh_agent": true,
+    "preferred_key_type": "ed25519",
+    "github_token": "<REDACTED>",
+    "gitlab_token": null,
+    "bitbucket_token": null,
+    "force_flags": {
+      "push": "--force-with-lease",
+      "reset": "--hard",
+      "clean": "--force",
+      "checkout": "--force"
+    },
+    "yes_flags": {
+      "clean": "--yes",
+      "reset": "--yes",
+      "checkout": "--yes"
+    }
+  },
+  "docker": {
+    "username": "vasilyvz",
+    "token": "<REDACTED>",
+    "registry": "docker.io",
+    "auto_login": true
+  },
+  "vast": {
+    "api_key": "<REDACTED>",
+    "api_url": "https://console.vast.ai/api/v0"
+  },
+  "ollama": {
+    "host": "localhost",
+    "port": 11434,
+    "timeout": 30,
+    "models_cache_path": "/app/models",
+    "servers": {
+      "local": {
+        "host": "localhost",
+        "port": 11434,
+        "description": "Local Ollama server"
+      },
+      "remote1": {
+        "host": "192.168.1.100",
+        "port": 11434,
+        "description": "Remote Ollama server 1"
+      },
+      "remote2": {
+        "host": "10.0.0.50",
+        "port": 11434,
+        "description": "Remote Ollama server 2"
+      }
+    }
+  },
+  "kubernetes": {
+    "clusters_dir": "./kubeconfigs",
+    "certificates_dir": "./certificates",
+    "default_cluster": "local",
+    "clusters": {
+      "local": {
+        "name": "local",
+        "type": "k3s",
+        "host": "localhost",
+        "port": 6443,
+        "kubeconfig_path": "~/.kube/config",
+        "description": "Local K3s cluster",
+        "context": "default",
+        "insecure_skip_tls_verify": true,
+        "timeout": 30
+      },
+      "docker_k3s": {
+        "name": "docker_k3s",
+        "type": "k3s",
+        "host": "localhost",
+        "port": 6443,
+        "kubeconfig_path": "/tmp/k3s.yaml",
+        "description": "K3s cluster in Docker container",
+        "context": "default",
+        "insecure_skip_tls_verify": true,
+        "timeout": 30,
+        "container_name": "k3s-server"
+      },
+      "kind_cluster": {
+        "name": "kind_cluster",
+        "type": "kind",
+        "host": "localhost",
+        "port": 6443,
+        "kubeconfig_path": "~/.kube/config",
+        "description": "Kind cluster",
+        "context": "kind-kind",
+        "insecure_skip_tls_verify": true,
+        "timeout": 30
+      },
+      "minikube": {
+        "name": "minikube",
+        "type": "minikube",
+        "host": "localhost",
+        "port": 8443,
+        "kubeconfig_path": "~/.kube/config",
+        "description": "Minikube cluster",
+        "context": "minikube",
+        "insecure_skip_tls_verify": true,
+        "timeout": 30
+      }
+    },
+    "default_namespace": "default",
+    "auto_create_namespace": true,
+    "resource_limits": {
+      "cpu": "500m",
+      "memory": "512Mi"
+    },
+    "labels": {
+      "app": "ai-admin",
+      "managed-by": "ai-admin"
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "log_dir": "logs",
+    "max_size": "10MB",
+    "backup_count": 5
+  },
+  "commands": {
+    "auto_discovery": true,
+    "discovery_path": "ai_admin.commands",
+    "exclude_patterns": [
+      "__pycache__",
+      "*.pyc"
+    ],
+    "reload_on_change": false
+  },
+  "registration": {
+    "enabled": true,
+    "protocol": "mtls",
+    "register_url": "https://172.28.0.2:3004/register",
+    "unregister_url": "https://172.28.0.2:3004/unregister",
+    "heartbeat_interval": 30,
+    "server_id": "vast_srv",
+    "server_name": "vast_srv",
+    "instance_uuid": "8b5385ca-4a55-4fce-9a0f-3a7575165ae4",
+    "auto_on_startup": true,
+    "auto_on_shutdown": true,
+    "ssl": {
+      "cert": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/client/code-analysis.crt",
+      "key": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/client/code-analysis.key",
+      "ca": "/home/vasilyvz/projects/tools/code_analysis/mtls_certificates/mtls_certificates/ca/ca.crt",
+      "crl": null,
+      "dnscheck": false,
+      "check_hostname": false
+    },
+    "heartbeat": {
+      "url": "https://172.28.0.2:3004/proxy/heartbeat",
+      "interval": 30
+    }
+  },
+  "ssl": {
+    "enabled": false
+  },
+  "security": {
+    "enabled": false,
+    "auth": {
+      "enabled": false,
+      "methods": [
+        "api_key",
+        "jwt",
+        "certificate"
+      ],
+      "api_keys": {
+        "admin": "admin_key_123",
+        "user": "user_key_456",
+        "readonly": "readonly_key_789"
+      },
+      "jwt_secret": "your_jwt_secret_key_here",
+      "jwt_algorithm": "HS256",
+      "jwt_expiry_hours": 24
+    },
+    "permissions": {
+      "enabled": true,
+      "roles_file": "/home/vasilyvz/projects/vast_srv/config/roles.json"
+    }
+  },
+  "protocols": {
+    "enabled": true,
+    "allowed_protocols": [
+      "http"
+    ]
+  },
+  "ssh": {
+    "default_timeout": 30,
+    "default_port": 22,
+    "key_directory": "./test_ssh_keys",
+    "servers": {
+      "localhost": {
+        "host": "localhost",
+        "port": 22,
+        "username": "vasilyvz",
+        "key_path": "./test_ssh_keys/test_key",
+        "description": "Local SSH server for testing"
+      },
+      "test_server": {
+        "host": "127.0.0.1",
+        "port": 22,
+        "username": "test",
+        "key_path": "./test_ssh_keys/test_ed25519_key",
+        "description": "Test SSH server"
+      }
+    },
+    "security": {
+      "strict_host_key_checking": false,
+      "user_known_hosts_file": "/dev/null",
+      "connect_timeout": 30,
+      "server_alive_interval": 60,
+      "server_alive_count_max": 3
+    }
+  },
+  "ftp": {
+    "host": "localhost",
+    "port": 21,
+    "user": "ftp_user",
+    "password": "ftp_password",
+    "timeout": 30,
+    "passive_mode": true,
+    "ssl": {
+      "enabled": false,
+      "implicit": false,
+      "explicit": true,
+      "cert_file": "./certificates/ftp/client.crt",
+      "key_file": "./certificates/ftp/client.key",
+      "ca_file": "./certificates/ftp/ca.crt",
+      "verify_mode": "required"
+    },
+    "mtls": {
+      "enabled": false,
+      "client_cert": "./certificates/mtls/client.crt",
+      "client_key": "./certificates/mtls/client.key",
+      "ca_cert": "./certificates/mtls/ca.crt"
+    },
+    "servers": {
+      "default": {
+        "host": "localhost",
+        "port": 21,
+        "description": "Default FTP server"
+      },
+      "secure": {
+        "host": "secure.ftp.example.com",
+        "port": 990,
+        "ssl": {
+          "enabled": true,
+          "implicit": true
+        },
+        "description": "Secure FTP server with SSL"
+      }
+    }
+  },
+  "k3s": {
+    "default_token": "mysecret",
+    "default_port": 6443,
+    "default_image": "rancher/k3s:latest",
+    "certificate_management": {
+      "enabled": true,
+      "auto_replace_ca": true,
+      "token_file_path": "/var/lib/rancher/k3s/server/token"
+    }
+  },
+  "ai_admin": {
+    "application": {
+      "name": "AI Admin - Enhanced MCP Server",
+      "version": "2.0.0",
+      "environment": "production",
+      "description": "AI Admin server with command autodiscovery support to manage DockerHub, GitHub, Vast.ai GPU instances, and Kubernetes resources"
+    },
+    "features": {
+      "advanced_hooks": true,
+      "custom_commands": true,
+      "data_transformation": true,
+      "command_interception": false,
+      "performance_monitoring": true,
+      "custom_settings_manager": true,
+      "queue_system": true,
+      "ftp_operations": true,
+      "docker_operations": true,
+      "vast_operations": true,
+      "github_operations": true,
+      "kubernetes_operations": true,
+      "ollama_operations": true
+    },
+    "security": {
+      "enable_authentication": false,
+      "max_request_size": "15MB",
+      "rate_limiting": {
+        "enabled": true,
+        "requests_per_minute": 200,
+        "burst_limit": 50
+      },
+      "cors": {
+        "enabled": true,
+        "allowed_origins": [
+          "*"
+        ],
+        "allowed_methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE"
+        ]
+      }
+    },
+    "monitoring": {
+      "enable_metrics": true,
+      "metrics_interval": 30,
+      "health_check_interval": 15,
+      "log_level": "INFO",
+      "performance_tracking": {
+        "enabled": true,
+        "track_response_times": true,
+        "track_memory_usage": true
+      }
+    },
+    "custom_commands": {
+      "docker_build": {
+        "enabled": true,
+        "timeout": 300,
+        "parallel_builds": 2
+      },
+      "docker_push": {
+        "enabled": true,
+        "timeout": 600,
+        "retry_attempts": 3
+      },
+      "vast_search": {
+        "enabled": true,
+        "max_results": 50,
+        "default_filters": {
+          "verified": true,
+          "external": false
+        }
+      },
+      "ftp_operations": {
+        "enabled": true,
+        "timeout": 30,
+        "passive_mode": true,
+        "max_retries": 3
+      },
+      "queue_operations": {
+        "enabled": true,
+        "max_queue_size": 1000,
+        "worker_threads": 4,
+        "task_timeout": 300
+      }
+    },
+    "hooks": {
+      "docker_operations": {
+        "enabled": true,
+        "log_operations": true,
+        "validate_parameters": true
+      },
+      "vast_operations": {
+        "enabled": true,
+        "cost_monitoring": true,
+        "auto_cleanup": true
+      },
+      "ftp_operations": {
+        "enabled": true,
+        "validate_paths": true,
+        "log_transfers": true
+      },
+      "queue_operations": {
+        "enabled": true,
+        "monitor_performance": true,
+        "log_task_completion": true
+      }
+    },
+    "database": {
+      "enabled": false,
+      "type": "sqlite",
+      "connection_string": "sqlite:///ai_admin.db",
+      "pool_size": 10,
+      "max_overflow": 20
+    },
+    "cache": {
+      "enabled": true,
+      "type": "memory",
+      "ttl": 300,
+      "max_size": 1000
+    },
+    "api": {
+      "version": "v1",
+      "prefix": "/api/v1",
+      "documentation": {
+        "enabled": true,
+        "title": "AI Admin MCP API",
+        "description": "Advanced API for managing Docker, Vast.ai, FTP, GitHub, and Kubernetes resources"
+      }
+    }
+  }
+}

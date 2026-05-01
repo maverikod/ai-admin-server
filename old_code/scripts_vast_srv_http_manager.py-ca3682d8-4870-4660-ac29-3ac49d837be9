@@ -1,0 +1,381 @@
+"""Vast_srv AI Admin HTTP process manager (start/stop/restart/status).
+
+Manages the detached ``python -m ai_admin --config config/config.json`` process
+with a pidfile under ``logs/``. Reload via MCP does not reload Python code;
+use ``restart`` for a full process cycle.
+
+Only ``server.host`` and ``server.port`` are read from JSON for status and
+port-based discovery — secrets are not printed.
+
+Security note: the pidfile is world-readable under typical umask; acceptable for
+local development only.
+
+Linux: when the pidfile is missing or stale, optional fallback locates a
+listener on the configured port via ``/proc/net/tcp`` and ``/proc/*/fd``.
+Raw TLS listener checks without ``/proc`` access may be unavailable (e.g. some
+sandboxes); status documents ``listener_guess`` vs pidfile binding.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import signal
+import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+# Exit codes
+EX_OK = 0
+EX_ERROR = 1
+EX_ALREADY_RUNNING = 2
+
+# Relative to vast_srv project root (same layout as ``python -m ai_admin``)
+CONFIG_REL = "config/config.json"
+PIDFILE_REL = "logs/vast_srv_http.pid"
+LOG_REL = "logs/vast_srv_http.log"
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def _resolve_python(project: Path) -> str:
+    """Prefer project virtualenv interpreter if present."""
+    for rel in (".venv/bin/python", "venv/bin/python"):
+        candidate = project / rel
+        if candidate.is_file():
+            return str(candidate)
+    return sys.executable
+
+
+def load_server_endpoint(config_path: Path) -> Tuple[str, int]:
+    """Load only server.host and server.port from config JSON."""
+    if not config_path.is_file():
+        return ("0.0.0.0", 8060)
+    try:
+        with open(config_path, "r", encoding="utf-8") as fh:
+            data: Dict[str, Any] = json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        return ("0.0.0.0", 8060)
+    srv = data.get("server") or {}
+    host = str(srv.get("host", "0.0.0.0"))
+    port = int(srv.get("port", 8060))
+    return (host, port)
+
+
+def read_pidfile(pidfile: Path) -> Optional[int]:
+    try:
+        if not pidfile.is_file():
+            return None
+        return int(pidfile.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+
+
+def is_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _read_cmdline(pid: int) -> str:
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return ""
+    return raw.replace(b"\x00", b" ").decode("utf-8", errors="replace").strip()
+
+
+def _linux_listen_inode_for_port(port: int) -> Optional[str]:
+    """Return inode string for a TCP LISTEN socket on port, or None."""
+    port_hex = f"{port:04X}"
+    try:
+        lines = Path("/proc/net/tcp").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines[1:]:
+        parts = line.split()
+        if len(parts) < 10:
+            continue
+        local, st, inode = parts[1], parts[3], parts[9]
+        if st != "0A":
+            continue
+        if not local.endswith(f":{port_hex}"):
+            continue
+        if inode.isdigit():
+            return inode
+    return None
+
+
+def find_pid_by_listen_port_linux(port: int) -> Optional[int]:
+    """Linux-only: map listening port -> pid via /proc (pure Python)."""
+    inode = _linux_listen_inode_for_port(port)
+    if inode is None:
+        return None
+    needle = f"socket:[{inode}]"
+    try:
+        for proc in Path("/proc").iterdir():
+            if not proc.name.isdigit():
+                continue
+            fd_dir = proc / "fd"
+            if not fd_dir.is_dir():
+                continue
+            try:
+                for fd in fd_dir.iterdir():
+                    try:
+                        if os.readlink(fd) == needle:
+                            return int(proc.name)
+                    except OSError:
+                        continue
+            except OSError:
+                continue
+    except OSError:
+        return None
+    return None
+
+
+def find_ai_admin_pid_by_port(port: int) -> Optional[int]:
+    """If a listener on ``port`` looks like ``ai_admin``, return its pid."""
+    pid = find_pid_by_listen_port_linux(port)
+    if pid is None:
+        return None
+    cmd = _read_cmdline(pid)
+    if "ai_admin" in cmd:
+        return pid
+    return None
+
+
+def proc_start_time_monotonic(pid: int) -> Optional[float]:
+    """Best-effort process start time (epoch seconds), Linux /proc."""
+    try:
+        stat_path = Path(f"/proc/{pid}/stat")
+        data = stat_path.read_text()
+    except OSError:
+        return None
+    rparen = data.rfind(")")
+    if rparen == -1:
+        return None
+    rest = data[rparen + 2 :].split()
+    try:
+        starttime_ticks = int(rest[19])
+    except (IndexError, ValueError):
+        return None
+    try:
+        clk_tck = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+    except (AttributeError, OSError, ValueError):
+        clk_tck = 100
+    try:
+        with open("/proc/stat", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("btime "):
+                    boot = float(line.split()[1])
+                    return boot + starttime_ticks / float(clk_tck)
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def cmd_status(project: Path, config_path: Path, pidfile: Path) -> int:
+    """Print pid, port, uptime hint; exit 0."""
+    host, port = load_server_endpoint(config_path)
+    pid = read_pidfile(pidfile)
+    stale = False
+    if pid is not None and not is_alive(pid):
+        stale = True
+    listen_pid = find_ai_admin_pid_by_port(port)
+    print(f"config: {config_path} (host={host} port={port})")
+    print(f"pidfile: {pidfile} exists={pidfile.is_file()}")
+    if pid is not None:
+        print(f"pidfile_pid: {pid} alive={is_alive(pid) if not stale else False}")
+        if stale:
+            print("pidfile: STALE (process gone)")
+    else:
+        print("pidfile_pid: (none)")
+    if listen_pid is not None:
+        print(f"listener_pid (ai_admin on :{port}): {listen_pid}")
+        st = proc_start_time_monotonic(listen_pid)
+        if st is not None:
+            up = max(0.0, time.time() - st)
+            print(f"uptime_seconds (approx): {up:.1f}")
+    else:
+        print("listener_pid: (not found via /proc or no LISTEN on port)")
+    if pid is not None and listen_pid is not None and pid != listen_pid and is_alive(pid):
+        print(
+            "note: pidfile pid differs from listener pid — possible double start",
+            file=sys.stderr,
+        )
+    return EX_OK
+
+
+def cmd_start(
+    project: Path, config_path: Path, pidfile: Path, log_path: Path
+) -> int:
+    """Detach-start ai_admin; write pidfile."""
+    _, port = load_server_endpoint(config_path)
+    pid = read_pidfile(pidfile)
+    if pid is not None and is_alive(pid):
+        print(f"already running (pid {pid} from pidfile)", file=sys.stderr)
+        return EX_ALREADY_RUNNING
+    listen_pid = find_ai_admin_pid_by_port(port)
+    if listen_pid is not None:
+        print(
+            f"port {port} already has ai_admin listener (pid {listen_pid})",
+            file=sys.stderr,
+        )
+        return EX_ALREADY_RUNNING
+    if pid is not None:
+        try:
+            pidfile.unlink()
+        except OSError:
+            pass
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    py = _resolve_python(project)
+    if not config_path.is_file():
+        print(f"config not found: {config_path}", file=sys.stderr)
+        return EX_ERROR
+    cmd = [py, "-m", "ai_admin", "--config", str(config_path)]
+    with open(log_path, "a", encoding="utf-8") as log_f:
+        proc = subprocess_run_detached(cmd, project, log_f)
+    pidfile.parent.mkdir(parents=True, exist_ok=True)
+    pidfile.write_text(str(proc.pid), encoding="utf-8")
+    print(f"started pid={proc.pid} log={log_path}")
+    return EX_OK
+
+
+def subprocess_run_detached(
+    cmd: list, cwd: Path, log_f: Any
+) -> "subprocess.Popen[bytes]":
+    import subprocess
+
+    return subprocess.Popen(
+        cmd,
+        cwd=str(cwd),
+        stdout=log_f,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+
+
+def stop_process(
+    pid: int, term_timeout: float = 10.0
+) -> None:
+    import errno
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError as exc:
+        if exc.errno == errno.ESRCH:
+            return
+        raise
+    deadline = time.monotonic() + term_timeout
+    while time.monotonic() < deadline:
+        if not is_alive(pid):
+            return
+        time.sleep(0.2)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError as exc:
+        if exc.errno != errno.ESRCH:
+            raise
+
+
+def cmd_stop(
+    project: Path, config_path: Path, pidfile: Path, use_port_fallback: bool
+) -> int:
+    """SIGTERM / SIGKILL; remove pidfile."""
+    _, port = load_server_endpoint(config_path)
+    pid = read_pidfile(pidfile)
+    if pid is None or not is_alive(pid):
+        if pid is not None and pidfile.is_file():
+            try:
+                pidfile.unlink()
+            except OSError:
+                pass
+        if use_port_fallback:
+            alt = find_ai_admin_pid_by_port(port)
+            if alt is not None:
+                print(f"stopping pid {alt} (from port {port} fallback)")
+                stop_process(alt)
+                return EX_OK
+        print("not running (no live pid from pidfile)")
+        return EX_OK
+    print(f"stopping pid {pid}")
+    stop_process(pid)
+    if pidfile.is_file():
+        try:
+            pidfile.unlink()
+        except OSError as exc:
+            print(f"warn: could not remove pidfile: {exc}", file=sys.stderr)
+    return EX_OK
+
+
+def cmd_restart(
+    project: Path, config_path: Path, pidfile: Path, log_path: Path
+) -> int:
+    rc = cmd_stop(project, config_path, pidfile, use_port_fallback=True)
+    if rc != EX_OK:
+        return rc
+    time.sleep(0.5)
+    return cmd_start(project, config_path, pidfile, log_path)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description="Manage vast_srv AI Admin HTTP (Hypercorn) process.",
+    )
+    p.add_argument(
+        "--config",
+        default=CONFIG_REL,
+        help=f"Config path relative to project root (default: {CONFIG_REL})",
+    )
+    p.add_argument(
+        "--pidfile",
+        default=PIDFILE_REL,
+        help=f"Pidfile relative to project root (default: {PIDFILE_REL})",
+    )
+    p.add_argument(
+        "--log",
+        default=LOG_REL,
+        help=f"Server stdout/stderr log (default: {LOG_REL})",
+    )
+    sub = p.add_subparsers(dest="command", required=True)
+    sub.add_parser("status", help="Show pid, port, listener guess, uptime hint")
+    sub.add_parser("start", help="Start detached server if not running")
+    p_stop = sub.add_parser("stop", help="Stop server (SIGTERM, then SIGKILL)")
+    p_stop.add_argument(
+        "--no-port-fallback",
+        action="store_true",
+        help="Do not resolve pid from listening port if pidfile missing",
+    )
+    sub.add_parser("restart", help="stop then start")
+    return p
+
+
+def main(argv: Optional[list] = None) -> int:
+    argv = argv if argv is not None else sys.argv[1:]
+    project = _project_root()
+    ns = build_parser().parse_args(argv)
+    cfg = (project / ns.config).resolve()
+    pidf = project / ns.pidfile
+    logp = project / ns.log
+    if ns.command == "status":
+        return cmd_status(project, cfg, pidf)
+    if ns.command == "start":
+        return cmd_start(project, cfg, pidf, logp)
+    if ns.command == "stop":
+        return cmd_stop(project, cfg, pidf, use_port_fallback=not ns.no_port_fallback)
+    if ns.command == "restart":
+        return cmd_restart(project, cfg, pidf, logp)
+    return EX_ERROR
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

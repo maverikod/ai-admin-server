@@ -1,0 +1,29 @@
+"""Discover registration API and attempt live register call."""
+from __future__ import annotations
+
+import importlib
+import inspect
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def main() -> None:
+    mod = importlib.import_module(
+        "mcp_proxy_adapter.api.core.registration.context_builder"
+    )
+    names = [n for n in dir(mod) if not n.startswith("_")]
+    print("context_builder exports:", names)
+    for name in names:
+        obj = getattr(mod, name)
+        if callable(obj):
+            try:
+                sig = str(inspect.signature(obj))
+            except (TypeError, ValueError):
+                sig = "?"
+            print(f"  {name}{sig}")
+
+
+if __name__ == "__main__":
+    main()

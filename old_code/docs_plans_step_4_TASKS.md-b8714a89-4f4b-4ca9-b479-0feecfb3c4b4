@@ -1,0 +1,238 @@
+# STEP 4 TASKS — Atomic Instructions for Haiku
+# Pattern: same for each command. Variables change per domain.
+
+## VARIABLES (fill per domain before executing)
+```
+COMMAND_FILE  = "ai_admin/commands/vast_create_command.py"  # example
+COMMAND_CLASS = "VastCreateCommand"
+OLD_METHOD    = "add_vast_create_task"
+JOB_CLASS     = "VastJob"
+JOB_IMPORT    = "from ai_admin.jobs.vast_job import VastJob"
+JOB_OP        = "create"
+JOB_PARAMS    = {"operation": "create", "bundle_id": "...", ...}  # see per-command below
+```
+
+## Per-command variable table
+```
+| Command file                          | old method              | JobClass  | op        |
+|---------------------------------------|-------------------------|-----------|-----------|
+| commands/docker_build_command.py      | add_build_task          | DockerJob | build     |
+| commands/docker_push_command.py       | add_push_task           | DockerJob | push      |
+| commands/docker_pull_command.py       | add_pull_task           | DockerJob | pull      |
+| commands/git_clone_command.py         | add_git_task            | GitJob    | clone     |
+| commands/git_push_command.py          | add_git_task            | GitJob    | push      |
+| commands/git_pull_command.py          | add_git_task            | GitJob    | pull      |
+| ai_admin/commands/vast_create_command.py | add_vast_create_task | VastJob   | create    |
+| ai_admin/commands/vast_destroy_command.py| add_vast_destroy_task| VastJob   | destroy   |
+| commands/queue_cancel_task_command.py | cancel_task             | N/A       | stop_job  |
+| commands/queue_remove_task_command.py | remove_task             | N/A       | delete_job|
+```
+(Complete from dependency_matrix.md after Step 1.10)
+
+---
+
+## TASK SEQUENCE (repeat for EACH command file)
+
+### TASK A: Read command file
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<COMMAND_FILE>
+)
+```
+Locate:
+1. The `from ai_admin.task_queue.queue_manager import QueueManager` import line number
+2. The `QueueManager()` instantiation line number
+3. The `.<OLD_METHOD>(...)` call line number and all arguments passed
+
+### TASK B: Load file into CST
+```
+cst_load_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<COMMAND_FILE>
+)
+```
+Save: tree_id
+
+### TASK C: Find QueueManager import node
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="xpath",
+  query="ImportFrom[module='ai_admin.task_queue.queue_manager']"
+)
+```
+Save: import_node_id
+
+### TASK D: Replace import node with new imports
+```
+cst_modify_tree(
+  tree_id=<tree_id>,
+  operations=[{
+    "action": "replace",
+    "node_id": <import_node_id>,
+    "code_lines": [
+      "from ai_admin.queue import get_queue_integration",
+      "from ai_admin.jobs import <JOB_CLASS>"
+    ]
+  }]
+)
+```
+
+### TASK E: Find the execute() method
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="simple",
+  node_type="FunctionDef",
+  name="execute"
+)
+```
+Save: execute_node_id
+
+### TASK F: Get execute() source to identify exact lines to change
+```
+cst_get_node_info(
+  tree_id=<tree_id>,
+  node_id=<execute_node_id>,
+  include_code=True
+)
+```
+From the code: find the lines with `QueueManager()` and `.<OLD_METHOD>(...)`
+Note their character ranges.
+
+### TASK G: Get node for QueueManager instantiation line
+```
+cst_get_node_by_range(
+  tree_id=<tree_id>,
+  start_line=<qm_instantiation_line>,
+  end_line=<old_method_call_line>,
+  prefer_exact=False
+)
+```
+Save: block_node_id
+
+### TASK H: Replace QueueManager block with new code
+```
+cst_modify_tree(
+  tree_id=<tree_id>,
+  operations=[{
+    "action": "replace",
+    "node_id": <block_node_id>,
+    "code_lines": [
+      "integration = get_queue_integration()",
+      "job_id = f'<JOB_CLASS_LOWER>_{<relevant_param>}'",
+      "result = await integration.add_job(",
+      "    <JOB_CLASS>,",
+      "    job_id,",
+      "    {",
+      "        'operation': '<JOB_OP>',",
+      # add all params that were passed to OLD_METHOD:
+      "        '<param1>': <param1>,",
+      "        '<param2>': <param2>,",
+      "    }",
+      ")"
+    ]
+  }]
+)
+```
+
+### TASK I: Find return statement, update to return job_id
+Find the existing return statement in execute():
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="xpath",
+  query="function[name='execute'] Return"
+)
+```
+Replace with:
+```python
+code_lines = [
+  "return SuccessResult(data={",
+  "    'job_id': result.job_id,",
+  "    'status': result.status,",
+  "})"
+]
+```
+
+### TASK J: Save tree
+```
+cst_save_tree(
+  tree_id=<tree_id>,
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<COMMAND_FILE>,
+  backup=True,
+  validate=True
+)
+```
+Expected: success=True
+
+### TASK K: Lint
+```
+lint_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<COMMAND_FILE>
+)
+```
+Expected: error_count=0
+
+### TASK L: Typecheck
+```
+type_check_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<COMMAND_FILE>
+)
+```
+Document any errors.
+
+### TASK M: Update dependency_matrix.md
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="docs/plans/step_1/dependency_matrix.md"
+)
+```
+Find the row for this command. Change Status column from "TODO" to "DONE".
+```
+universal_file_replace(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="docs/plans/step_1/dependency_matrix.md",
+  start_line=<row_line>,
+  end_line=<row_line>,
+  new_lines=[<updated row with DONE status>]
+)
+```
+
+---
+
+## Special case: QueueCancelTaskCommand
+
+### TASK A-B: Read + CST load (same as above)
+
+### TASK C: Find cancel_task call
+```
+cst_find_node(tree_id=<tree_id>, search_type="xpath", query="Call[func='cancel_task']")
+```
+
+### TASK D: Replace with stop_job
+```
+code_lines = [
+  "result = await get_queue_integration().stop_job(task_id)"
+]
+```
+
+### TASK E-M: Save, lint, typecheck, update matrix (same as above)
+
+---
+
+## Special case: QueueRemoveTaskCommand
+Same as cancel, but replace `remove_task` with `delete_job`.
+
+---
+
+## DONE CHECK for Step 4
+- [ ] dependency_matrix.md: all rows show DONE
+- [ ] Zero files still import QueueManager (verify via find_usages)
+- [ ] lint passes on all modified command files
+- [ ] No NotImplementedError in any command execute()

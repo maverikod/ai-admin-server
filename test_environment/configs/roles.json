@@ -1,0 +1,65 @@
+{
+  "admin": {
+    "description": "Administrator role with full access",
+    "permissions": [
+      "read",
+      "write",
+      "execute",
+      "delete",
+      "admin",
+      "register",
+      "unregister",
+      "heartbeat",
+      "discover"
+    ],
+    "tokens": [
+      "test-token-123"
+    ]
+  },
+  "user": {
+    "description": "User role with limited access",
+    "permissions": [
+      "read",
+      "execute",
+      "register",
+      "unregister",
+      "heartbeat",
+      "discover"
+    ],
+    "tokens": [
+      "user-token-456"
+    ]
+  },
+  "readonly": {
+    "description": "Read-only role",
+    "permissions": [
+      "read",
+      "discover"
+    ],
+    "tokens": [
+      "readonly-token-123"
+    ]
+  },
+  "guest": {
+    "description": "Guest role with read-only access",
+    "permissions": [
+      "read",
+      "discover"
+    ],
+    "tokens": [
+      "guest-token-123"
+    ]
+  },
+  "proxy": {
+    "description": "Proxy role for registration",
+    "permissions": [
+      "register",
+      "unregister",
+      "heartbeat",
+      "discover"
+    ],
+    "tokens": [
+      "proxy-token-123"
+    ]
+  }
+}

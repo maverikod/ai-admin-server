@@ -1,0 +1,158 @@
+"""Server setup utilities for AI Admin.
+
+This module provides functions for setting up hooks, dependency injection,
+and proxy registration for the AI Admin server.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+from ai_admin.core.custom_exceptions import CustomError
+"""Server setup utilities for AI Admin.
+
+This module provides functions for setting up hooks, dependency injection,
+and proxy registration for the AI Admin server.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import asyncio
+import logging
+from mcp_proxy_adapter.commands.command_registry import registry
+from mcp_proxy_adapter.commands.hooks import register_custom_commands_hook
+from mcp_proxy_adapter.commands import ProxyRegistrationCommand
+from mcp_proxy_adapter.config import config
+
+from ai_admin.hooks import register_ai_admin_hooks
+from ai_admin.dependency_injection import get_container
+from ai_admin.core.command_registry import custom_commands_hook, initialize_commands
+
+
+def setup_hooks():
+    """Setup hooks for AI Admin server."""
+    logger = logging.getLogger("ai_admin")
+    logger.info("Setting up AI Admin hooks...")
+
+    try:
+        # Register custom commands hook
+        register_custom_commands_hook(custom_commands_hook)
+
+        # Register AI Admin specific hooks
+        from mcp_proxy_adapter.commands.hooks import hooks
+
+        register_ai_admin_hooks(hooks)
+
+        logger.info("Registered: AI Admin hooks")
+    except CustomError as e:
+        logger.error(f"Failed to setup AI Admin hooks: {e}")
+        raise
+
+
+def setup_dependency_injection():
+    """Setup dependency injection for AI Admin server."""
+    logger = logging.getLogger("ai_admin")
+    logger.info("Setting up dependency injection...")
+
+    # Initialize the DI container
+    container = get_container()
+
+    # Register additional services if needed
+    try:
+        # Register logger service
+        container.register_singleton(type(logger), logger)
+
+        # Register registry service
+        container.register_singleton(type(registry), registry)
+
+        logger.info("✅ Dependency injection setup completed")
+
+    except CustomError as e:
+        logger.warning(f"⚠️ Some services could not be registered in DI container: {e}")
+
+
+def setup_proxy_registration():
+    """Setup proxy registration for AI Admin server."""
+    logger = logging.getLogger("ai_admin")
+    logger.info("Setting up proxy registration...")
+
+    try:
+        # Configure proxy registration mode
+        config.configure_proxy_registration_mode("enabled")
+        logger.info("Proxy registration mode configured")
+
+        # Get proxy registration settings
+        proxy_config = config.get("proxy_registration", {})
+
+        if proxy_config.get("enabled", False):
+            logger.info("Proxy registration is enabled")
+
+            # Register with proxy server if auto_register_on_startup is enabled
+            if proxy_config.get("auto_register_on_startup", False):
+                asyncio.run(register_with_proxy(proxy_config))
+        else:
+            logger.info("Proxy registration is disabled")
+
+    except CustomError as e:
+        logger.warning(f"Failed to setup proxy registration: {e}")
+        logger.info("Continuing without proxy registration")
+
+
+async def register_with_proxy(proxy_config):
+    """Register AI Admin server with proxy server."""
+    logger = logging.getLogger("ai_admin")
+
+    try:
+        # Create proxy registration command instance
+        proxy_cmd = ProxyRegistrationCommand()
+
+        # Prepare registration data
+        registration_data = {
+            "action": "register",
+            "server_url": proxy_config.get("server_url", "http://127.0.0.1:3004/proxy"),
+            "auth_method": proxy_config.get("auth_method", "token"),
+            "token": proxy_config.get("token", "ai_admin_proxy_token_123"),
+            "proxy_info": proxy_config.get("proxy_info", {}),
+            "heartbeat": proxy_config.get("heartbeat", {}),
+            "retry": proxy_config.get("retry", {}),
+        }
+
+        # Execute registration
+        result = await proxy_cmd.execute(**registration_data)
+
+        if hasattr(result, "success") and result.success:
+            logger.info("Successfully registered with proxy server")
+            logger.info(f"Registration result: {result.data}")
+        else:
+            logger.warning(f"Failed to register with proxy server: {result}")
+
+    except CustomError as e:
+        logger.error(f"Error during proxy registration: {e}")
+
+
+async def unregister_from_proxy(proxy_config):
+    """Unregister AI Admin server from proxy server."""
+    logger = logging.getLogger("ai_admin")
+
+    try:
+        # Create proxy registration command instance
+        proxy_cmd = ProxyRegistrationCommand()
+
+        # Prepare unregistration data
+        unregistration_data = {
+            "action": "unregister",
+            "server_url": proxy_config.get("server_url", "http://127.0.0.1:3004/proxy"),
+            "auth_method": proxy_config.get("auth_method", "token"),
+            "token": proxy_config.get("token", "ai_admin_proxy_token_123"),
+            "proxy_info": proxy_config.get("proxy_info", {}),
+        }
+
+        # Execute unregistration
+        result = await proxy_cmd.execute(**unregistration_data)
+
+        if hasattr(result, "success") and result.success:
+            logger.info("Successfully unregistered from proxy server")
+        else:
+            logger.warning(f"Failed to unregister from proxy server: {result}")
+
+    except CustomError as e:
+        logger.error(f"Error during proxy unregistration: {e}")

@@ -1,0 +1,231 @@
+# STEP 6 TASKS — Atomic Instructions for Haiku
+
+## 6.1–6.3: QueueManager Deduplication
+
+### TASK 1
+Get method list of QueueManager from impl:
+```
+list_class_methods(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  class_name="QueueManager"
+)
+```
+Note: may return methods from both files. Look at file_path in each result.
+Filter to keep only those from queue_manager_impl.py.
+Save: `methods_impl`
+
+### TASK 2
+Find queue_manager.py (root duplicate):
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/task_queue/queue_manager.py"
+)
+```
+If count=0: file already deleted. Skip to 6.4.
+
+### TASK 3
+Search for any import pointing to root queue_manager.py:
+```
+fulltext_search(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  query="from ai_admin.task_queue.queue_manager import"
+)
+```
+For each result: check if it imports from the root file vs package.
+If any import from root file: use CST to update it to package path first.
+
+### TASK 4
+Delete root queue_manager.py:
+```
+delete_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/task_queue/queue_manager.py"
+)
+```
+
+### TASK 5
+Verify deleted:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/task_queue/queue_manager.py"
+)
+```
+Expected: count=0
+
+## 6.4–6.5: FTP verification (should already be done in Step 2.7)
+
+### TASK 1
+Check FtpJob file exists:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/jobs/ftp_job.py"
+)
+```
+Expected: count=1
+
+### TASK 2
+Verify no NotImplementedError in FtpJob:
+```
+fulltext_search(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  query="NotImplementedError"
+)
+```
+Filter to ai_admin/jobs/ftp_job.py hits only.
+Expected: 0 hits
+
+## 6.6: Remove stale QueueManagerError subclasses
+
+### TASK 1
+```
+get_class_hierarchy(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  class_name="QueueManagerError"
+)
+```
+Save: children list
+
+### TASK 2
+For each child class in hierarchy:
+```
+find_usages(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  target_name=<child_class_name>,
+  target_type="class"
+)
+```
+If usages exist outside deleted code: keep the class.
+If zero usages: mark for deletion.
+
+### TASK 3
+For each class marked for deletion:
+Get file_path via get_code_entity_info
+Load file into CST
+Find class node via cst_find_node
+Delete node via cst_modify_tree
+Save tree
+
+## 6.7: Final audit for direct QueueManager() calls
+
+### TASK 1
+```
+fulltext_search(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  query="QueueManager()"
+)
+```
+Expected: 0 results outside ai_admin/queue/integration.py
+If any found: go back to Step 4 pattern for that file.
+
+## 6.8: Fix validate_log_path duplication
+
+### TASK 1
+Find all 3 definitions:
+```
+find_usages(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  target_name="validate_log_path",
+  target_type="function"
+)
+```
+Save: 3 file_paths + line numbers
+
+### TASK 2
+Read the function body from first occurrence:
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<first_file>,
+  start_line=<line>,
+  end_line=<line+15>
+)
+```
+
+### TASK 3
+Create ai_admin/core/log_utils.py:
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/core/log_utils.py",
+  content="""\
+\"\"\"Logging utilities.\"\"\"
+
+from pathlib import Path
+
+
+def validate_log_path(path: str) -> bool:
+    \"\"\"Validate log file path.
+
+    Args:
+        path: File path to validate.
+
+    Returns:
+        True if path is valid, False otherwise.
+    \"\"\"
+    # <paste exact body from TASK 2>
+    raise NotImplementedError('paste from core/config_server.py')
+"""
+)
+```
+
+### TASK 4
+CST load log_utils.py, replace NotImplementedError stub with real body.
+Save tree.
+
+### TASK 5
+For each of the 3 original files:
+- CST load file
+- Find validate_log_path FunctionDef node
+- Replace with: `from ai_admin.core.log_utils import validate_log_path`
+  (delete function, add import at top)
+- Save tree
+
+### TASK 6
+lint_code on each modified file
+
+## 6.9: Format all modified files
+
+### TASK 1
+For each file modified in Steps 4-6, run:
+```
+format_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<modified_file>
+)
+```
+Expected: formatted=True for each
+
+## 6.10: Typecheck and fix arg-type errors
+
+### TASK 1
+For each file in ai_admin/commands/ and ai_admin/jobs/:
+```
+type_check_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<file>
+)
+```
+
+### TASK 2
+For each arg-type error:
+- Read the error line
+- CST load the file
+- Find the node with wrong type
+- Fix the type annotation or add cast
+- Save tree
+
+### TASK 3
+For each override error:
+- The method signature must match parent class
+- Fix by adjusting parameter types to match QueueJobBase.run() signature
+
+## DONE CHECK for Step 6
+- [ ] queue_manager.py (root duplicate) deleted
+- [ ] FtpJob has zero NotImplementedError
+- [ ] validate_log_path extracted to log_utils.py
+- [ ] fulltext_search("QueueManager()") = 0 outside integration.py
+- [ ] format_code run on all modified files
+- [ ] lint_code passes on all files in ai_admin/commands/ and ai_admin/jobs/

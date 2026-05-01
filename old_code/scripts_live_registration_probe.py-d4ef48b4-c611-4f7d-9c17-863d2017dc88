@@ -1,0 +1,16 @@
+"""RegistrationManager API."""
+from __future__ import annotations
+
+import inspect
+
+from mcp_proxy_adapter.api.core.registration_manager.manager import RegistrationManager
+
+for n in sorted(dir(RegistrationManager)):
+    if n.startswith("_"):
+        continue
+    a = getattr(RegistrationManager, n)
+    if callable(a):
+        try:
+            print(n, inspect.signature(a))
+        except Exception:
+            print(n)

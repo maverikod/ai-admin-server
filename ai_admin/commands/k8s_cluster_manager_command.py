@@ -1,0 +1,343 @@
+"""K8s cluster manager command."""
+
+from ai_admin.core.custom_exceptions import CustomError
+
+"""Kubernetes cluster manager command for managing clusters.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+
+import subprocess
+
+from typing import Dict, Any, Optional, List
+
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+
+from ai_admin.security.k8s_security_adapter import K8sSecurityAdapter, K8sOperation
+
+
+class K8sClusterManagerCommand:
+    """Universal command to manage Kubernetes clusters (k3s, kind, minikube) using Python libraries."""
+
+    name = "k8s_cluster_manager"
+
+    def __init__(self):
+        """Initialize K8s cluster manager command."""
+        super().__init__()
+        self.supported_types = ["k3s", "kind", "minikube"]
+        self.docker_client = None
+        self.security_adapter = K8sSecurityAdapter()
+
+        # Initialize Docker client
+        try:
+            import docker
+
+            self.docker_client = docker.from_env()
+        except CustomError:
+            self.docker_client = None
+
+    async def execute(
+        self,
+        action: str = "list",
+        cluster_type: Optional[str] = None,
+        cluster_name: Optional[str] = None,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute K8s cluster manager command with unified security.
+
+        Args:
+            action: Cluster action (list, create, delete, start, stop, status)
+            cluster_type: Type of cluster (k3s, kind, minikube)
+            cluster_name: Name of the cluster
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with cluster information
+        """
+        # Use unified security approach
+        return await super().execute(
+            action=action,
+            cluster_type=cluster_type,
+            cluster_name=cluster_name,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for K8s cluster manager command."""
+        return "k8s:cluster_manager"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute K8s cluster manager command logic."""
+        action = kwargs.get("action", "list")
+
+        if action == "list":
+            return await self._list_clusters(**kwargs)
+        elif action == "create":
+            return await self._create_cluster(**kwargs)
+        elif action == "delete":
+            return await self._delete_cluster(**kwargs)
+        elif action == "start":
+            return await self._start_cluster(**kwargs)
+        elif action == "stop":
+            return await self._stop_cluster(**kwargs)
+        elif action == "status":
+            return await self._get_cluster_status(**kwargs)
+        else:
+            raise CustomError(f"Unknown cluster action: {action}")
+
+    async def _list_clusters(
+        self,
+        cluster_type: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """List Kubernetes clusters."""
+        try:
+            clusters = []
+
+            if cluster_type == "kind" or cluster_type is None:
+                # List kind clusters
+                result = subprocess.run(
+                    ["kind", "get", "clusters"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0:
+                    for cluster_name in result.stdout.strip().split("\n"):
+                        if cluster_name.strip():
+                            clusters.append(
+                                {
+                                    "name": cluster_name.strip(),
+                                    "type": "kind",
+                                    "status": "running",
+                                }
+                            )
+
+            if cluster_type == "minikube" or cluster_type is None:
+                # List minikube clusters
+                result = subprocess.run(
+                    ["minikube", "profile", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.strip().split("\n"):
+                        if "minikube" in line and "Running" in line:
+                            clusters.append(
+                                {
+                                    "name": "minikube",
+                                    "type": "minikube",
+                                    "status": "running",
+                                }
+                            )
+
+            return {
+                "message": f"Found {len(clusters)} clusters",
+                "action": "list",
+                "cluster_type": cluster_type,
+                "clusters": clusters,
+                "count": len(clusters),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster list command timed out: {str(e)}")
+
+    async def _create_cluster(
+        self,
+        cluster_type: str,
+        cluster_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Create Kubernetes cluster."""
+        try:
+            if cluster_type == "kind":
+                cmd = ["kind", "create", "cluster", "--name", cluster_name]
+            elif cluster_type == "minikube":
+                cmd = ["minikube", "start", "--profile", cluster_name]
+            else:
+                raise CustomError(f"Unsupported cluster type: {cluster_type}")
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+            if result.returncode != 0:
+                raise CustomError(f"Cluster creation failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully created {cluster_type} cluster '{cluster_name}'",
+                "action": "create",
+                "cluster_type": cluster_type,
+                "cluster_name": cluster_name,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster creation command timed out: {str(e)}")
+
+    async def _delete_cluster(
+        self,
+        cluster_type: str,
+        cluster_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Delete Kubernetes cluster."""
+        try:
+            if cluster_type == "kind":
+                cmd = ["kind", "delete", "cluster", "--name", cluster_name]
+            elif cluster_type == "minikube":
+                cmd = ["minikube", "delete", "--profile", cluster_name]
+            else:
+                raise CustomError(f"Unsupported cluster type: {cluster_type}")
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+            if result.returncode != 0:
+                raise CustomError(f"Cluster deletion failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully deleted {cluster_type} cluster '{cluster_name}'",
+                "action": "delete",
+                "cluster_type": cluster_type,
+                "cluster_name": cluster_name,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster deletion command timed out: {str(e)}")
+
+    async def _start_cluster(
+        self,
+        cluster_type: str,
+        cluster_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Start Kubernetes cluster."""
+        try:
+            if cluster_type == "minikube":
+                cmd = ["minikube", "start", "--profile", cluster_name]
+            else:
+                raise CustomError(
+                    f"Start not supported for cluster type: {cluster_type}"
+                )
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+            if result.returncode != 0:
+                raise CustomError(f"Cluster start failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully started {cluster_type} cluster '{cluster_name}'",
+                "action": "start",
+                "cluster_type": cluster_type,
+                "cluster_name": cluster_name,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster start command timed out: {str(e)}")
+
+    async def _stop_cluster(
+        self,
+        cluster_type: str,
+        cluster_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Stop Kubernetes cluster."""
+        try:
+            if cluster_type == "minikube":
+                cmd = ["minikube", "stop", "--profile", cluster_name]
+            else:
+                raise CustomError(
+                    f"Stop not supported for cluster type: {cluster_type}"
+                )
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+
+            if result.returncode != 0:
+                raise CustomError(f"Cluster stop failed: {result.stderr}")
+
+            return {
+                "message": f"Successfully stopped {cluster_type} cluster '{cluster_name}'",
+                "action": "stop",
+                "cluster_type": cluster_type,
+                "cluster_name": cluster_name,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster stop command timed out: {str(e)}")
+
+    async def _get_cluster_status(
+        self,
+        cluster_type: str,
+        cluster_name: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Get Kubernetes cluster status."""
+        try:
+            if cluster_type == "kind":
+                cmd = ["kind", "get", "clusters"]
+            elif cluster_type == "minikube":
+                cmd = ["minikube", "status", "--profile", cluster_name]
+            else:
+                raise CustomError(
+                    f"Status not supported for cluster type: {cluster_type}"
+                )
+
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+
+            if result.returncode != 0:
+                raise CustomError(f"Cluster status check failed: {result.stderr}")
+
+            return {
+                "message": f"Cluster status for {cluster_type} cluster '{cluster_name}'",
+                "action": "status",
+                "cluster_type": cluster_type,
+                "cluster_name": cluster_name,
+                "status": result.stdout,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Cluster status command timed out: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for K8s cluster manager command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "description": "Cluster action (list, create, delete, start, stop, status)",
+                    "default": "list",
+                    "enum": ["list", "create", "delete", "start", "stop", "status"],
+                },
+                "cluster_type": {
+                    "type": "string",
+                    "description": "Type of cluster (k3s, kind, minikube)",
+                    "enum": ["k3s", "kind", "minikube"],
+                },
+                "cluster_name": {
+                    "type": "string",
+                    "description": "Name of the cluster",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "additionalProperties": False,
+        }

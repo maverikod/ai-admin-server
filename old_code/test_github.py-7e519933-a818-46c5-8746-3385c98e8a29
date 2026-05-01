@@ -1,0 +1,81 @@
+"""
+GitHub commands testing module.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import asyncio
+import aiohttp
+from typing import List, Dict, Any
+from rich.console import Console
+
+
+class GitHubTests:
+    """GitHub commands testing class."""
+    
+    def __init__(self, base_url: str, headers: Dict[str, str] = None):
+        self.base_url = base_url
+        self.headers = headers or {}
+        self.console = Console()
+    
+    async def test_github_list_repos(self) -> Dict[str, Any]:
+        """Test github_list_repos command."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.base_url}/cmd",
+                    headers=self.headers
+                ) as response:
+                    return {
+                        "command": "github_list_repos",
+                        "status": response.status,
+                        "success": response.status == 200,
+                        "response": await response.text()
+                    }
+        except Exception as e:
+            return {
+                "command": "github_list_repos",
+                "status": 0,
+                "success": False,
+                "response": str(e)
+            }
+    
+    async def test_github_create_repo(self) -> Dict[str, Any]:
+        """Test github_create_repo command."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{self.base_url}/cmd",
+                    json={
+                        "name": "test-repo",
+                        "description": "Test repository",
+                        "private": False,
+                        "user_roles": ["admin"]
+                    },
+                    headers=self.headers
+                ) as response:
+                    return {
+                        "command": "github_create_repo",
+                        "status": response.status,
+                        "success": response.status == 200,
+                        "response": await response.text()
+                    }
+        except Exception as e:
+            return {
+                "command": "github_create_repo",
+                "status": 0,
+                "success": False,
+                "response": str(e)
+            }
+    
+    async def run_all_tests(self) -> List[Dict[str, Any]]:
+        """Run all GitHub tests."""
+        self.console.print("[blue]Running GitHub tests...[/blue]")
+        
+        tests = [
+            await self.test_github_list_repos(),
+            await self.test_github_create_repo()
+        ]
+        
+        return tests

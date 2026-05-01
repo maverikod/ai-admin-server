@@ -1,0 +1,335 @@
+"""Command registry and custom commands hook for AI Admin.
+
+This module provides initialize_commands and custom_commands_hook for registering
+AI Admin commands with the MCP proxy.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+from ai_admin.core.custom_exceptions import CustomError
+
+"""Command registry for AI Admin server.
+
+This module provides functions for registering AI Admin custom commands
+and managing command initialization.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import logging
+from mcp_proxy_adapter.commands.command_registry import registry
+
+
+async def initialize_commands():
+    """
+    Initialize commands using the unified system initialization logic.
+    This function is used both at startup and during reload.
+
+    Returns:
+        Number of commands discovered.
+    """
+    try:
+        # Use the unified reload method from registry
+        result = await registry.reload_system()
+        return result["total_commands"]
+    except CustomError as e:
+        logger = logging.getLogger("ai_admin")
+        logger.error(f"Failed to initialize commands: {e}")
+        return 0
+
+
+def custom_commands_hook(registry):
+    """Hook function for registering AI Admin custom commands."""
+    logger = logging.getLogger("ai_admin")
+    logger.info("Registering AI Admin custom commands via hook...")
+
+    try:
+        # Import all AI Admin commands
+        from ai_admin.commands.system_monitor_command import SystemMonitorCommand
+        from ai_admin.commands.docker_build_command import DockerBuildCommand
+        from ai_admin.commands.docker_push_command import DockerPushCommand
+        from ai_admin.commands.docker_images_command import DockerImagesCommand
+        from ai_admin.commands.docker_search_command import DockerSearchCommand
+        from ai_admin.commands.docker_pull_command import DockerPullCommand
+        from ai_admin.commands.docker_remove_command import DockerRemoveCommand
+        from ai_admin.commands.docker_run_command import DockerRunCommand
+        from ai_admin.commands.docker_start_command import DockerStartCommand
+        from ai_admin.commands.docker_stop_command import DockerStopCommand
+        from ai_admin.commands.docker_rm_command import DockerRmCommand
+        from ai_admin.commands.docker_cp_command import DockerCpCommand
+        from ai_admin.commands.docker_volume_command import DockerVolumeCommand
+        from ai_admin.commands.docker_restart_command import DockerRestartCommand
+        from ai_admin.commands.argocd_init_command import ArgoCDInitCommand
+        from ai_admin.commands.docker_logs_command import DockerLogsCommand
+        from ai_admin.commands.docker_containers_command import DockerContainersCommand
+        from ai_admin.commands.docker_exec_command import DockerExecCommand
+        from ai_admin.commands.docker_inspect_command import DockerInspectCommand
+        from ai_admin.commands.ollama_show_command import OllamaShowCommand
+        from ai_admin.commands.ollama_remove_command import OllamaRemoveCommand
+        from ai_admin.commands.ollama_copy_command import OllamaCopyCommand
+        from ai_admin.commands.ollama_push_command import OllamaPushCommand
+        from ai_admin.commands.docker_tag_command import DockerTagCommand
+        from ai_admin.commands.docker_login_command import DockerLoginCommand
+        from ai_admin.commands.docker_hub_images_command import DockerHubImagesCommand
+        from ai_admin.commands.docker_hub_image_info_command import (
+            DockerHubImageInfoCommand,
+        )
+        from ai_admin.commands.docker_images_compare_command import (
+            DockerImagesCompareCommand,
+        )
+        from ai_admin.commands.docker_search_cli_command import DockerSearchCliCommand
+        from ai_admin.commands.docker_network_ls_command import DockerNetworkLsCommand
+        from ai_admin.commands.docker_network_inspect_command import (
+            DockerNetworkInspectCommand,
+        )
+        from ai_admin.commands.docker_network_create_command import (
+            DockerNetworkCreateCommand,
+        )
+        from ai_admin.commands.docker_network_connect_command import (
+            DockerNetworkConnectCommand,
+        )
+        from ai_admin.commands.docker_network_disconnect_command import (
+            DockerNetworkDisconnectCommand,
+        )
+        from ai_admin.commands.docker_network_rm_command import DockerNetworkRmCommand
+        from ai_admin.commands.vast_search_command import VastSearchCommand
+        from ai_admin.commands.vast_create_command import VastCreateCommand
+        from ai_admin.commands.vast_destroy_command import VastDestroyCommand
+        from ai_admin.commands.vast_instances_command import VastInstancesCommand
+        from ai_admin.commands.ftp_upload_command import FtpUploadCommand
+        from ai_admin.commands.ftp_download_command import FtpDownloadCommand
+        from ai_admin.commands.ftp_list_command import FtpListCommand
+        from ai_admin.commands.ftp_delete_command import FtpDeleteCommand
+        from ai_admin.commands.ftp_mkdir_command import FtpMkdirCommand
+        from ai_admin.commands.ftp_rename_command import FtpRenameCommand
+        from ai_admin.commands.ftp_info_command import FtpInfoCommand
+        from ai_admin.commands.ftp_test_command import FtpTestCommand
+        from ai_admin.commands.queue_push_command import QueuePushCommand
+        from ai_admin.commands.queue_status_command import QueueStatusCommand
+        from ai_admin.commands.queue_cancel_command import QueueCancelCommand
+        from ai_admin.commands.queue_task_status_command import QueueTaskStatusCommand
+        from ai_admin.commands.github_list_repos_command import GitHubListReposCommand
+        from ai_admin.commands.github_create_repo_command import GitHubCreateRepoCommand
+        from ai_admin.commands.git_clone_command import GitCloneCommand
+        from ai_admin.commands.git_status_command import GitStatusCommand
+        from ai_admin.commands.git_add_command import GitAddCommand
+        from ai_admin.commands.git_commit_command import GitCommitCommand
+        from ai_admin.commands.git_push_command import GitPushCommand
+        from ai_admin.commands.git_pull_command import GitPullCommand
+        from ai_admin.commands.git_branch_command import GitBranchCommand
+        from ai_admin.commands.git_checkout_command import GitCheckoutCommand
+        from ai_admin.commands.git_init_command import GitInitCommand
+        from ai_admin.commands.git_remote_command import GitRemoteCommand
+        from ai_admin.commands.git_reset_command import GitResetCommand
+        from ai_admin.commands.git_rebase_command import GitRebaseCommand
+        from ai_admin.commands.git_diff_command import GitDiffCommand
+        from ai_admin.commands.git_fetch_command import GitFetchCommand
+        from ai_admin.commands.git_merge_command import GitMergeCommand
+        from ai_admin.commands.git_log_command import GitLogCommand
+        from ai_admin.commands.git_show_command import GitShowCommand
+        from ai_admin.commands.git_tag_command import GitTagCommand
+        from ai_admin.commands.git_stash_command import GitStashCommand
+        from ai_admin.commands.git_clean_command import GitCleanCommand
+        from ai_admin.commands.git_config_command import GitConfigCommand
+        from ai_admin.commands.git_grep_command import GitGrepCommand
+        from ai_admin.commands.git_blame_command import GitBlameCommand
+        from ai_admin.commands.git_cherry_pick_command import GitCherryPickCommand
+        from ai_admin.commands.k8s_pod_status_command import K8sPodStatusCommand
+        from ai_admin.commands.k8s_deployment_create_command import (
+            K8sDeploymentCreateCommand,
+        )
+        from ai_admin.commands.k8s_service_create_command import K8sServiceCreateCommand
+        from ai_admin.commands.k8s_pod_create_command import K8sPodCreateCommand
+        from ai_admin.commands.k8s_pod_delete_command import K8sPodDeleteCommand
+        from ai_admin.commands.k8s_configmap_command import (
+            K8sConfigMapCreateCommand,
+        )
+        from ai_admin.commands.k8s_logs_command import (
+            K8sLogsCommand,
+        )
+        from ai_admin.commands.k8s_namespace_command import (
+            K8sNamespaceCommand,
+        )
+        from ai_admin.commands.k8s_cluster_command import K8sClusterCommand
+        from ai_admin.commands.kind_cluster_command import KindClusterCommand
+        from ai_admin.commands.k8s_cluster_manager_command import (
+            K8sClusterManagerCommand,
+        )
+        from ai_admin.commands.vector_store_deploy_command import (
+            VectorStoreDeployCommand,
+        )
+        from ai_admin.commands.k8s_mtls_setup_command import K8sMtlsSetupCommand
+        from ai_admin.commands.ssl_cert_generate_command import SSLCertGenerateCommand
+        from ai_admin.commands.ssl_cert_view_command import SSLCertViewCommand
+        from ai_admin.commands.ssl_cert_verify_command import SSLCertVerifyCommand
+        from ai_admin.commands.ssl_crl_command import SSLCrlCommand
+        from ai_admin.commands.cert_key_pair_command import CertKeyPairCommand
+        from ai_admin.commands.cert_request_command import CertRequestCommand
+        from ai_admin.commands.crl_operations_command import CRLOperationsCommand
+        from ai_admin.commands.example_di_command import ExampleDICommand
+        from ai_admin.commands.ollama_status_command import OllamaStatusCommand
+        from ai_admin.commands.ollama_models_command import OllamaModelsCommand
+        from ai_admin.commands.ollama_run_command import OllamaRunCommand
+        from ai_admin.commands.ollama_memory_command import OllamaMemoryCommand
+        from ai_admin.commands.ollama_test_command import OllamaTestCommand
+        from ai_admin.commands.ollama_generate_command import OllamaGenerateCommand
+        from ai_admin.commands.ollama_chat_command import OllamaChatCommand
+        from ai_admin.commands.ollama_embeddings_command import OllamaEmbeddingsCommand
+        from ai_admin.commands.ollama_create_command import OllamaCreateCommand
+        from ai_admin.commands.test_discovery_command import TestDiscoveryCommand
+        from ai_admin.commands.queue_manage_command import QueueManageCommand
+        from ai_admin.commands.queue_ssl_command import QueueSSLCommand
+        from ai_admin.commands.queue_statistics_command import QueueStatisticsCommand
+        from ai_admin.commands.queue_health_command import QueueHealthCommand
+        from ai_admin.commands.queue_clear_command import QueueClearCommand
+        from ai_admin.commands.queue_logs_command import QueueLogsCommand
+        from ai_admin.commands.queue_filter_command import QueueFilterCommand
+        from ai_admin.commands.queue_cancel_task_command import QueueCancelTaskCommand
+        from ai_admin.commands.queue_remove_task_command import QueueRemoveTaskCommand
+        from ai_admin.commands.config_command import ConfigCommand
+        from ai_admin.commands.security_command import SecurityCommand
+        from ai_admin.commands.mtls_roles_command import MtlsRolesCommand
+        from ai_admin.commands.get_methods_command import GetMethodsCommand
+        from mcp_proxy_adapter.commands import ProxyRegistrationCommand
+
+        # Register AI Admin commands
+        commands_to_register = [
+            SystemMonitorCommand,
+            DockerBuildCommand,
+            DockerPushCommand,
+            DockerImagesCommand,
+            DockerSearchCommand,
+            DockerPullCommand,
+            DockerRemoveCommand,
+            DockerRunCommand,
+            DockerStartCommand,
+            DockerStopCommand,
+            DockerRmCommand,
+            DockerCpCommand,
+            DockerVolumeCommand,
+            DockerRestartCommand,
+            ArgoCDInitCommand,
+            DockerLogsCommand,
+            DockerContainersCommand,
+            DockerExecCommand,
+            DockerInspectCommand,
+            OllamaShowCommand,
+            OllamaRemoveCommand,
+            OllamaCopyCommand,
+            OllamaPushCommand,
+            DockerTagCommand,
+            DockerLoginCommand,
+            DockerHubImagesCommand,
+            DockerHubImageInfoCommand,
+            DockerImagesCompareCommand,
+            DockerSearchCliCommand,
+            DockerNetworkLsCommand,
+            DockerNetworkInspectCommand,
+            DockerNetworkCreateCommand,
+            DockerNetworkConnectCommand,
+            DockerNetworkDisconnectCommand,
+            DockerNetworkRmCommand,
+            VastSearchCommand,
+            VastCreateCommand,
+            VastDestroyCommand,
+            VastInstancesCommand,
+            FtpUploadCommand,
+            FtpDownloadCommand,
+            FtpListCommand,
+            FtpDeleteCommand,
+            FtpMkdirCommand,
+            FtpRenameCommand,
+            FtpInfoCommand,
+            FtpTestCommand,
+            QueuePushCommand,
+            QueueStatusCommand,
+            QueueCancelCommand,
+            QueueTaskStatusCommand,
+            GitHubListReposCommand,
+            GitHubCreateRepoCommand,
+            GitCloneCommand,
+            GitStatusCommand,
+            GitAddCommand,
+            GitCommitCommand,
+            GitPushCommand,
+            GitPullCommand,
+            GitBranchCommand,
+            GitCheckoutCommand,
+            GitInitCommand,
+            GitRemoteCommand,
+            GitResetCommand,
+            GitRebaseCommand,
+            GitDiffCommand,
+            GitFetchCommand,
+            GitMergeCommand,
+            GitLogCommand,
+            GitShowCommand,
+            GitTagCommand,
+            GitStashCommand,
+            GitCleanCommand,
+            GitConfigCommand,
+            GitGrepCommand,
+            GitBlameCommand,
+            GitCherryPickCommand,
+            K8sPodStatusCommand,
+            K8sDeploymentCreateCommand,
+            OllamaStatusCommand,
+            OllamaModelsCommand,
+            OllamaRunCommand,
+            OllamaMemoryCommand,
+            OllamaTestCommand,
+            OllamaGenerateCommand,
+            OllamaChatCommand,
+            OllamaEmbeddingsCommand,
+            OllamaCreateCommand,
+            TestDiscoveryCommand,
+            QueueManageCommand,
+            QueueSSLCommand,
+            QueueStatisticsCommand,
+            QueueHealthCommand,
+            QueueClearCommand,
+            QueueLogsCommand,
+            QueueFilterCommand,
+            QueueCancelTaskCommand,
+            QueueRemoveTaskCommand,
+            ConfigCommand,
+            K8sPodCreateCommand,
+            K8sPodDeleteCommand,
+            K8sServiceCreateCommand,
+            K8sConfigMapCreateCommand,
+            K8sNamespaceCommand,
+            K8sLogsCommand,
+            K8sClusterCommand,
+            KindClusterCommand,
+            K8sClusterManagerCommand,
+            VectorStoreDeployCommand,
+            K8sMtlsSetupCommand,
+            SSLCertGenerateCommand,
+            SSLCertViewCommand,
+            SSLCertVerifyCommand,
+            SSLCrlCommand,
+            CertKeyPairCommand,
+            CertRequestCommand,
+            CRLOperationsCommand,
+            ExampleDICommand,
+            SecurityCommand,
+            MtlsRolesCommand,
+            GetMethodsCommand,
+            ProxyRegistrationCommand,
+        ]
+
+        for command_class in commands_to_register:
+            if not registry.command_exists(command_class.name):
+                registry.register_custom(command_class)
+                logger.info(f"Registered: {command_class.name} command")
+            else:
+                logger.debug(
+                    f"Command '{command_class.name}' is already registered, skipping"
+                )
+
+        logger.info(f"Total AI Admin commands registered: {len(commands_to_register)}")
+
+    except CustomError as e:
+        logger.error(f"Failed to register AI Admin commands: {e}")
+        raise

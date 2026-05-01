@@ -1,0 +1,409 @@
+# STEP 3 TASKS — Atomic Instructions for Haiku
+
+## CRITICAL: Python file creation
+**Use `cst_create_file` (NOT `create_text_file`) for all `.py` files.**
+`create_text_file` only supports `.md/.txt/.rst/.adoc` and will FAIL on `.py`.
+For `.py` files: `cst_create_file` → `cst_modify_tree` (insert code) → `cst_save_tree`.
+
+### TASK 1
+```
+project_pip_check(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  packages=["queuemgr"]
+)
+```
+Expected: present=True for queuemgr
+If present=False: go to TASK 2. Else: skip to TASK 4.
+
+### TASK 2 (only if not installed)
+```
+project_pip_install(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  packages=["queuemgr"]
+)
+```
+This is queued. Save job_id.
+
+### TASK 3 (only if TASK 2 ran)
+```
+queue_get_job_status(job_id=<from TASK 2>)
+```
+Poll until status=="completed". If failed: STOP and report error.
+
+### TASK 4
+```
+project_pip_show(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  packages=["queuemgr"]
+)
+```
+Save version string.
+
+### TASK 5
+Read requirements.txt:
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="requirements.txt"
+)
+```
+If queuemgr not in content: add line `queuemgr=={version}` via universal_file_replace.
+
+---
+
+## 3.2–3.3: Create integration.py and accessor
+
+### TASK 1
+Check if ai_admin/queue/ exists:
+```
+list_project_files(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  glob="ai_admin/queue/*"
+)
+```
+
+### TASK 2
+Create ai_admin/queue/__init__.py:
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/queue/__init__.py",
+  content="\"\"\"Queue integration package.\"\"\"
+
+from .integration import get_queue_integration, set_queue_integration
+
+__all__ = [\"get_queue_integration\", \"set_queue_integration\"]
+"
+)
+```
+
+### TASK 3
+Create ai_admin/queue/integration.py:
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/queue/integration.py",
+  content="""\
+\"\"\"Queue integration — wraps QueueManagerIntegration from mcp_proxy_adapter.\"\"\"
+
+from typing import Optional
+from mcp_proxy_adapter.queue.integration import QueueManagerIntegration
+
+_integration: Optional[QueueManagerIntegration] = None
+
+
+def get_queue_integration() -> QueueManagerIntegration:
+    \"\"\"Return running queue integration instance.
+
+    Raises:
+        RuntimeError: If integration not started via set_queue_integration().
+    \"\"\"
+    if _integration is None:
+        raise RuntimeError('Queue integration not started. Call set_queue_integration() in server startup.')
+    return _integration
+
+
+def set_queue_integration(integration: QueueManagerIntegration) -> None:
+    \"\"\"Register the running queue integration instance.
+
+    Args:
+        integration: Started QueueManagerIntegration instance.
+    \"\"\"
+    global _integration
+    _integration = integration
+"""
+)
+```
+
+### TASK 4
+Lint integration.py:
+```
+lint_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/queue/integration.py"
+)
+```
+Expected: error_count=0
+
+### TASK 5
+Type check integration.py:
+```
+type_check_code(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="ai_admin/queue/integration.py"
+)
+```
+
+---
+
+## 3.4–3.5: Wire into AIAdminServer startup/shutdown
+
+### TASK 1
+Find AIAdminServer class location:
+```
+get_code_entity_info(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  entity_type="class",
+  entity_name="AIAdminServer"
+)
+```
+Save: file_path, line
+
+### TASK 2
+Get AIAdminServer methods:
+```
+list_class_methods(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  class_name="AIAdminServer"
+)
+```
+Find: startup or lifespan or __init__ method. Save its line number.
+
+### TASK 3
+Read startup method body:
+```
+universal_file_read(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<server_file>,
+  start_line=<startup_line>,
+  end_line=<startup_line + 30>
+)
+```
+
+### TASK 4
+Load server file into CST:
+```
+cst_load_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<server_file_relative>
+)
+```
+Save: tree_id
+
+### TASK 5
+Find startup method node:
+```
+cst_find_node(
+  tree_id=<tree_id>,
+  search_type="simple",
+  node_type="FunctionDef",
+  name="<startup_method_name>"
+)
+```
+Save: node_id
+
+### TASK 6
+Get node info to see current code:
+```
+cst_get_node_info(
+  tree_id=<tree_id>,
+  node_id=<node_id>,
+  include_code=True
+)
+```
+
+### TASK 7
+Modify startup to add queue start (INSERT after existing startup logic):
+```
+cst_modify_tree(
+  tree_id=<tree_id>,
+  operations=[{
+    "action": "insert",
+    "target_node_id": <last_statement_in_startup>,
+    "position": "after",
+    "code_lines": [
+      "# Start queue integration",
+      "from ai_admin.queue import set_queue_integration",
+      "from mcp_proxy_adapter.queue.integration import QueueManagerIntegration",
+      "_queue = QueueManagerIntegration(in_memory=True, max_concurrent_jobs=4)",
+      "await _queue.start()",
+      "set_queue_integration(_queue)"
+    ]
+  }]
+)
+```
+
+### TASK 8
+Find shutdown method, add shutdown logic (same pattern as TASK 5-7):
+```python
+# Insert at START of shutdown:
+"from ai_admin.queue import get_queue_integration",
+"try:",
+"    await get_queue_integration().stop()",
+"except RuntimeError:",
+"    pass  # not started"
+```
+
+### TASK 9
+Save tree:
+```
+cst_save_tree(
+  tree_id=<tree_id>,
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path=<server_file_relative>,
+  backup=True,
+  validate=True
+)
+```
+
+### TASK 10
+Lint + typecheck server file:
+```
+lint_code(project_id=PROJ, file_path=<server_file>)
+type_check_code(project_id=PROJ, file_path=<server_file>)
+```
+
+---
+
+## 3.6–3.8: Configure limits via settings
+
+### TASK 1
+Find AIAdminSettingsManager:
+```
+get_code_entity_info(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  entity_type="class",
+  entity_name="AIAdminSettingsManager"
+)
+```
+Save: file_path
+
+### TASK 2
+Read settings file:
+```
+universal_file_read(project_id=PROJ, file_path=<settings_file>)
+```
+Check: is there a `queue` section? If not, need to add.
+
+### TASK 3
+Load settings file into CST:
+```
+cst_load_file(project_id=PROJ, file_path=<settings_file>)
+```
+Save: tree_id
+
+### TASK 4
+Find the class body or config dict where sections are defined.
+Add queue config block (INSERT at appropriate location):
+```
+code_lines = [
+  "# Queue configuration",
+  "queue_max_concurrent: int = 4",
+  "queue_max_size: Optional[int] = None",
+  "queue_retention_seconds: int = 21600"
+]
+```
+
+### TASK 5
+Save tree. Lint. Typecheck.
+
+### TASK 6
+Update server startup (3.4 TASK 7) to use settings values:
+```python
+"_queue = QueueManagerIntegration(",
+"    in_memory=True,",
+"    max_concurrent_jobs=settings.queue_max_concurrent,",
+"    max_queue_size=settings.queue_max_size,",
+"    completed_job_retention_seconds=settings.queue_retention_seconds",
+")"
+```
+(Use CST modify on server file again)
+
+---
+
+## 3.9: Add health endpoint
+
+### TASK 1
+Find where routes are registered in AIAdminServer (or its router file).
+```
+fulltext_search(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  query="app.include_router"
+)
+```
+Save: router registration location
+
+### TASK 2
+Read router file:
+```
+universal_file_read(project_id=PROJ, file_path=<router_file>)
+```
+
+### TASK 3
+Load router file into CST:
+```
+cst_load_file(project_id=PROJ, file_path=<router_file>)
+```
+
+### TASK 4
+Insert health route at module level:
+```
+code_lines = [
+  "@router.get('/queue/health')",
+  "async def queue_health():",
+  "    \\"\\"\\"Get queue system health.\\"\\"\\"",
+  "    from ai_admin.queue import get_queue_integration",
+  "    return await get_queue_integration().get_queue_health()"
+]
+```
+
+### TASK 5
+Save tree. Lint. Typecheck.
+
+---
+
+## 3.10: Smoke test
+
+### TASK 1
+Start server in background (via run_project_module or existing startup script)
+OR: write a standalone test script:
+```
+create_text_file(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  file_path="scripts/smoke_test_queue.py",
+  content="""\
+import asyncio
+from mcp_proxy_adapter.queue.integration import QueueManagerIntegration
+from ai_admin.jobs.system_job import SystemJob
+
+async def main():
+    q = QueueManagerIntegration(in_memory=True, max_concurrent_jobs=1)
+    await q.start()
+    result = await q.add_job(SystemJob, 'smoke_1', {
+        'operation_type': 'system_monitor',
+        'include_gpu': False,
+        'include_temperature': False,
+        'include_processes': False
+    })
+    print('Added job:', result)
+    await asyncio.sleep(3)
+    status = await q.get_job_status('smoke_1')
+    print('Status:', status)
+    await q.stop()
+    print('DONE')
+
+asyncio.run(main())
+"""
+)
+```
+
+### TASK 2
+Run the smoke test:
+```
+run_project_script(
+  project_id="c86dded6-6f93-4fb0-be54-b6d7b739eeb9",
+  script_path="scripts/smoke_test_queue.py"
+)
+```
+Expected output contains: "DONE" and status shows completed/running
+If error: read output, fix integration wiring, retry.
+
+## DONE CHECK for all Step 3
+- [ ] queuemgr installed and version pinned
+- [ ] ai_admin/queue/integration.py created
+- [ ] get/set_queue_integration() working
+- [ ] AIAdminServer startup calls integration.start()
+- [ ] AIAdminServer shutdown calls integration.stop()
+- [ ] Settings have queue section
+- [ ] /queue/health endpoint added
+- [ ] Smoke test passes (status=completed)

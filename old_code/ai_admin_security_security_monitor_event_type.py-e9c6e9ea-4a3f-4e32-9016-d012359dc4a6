@@ -1,0 +1,37 @@
+"""Module event_type."""
+
+from ai_admin.core.custom_exceptions import CustomError
+from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+from dataclasses import dataclass, asdict
+from enum import Enum
+import logging
+from ai_admin.settings_manager import get_settings_manager
+pass  # SecuritySeverity imported where needed to avoid circular import
+pass  # SecurityEvent imported where needed
+from .alert import SecurityAlert
+from .monitor import SecurityMonitor
+from .metrics import SecurityMetrics
+
+class SecurityEventType(Enum):
+    """Security event types."""
+
+    AUTHENTICATION_SUCCESS = "auth_success"
+    AUTHENTICATION_FAILURE = "auth_failure"
+    AUTHORIZATION_SUCCESS = "authz_success"
+    AUTHORIZATION_FAILURE = "authz_failure"
+    OPERATION_SUCCESS = "operation_success"
+    OPERATION_FAILURE = "operation_failure"
+    PERMISSION_DENIED = "permission_denied"
+    SUSPICIOUS_ACTIVITY = "suspicious_activity"
+    RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
+    INVALID_INPUT = "invalid_input"
+    SYSTEM_ERROR = "system_error"
+    CONFIGURATION_CHANGE = "config_change"
+    CERTIFICATE_ISSUE = "certificate_issue"
+    SSL_ERROR = "ssl_error"
+    NETWORK_ANOMALY = "network_anomaly"
+
+
+

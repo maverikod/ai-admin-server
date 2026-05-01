@@ -1,0 +1,27 @@
+"""Module severity."""
+
+from ai_admin.core.custom_exceptions import CustomError
+from typing import Dict, Any, Optional, List, Tuple
+from datetime import datetime, timedelta
+from collections import defaultdict, deque
+from dataclasses import dataclass, asdict
+from enum import Enum
+import logging
+from ai_admin.settings_manager import get_settings_manager
+from .event_type import SecurityEventType
+from .event import SecurityEvent
+from .alert import SecurityAlert
+from .monitor import SecurityMonitor
+from .metrics import SecurityMetrics
+
+class SecuritySeverity(Enum):
+    """Security severity levels."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+@dataclass
+

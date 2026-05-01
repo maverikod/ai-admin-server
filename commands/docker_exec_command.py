@@ -1,0 +1,198 @@
+from mcp_proxy_adapter.core.errors import CommandError as CustomError
+"""Docker exec command for executing commands in containers.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerExecCommand(BaseUnifiedCommand):
+    """Execute commands in Docker containers.
+
+    This command allows executing arbitrary commands inside running Docker containers.
+    """
+
+    name = "docker_exec"
+
+    def __init__(self):
+        """Initialize Docker exec command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        container: str,
+        command: str,
+        user: Optional[str] = None,
+        workdir: Optional[str] = None,
+        env: Optional[List[str]] = None,
+        detach: bool = False,
+        interactive: bool = False,
+        tty: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker exec command with unified security.
+
+        Args:
+            container: Container name or ID
+            command: Command to execute
+            user: User to run command as
+            workdir: Working directory
+            env: Environment variables
+            detach: Run in background
+            interactive: Keep STDIN open
+            tty: Allocate a pseudo-TTY
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success or error result
+        """
+        # Validate inputs
+        if not container or not command:
+            return ErrorResult(message="Container and command are required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            container=container,
+            command=command,
+            user=user,
+            workdir=workdir,
+            env=env,
+            detach=detach,
+            interactive=interactive,
+            tty=tty,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker exec command."""
+        return "docker:exec"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker exec command logic."""
+        return await self._exec_command(**kwargs)
+
+    async def _exec_command(
+        self,
+        container: str,
+        command: str,
+        user: Optional[str] = None,
+        workdir: Optional[str] = None,
+        env: Optional[List[str]] = None,
+        detach: bool = False,
+        interactive: bool = False,
+        tty: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Execute command in container."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "exec"]
+
+            # Add options
+            if user:
+                cmd.extend(["--user", user])
+
+            if workdir:
+                cmd.extend(["--workdir", workdir])
+
+            if env:
+                for env_var in env:
+                    cmd.extend(["-e", env_var])
+
+            if detach:
+                cmd.append("-d")
+
+            if interactive:
+                cmd.append("-i")
+
+            if tty:
+                cmd.append("-t")
+
+            # Add container and command
+            cmd.append(container)
+            cmd.extend(command.split())
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to execute command in container: {result.stderr}")
+
+            return {
+                "message": f"Command executed in container '{container}'",
+                "container": container,
+                "command": command,
+                "user": user,
+                "workdir": workdir,
+                "env": env,
+                "detach": detach,
+                "interactive": interactive,
+                "tty": tty,
+                "raw_output": result.stdout,
+                "command_executed": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker exec command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker exec failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker exec command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "container": {
+                    "type": "string",
+                    "description": "Container name or ID",
+                },
+                "command": {
+                    "type": "string",
+                    "description": "Command to execute",
+                },
+                "user": {
+                    "type": "string",
+                    "description": "User to run command as",
+                },
+                "workdir": {
+                    "type": "string",
+                    "description": "Working directory",
+                },
+                "env": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Environment variables",
+                },
+                "detach": {
+                    "type": "boolean",
+                    "description": "Run in background",
+                    "default": False,
+                },
+                "interactive": {
+                    "type": "boolean",
+                    "description": "Keep STDIN open",
+                    "default": False,
+                },
+                "tty": {
+                    "type": "boolean",
+                    "description": "Allocate a pseudo-TTY",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["container", "command"],
+            "additionalProperties": False,
+        }

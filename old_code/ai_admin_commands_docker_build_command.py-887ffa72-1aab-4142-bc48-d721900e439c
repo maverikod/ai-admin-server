@@ -1,0 +1,192 @@
+from ai_admin.core.custom_exceptions import CustomError
+"""Docker build command for building images from Dockerfiles.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerBuildCommand(BaseUnifiedCommand):
+    """Build Docker images from Dockerfile.
+
+    This command allows building Docker images with various options
+    including tagging, build context, and build arguments.
+    """
+
+    name = "docker_build"
+
+    def __init__(self):
+        """Initialize Docker build command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        dockerfile_path: str = "Dockerfile",
+        tag: Optional[str] = None,
+        context_path: str = ".",
+        build_args: Optional[Dict[str, str]] = None,
+        no_cache: bool = False,
+        pull: bool = False,
+        quiet: bool = False,
+        user_roles: Optional[List[str]] = None,
+        **kwargs,
+    ) -> SuccessResult:
+        """Execute Docker build command with unified security.
+
+        Args:
+            dockerfile_path: Path to Dockerfile
+            tag: Image tag
+            context_path: Build context path
+            build_args: Build arguments
+            no_cache: Don't use cache
+            pull: Pull base images
+            quiet: Suppress build output
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success result with build information
+        """
+        # Validate inputs
+        if not dockerfile_path:
+            return ErrorResult(message="Dockerfile path is required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            dockerfile_path=dockerfile_path,
+            tag=tag,
+            context_path=context_path,
+            build_args=build_args,
+            no_cache=no_cache,
+            pull=pull,
+            quiet=quiet,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker build command."""
+        return "docker:build"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker build command logic."""
+        return await self._build_image(**kwargs)
+
+    async def _build_image(
+        self,
+        dockerfile_path: str = "Dockerfile",
+        tag: Optional[str] = None,
+        context_path: str = ".",
+        build_args: Optional[Dict[str, str]] = None,
+        no_cache: bool = False,
+        pull: bool = False,
+        quiet: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Build Docker image."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "build"]
+
+            # Add options
+            if tag:
+                cmd.extend(["-t", tag])
+
+            if no_cache:
+                cmd.append("--no-cache")
+
+            if pull:
+                cmd.append("--pull")
+
+            if quiet:
+                cmd.append("--quiet")
+
+            # Add build arguments
+            if build_args:
+                for key, value in build_args.items():
+                    cmd.extend(["--build-arg", f"{key}={value}"])
+
+            # Add Dockerfile path
+            cmd.extend(["-f", dockerfile_path])
+
+            # Add context path
+            cmd.append(context_path)
+
+            # Execute build command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+            if result.returncode != 0:
+                raise CustomError(f"Failed to build Docker image: {result.stderr}")
+
+            return {
+                "message": "Docker image built successfully",
+                "dockerfile_path": dockerfile_path,
+                "tag": tag,
+                "context_path": context_path,
+                "build_args": build_args,
+                "no_cache": no_cache,
+                "pull": pull,
+                "quiet": quiet,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker build command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker build failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker build command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "dockerfile_path": {
+                    "type": "string",
+                    "description": "Path to Dockerfile",
+                    "default": "Dockerfile",
+                },
+                "tag": {
+                    "type": "string",
+                    "description": "Image tag",
+                },
+                "context_path": {
+                    "type": "string",
+                    "description": "Build context path",
+                    "default": ".",
+                },
+                "build_args": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                    "description": "Build arguments",
+                },
+                "no_cache": {
+                    "type": "boolean",
+                    "description": "Don't use cache",
+                    "default": False,
+                },
+                "pull": {
+                    "type": "boolean",
+                    "description": "Pull base images",
+                    "default": False,
+                },
+                "quiet": {
+                    "type": "boolean",
+                    "description": "Suppress build output",
+                    "default": False,
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["dockerfile_path"],
+            "additionalProperties": False,
+        }

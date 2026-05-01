@@ -1,0 +1,113 @@
+from ai_admin.core.custom_exceptions import CustomError, FileNotFoundError
+"""Docker copy command for copying files between host and container.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import subprocess
+from typing import Dict, Any, Optional, List
+from mcp_proxy_adapter.commands.result import SuccessResult, ErrorResult
+from ai_admin.commands.base_unified_command import BaseUnifiedCommand
+from ai_admin.security.docker_security_adapter import DockerSecurityAdapter
+
+class DockerCpCommand(BaseUnifiedCommand):
+    """Copy files between host and Docker container."""
+
+    name = "docker_cp"
+
+    def __init__(self):
+        """Initialize Docker cp command."""
+        super().__init__()
+        self.security_adapter = DockerSecurityAdapter()
+
+    async def execute(
+        self,
+        source: str,
+        destination: str,
+        user_roles: Optional[List[str]] = None,
+        **kwargs
+    ) -> SuccessResult:
+        """Execute Docker cp command with unified security.
+
+        Args:
+            source: Source path (host path or container:path)
+            destination: Destination path (host path or container:path)
+            user_roles: List of user roles for security validation
+
+        Returns:
+            Success or error result
+        """
+        # Validate inputs
+        if not source or not destination:
+            return ErrorResult(message="Source and destination are required", code="VALIDATION_ERROR")
+
+        # Use unified security approach
+        return await super().execute(
+            source=source,
+            destination=destination,
+            user_roles=user_roles,
+            **kwargs,
+        )
+
+    def _get_default_operation(self) -> str:
+        """Get default operation name for Docker cp command."""
+        return "docker:cp"
+
+    async def _execute_command_logic(self, **kwargs) -> Dict[str, Any]:
+        """Execute Docker cp command logic."""
+        return await self._copy_files(**kwargs)
+
+    async def _copy_files(
+        self,
+        source: str,
+        destination: str,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Copy files between host and container."""
+        try:
+            # Build Docker command
+            cmd = ["docker", "cp", source, destination]
+
+            # Execute command
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+
+            if result.returncode != 0:
+                raise FileNotFoundError(f"Failed to copy files: {result.stderr}")
+
+            return {
+                "message": f"Files copied from '{source}' to '{destination}'",
+                "source": source,
+                "destination": destination,
+                "raw_output": result.stdout,
+                "command": " ".join(cmd),
+            }
+
+        except subprocess.TimeoutExpired as e:
+            raise CustomError(f"Docker cp command timed out: {str(e)}")
+        except CustomError as e:
+            raise CustomError(f"Docker cp failed: {str(e)}")
+
+    @classmethod
+    def get_schema(cls) -> Dict[str, Any]:
+        """Get JSON schema for Docker cp command parameters."""
+        return {
+            "type": "object",
+            "properties": {
+                "source": {
+                    "type": "string",
+                    "description": "Source path (host path or container:path)",
+                },
+                "destination": {
+                    "type": "string",
+                    "description": "Destination path (host path or container:path)",
+                },
+                "user_roles": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of user roles for security validation",
+                },
+            },
+            "required": ["source", "destination"],
+            "additionalProperties": False,
+        }

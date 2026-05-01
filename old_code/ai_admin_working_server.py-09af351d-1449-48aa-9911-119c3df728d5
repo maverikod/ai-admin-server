@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""Working server entry point for ai_admin."""
+"""Working AI Admin MCP Server based on full_application example.
+
+Author: Vasiliy Zdanovskiy
+email: vasilyvz@gmail.com
+"""
+
+import sys
+import argparse
+import logging
+import asyncio
+from pathlib import Path
+
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from mcp_proxy_adapter.api.app import create_app  # noqa: E402
+from mcp_proxy_adapter.core.config.simple_config import SimpleConfig  # noqa: E402
+from mcp_proxy_adapter.commands.command_registry import registry  # noqa: E402
+
+# Import AI Admin command registry to register all commands
+import ai_admin.core.command_registry  # noqa: E402,F401
+from ai_admin.commands.get_methods_command import GetMethodsCommand  # noqa: E402
+
+# Import config validator
+from ai_admin.config.config_validator import ConfigValidator  # noqa: E402
+
+
+class AIAdminServer:
+    """AI Admin server based on full_application example."""
+
+    def __init__(self, config_path: str):
+        self.config_path = config_path
+
+        # Setup logging first
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        # Validate configuration before loading
+        self._validate_config(config_path)
+
+        # Load configuration using SimpleConfig (required by adapter)
+        self.simple_config = SimpleConfig(config_path)
+        self.config_model = self.simple_config.load()
+        self.config_dict = self.simple_config.to_dict()
+        self.app = None
+
+    def _validate_config(self, config_path: str) -> None:
+        """
+        Validate configuration file before loading.
+
+        Args:
+            config_path: Path to configuration file
+
+        Raises:
+            ValueError: If configuration validation fails
+        """
+        validator = ConfigValidator(config_path)
+        is_valid, errors = validator.validate_file(config_path)
+
+        if not is_valid:
+            error_messages = "\n".join([f"  - {e}" for e in errors])
+            raise ValueError(
+                f"Configuration validation failed for {config_path}:\n{error_messages}"
+            )
+
+        self.logger.info(f"✅ Configuration validated: {config_path}")
+
+    def create_application(self):
+        """Create the FastAPI application."""
+        self.logger.info("🔧 Creating AI Admin application...")
+
+        # Create application with configuration (pass dict, not Config object)
+        self.app = create_app(app_config=self.config_dict, config_path=self.config_path)
+
+        # Keep backward compatibility for proxies that still call JSON-RPC get_methods.
+        if not registry.command_exists(GetMethodsCommand.name):
+            registry.register_custom(GetMethodsCommand)
+            self.logger.info("✅ Registered compatibility command: get_methods")
+
+        self.logger.info("✅ Application created successfully")
+
+    def run(self, host: str = None, port: int = None, debug: bool = False):
+        """Run the application using hypercorn like in the example."""
+
+        # Override configuration if specified
+        if host:
+            self.config_dict["server"]["host"] = host
+        if port:
+            self.config_dict["server"]["port"] = port
+        if debug:
+            self.config_dict["server"]["debug"] = debug
+
+        print("🚀 Starting AI Admin MCP Server")
+        print(f"📋 Configuration: {self.config_path}")
+        print("=" * 60)
+
+        # Create application with configuration
+        self.create_application()
+
+        # Get server configuration
+        server_host = self.config_dict.get("server", {}).get("host", "127.0.0.1")
+        server_port = self.config_dict.get("server", {}).get("port", 20000)
+        server_debug = self.config_dict.get("server", {}).get("debug", False)
+
+        # Get SSL configuration
+        server_ssl = self.config_dict.get("server", {}).get("ssl")
+        ssl_enabled = server_ssl is not None
+        ssl_cert_file = server_ssl.get("cert") if server_ssl else None
+        ssl_key_file = server_ssl.get("key") if server_ssl else None
+
+        print(f"🌐 Server: {server_host}:{server_port}")
+        print(f"🔧 Debug: {server_debug}")
+        if ssl_enabled:
+            print("🔐 SSL: Enabled")
+            print(f"   Certificate: {ssl_cert_file}")
+            print(f"   Key: {ssl_key_file}")
+        print("=" * 60)
+
+        # Use hypercorn directly to run the application
+        try:
+            import hypercorn.asyncio
+            import hypercorn.config
+
+            # Configure hypercorn
+            config_hypercorn = hypercorn.config.Config()
+            config_hypercorn.bind = [f"{server_host}:{server_port}"]
+            config_hypercorn.loglevel = "debug" if server_debug else "info"
+
+            if ssl_enabled and ssl_cert_file and ssl_key_file:
+                config_hypercorn.certfile = ssl_cert_file
+                config_hypercorn.keyfile = ssl_key_file
+                print("🔐 Starting HTTPS server with hypercorn...")
+            else:
+                print("🌐 Starting HTTP server with hypercorn...")
+
+            # Run the server - this is the key difference!
+            asyncio.run(hypercorn.asyncio.serve(self.app, config_hypercorn))
+
+        except ImportError:
+            print("❌ hypercorn not installed. Installing...")
+            import subprocess
+
+            subprocess.run([sys.executable, "-m", "pip", "install", "hypercorn"])
+            print("✅ hypercorn installed. Please restart the application.")
+            return
+
+
+def main():
+    """Main entry point for AI Admin server."""
+    parser = argparse.ArgumentParser(description="AI Admin MCP Server")
+    parser.add_argument(
+        "--config", "-c", required=True, help="Path to configuration file"
+    )
+    parser.add_argument("--host", help="Server host")
+    parser.add_argument("--port", type=int, help="Server port")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+
+    args = parser.parse_args()
+
+    # Create and run application
+    app = AIAdminServer(args.config)
+    app.run(host=args.host, port=args.port, debug=args.debug)
+
+
+if __name__ == "__main__":
+    main()

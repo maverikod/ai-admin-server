@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "cert_type": "server",
+    "common_name": "test-cert",
+    "cert_path": "test.crt",
+    "key_path": "test.key",
+    "roles": [
+      "admin"
+    ],
+    "created_at": "2024-01-01T00:00:00",
+    "status": "active"
+  }
+]

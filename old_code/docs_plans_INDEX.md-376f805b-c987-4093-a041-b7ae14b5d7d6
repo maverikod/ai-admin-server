@@ -1,0 +1,36 @@
+# Queue Refactoring Plan: Task Queue → queuemgr
+
+## Goal
+
+Replace the custom Task Queue (`ai_admin/task_queue/`, `ai_admin/queue_management/`) with the
+unified `queuemgr`-based system already used by `mcp_proxy_adapter`. Remove all Executor classes,
+deduplicate `QueueManager`, eliminate `FTPExecutor`/`FtpExecutor` split, and make every command
+submit jobs via `QueueManagerIntegration`.
+
+## High-Level Steps
+
+| # | Step | Directory |
+|---|------|-----------|
+| 1 | **Audit & map** — catalogue every Task Queue consumer and Executor | [step_1/](step_1/INDEX.md) |
+| 2 | **Define Job classes** — create `QueueJobBase` subclasses for each domain | [step_2/](step_2/INDEX.md) |
+| 3 | **Wire `QueueManagerIntegration`** — replace singleton `QueueManager` with integration layer | [step_3/](step_3/INDEX.md) |
+| 4 | **Migrate commands** — rewrite each command to submit via `QueueManagerIntegration` | [step_4/](step_4/INDEX.md) |
+| 5 | **Delete legacy layer** — remove Executors, old `QueueManager`, `QueueClient`, `QueueDaemon` | [step_5/](step_5/INDEX.md) |
+| 6 | **Deduplicate & clean** — merge `FTPExecutor`/`FtpExecutor`, fix `queue_manager.py` duplicate | [step_6/](step_6/INDEX.md) |
+| 7 | **Tests** — cover new Job classes and migrated commands | [step_7/](step_7/INDEX.md) |
+
+## Key Files Affected
+
+```
+ai_admin/task_queue/              ← DELETE entirely after migration
+ai_admin/queue_management/        ← DELETE entirely after migration
+ai_admin/commands/*_command.py    ← MODIFY: replace QueueManager calls
+commands/base_unified_command.py  ← MODIFY: inject QueueManagerIntegration
+ai_admin/__init__.py              ← MODIFY: startup wiring
+```
+
+## Dependencies
+
+- `queuemgr` — already in `.venv`, used by `mcp_proxy_adapter`
+- `QueueJobBase` — base class for all new Job classes
+- `QueueManagerIntegration` — already implemented in `mcp_proxy_adapter`

@@ -1,0 +1,36 @@
+# Step 4: Migrate Commands — Replace QueueManager Calls
+
+## Goal
+Rewrite every command that calls `QueueManager.add_*_task()` to instead
+call `get_queue_integration().add_job(JobClass, job_id, params)`.
+
+## Tactical Steps
+
+| # | Task | Detail |
+|---|------|---------|
+| 4.1 | Migrate Docker commands: `DockerBuildCommand`, `DockerPushCommand`, `DockerPullCommand` | [4_1/](4_1/INDEX.md) |
+| 4.2 | Migrate Git commands: `GitCloneCommand`, `GitPushCommand`, `GitPullCommand` | [4_2/](4_2/INDEX.md) |
+| 4.3 | Migrate GitHub commands: `GitHubCreateRepoCommand` and others | [4_3/](4_3/INDEX.md) |
+| 4.4 | Migrate K8s commands: deployment, pod, cluster, cert, mTLS (5 commands) | [4_4/](4_4/INDEX.md) |
+| 4.5 | Migrate Vast.ai commands: `VastCreateCommand`, `VastDestroyCommand`, `VastSearchCommand`, `VastInstancesCommand` | [4_5/](4_5/INDEX.md) |
+| 4.6 | Migrate FTP commands — use merged `FtpJob` | [4_6/](4_6/INDEX.md) |
+| 4.7 | Migrate Ollama commands: `OllamaPullCommand`, `OllamaRunCommand` | [4_7/](4_7/INDEX.md) |
+| 4.8 | Migrate SSL commands: generate/view/verify/revoke | [4_8/](4_8/INDEX.md) |
+| 4.9 | Migrate System commands: `SystemMonitorCommand` | [4_9/](4_9/INDEX.md) |
+| 4.10 | Migrate queue management commands: `QueueCancelTaskCommand`, `QueueRemoveTaskCommand` → `stop_job`/`delete_job` | [4_10/](4_10/INDEX.md) |
+
+## Pattern Per Command
+```python
+# Before
+qm = QueueManager()
+task_id = qm.add_docker_push_task(image_name, tag)
+
+# After
+integration = get_queue_integration()
+result = await integration.add_job(DockerJob, job_id, {"op": "push", "image": image_name, "tag": tag})
+```
+
+## Notes
+- Migrate one domain at a time, test after each batch
+- `job_id` = deterministic string, e.g. `f"docker_push_{image_name}_{tag}"`
+- Return `job_id` from command so caller can poll status
