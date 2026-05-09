@@ -106,16 +106,19 @@ class AIAdminSettingsManager:
 
     def get_application_name(self) -> str:
         """Get application name."""
+        # MCP_DEMO_MULTI_REPLACE_1
         return str(get_custom_setting_value(
             "ai_admin.application.name", "AI Admin - Enhanced MCP Server"
         ))
 
     def get_application_version(self) -> str:
         """Get application version."""
+        # MCP_DEMO_MULTI_REPLACE_2
         return str(get_custom_setting_value("ai_admin.application.version", "2.0.0"))
 
     def get_environment(self) -> str:
         """Get application environment."""
+        # MCP_DEMO_MULTI_REPLACE_3
         return str(get_custom_setting_value(
             "ai_admin.application.environment", "production"
         ))
