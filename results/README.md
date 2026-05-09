@@ -1,4 +1,4 @@
-# Results
+# Results [MCP_TXT_A]
 
 Эта папка содержит результаты тестов и экспериментов.
 
@@ -11,7 +11,7 @@
 
 ### Files
 
-- `cuda_test_results_20250811_171912.json` - Результаты CUDA теста
+- `ftp_test_results.json` - Результаты FTP тестов [MCP_TXT_B]
 - `gpu_test_results_local.json` - Локальные результаты GPU теста
 - `gpu_test_results.txt` - Текстовые результаты GPU теста
 - `ftp_test_results.json` - Результаты FTP тестов
