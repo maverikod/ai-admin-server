@@ -23,13 +23,13 @@ so nothing is missed during migration. Also identify duplicates for cleanup.
 - `docs/plans/queue/step_1/outputs/queuemanager_importers.md` — all QueueManager consumers
 - `docs/plans/queue/step_1/outputs/queueclient_importers.md` — all QueueClient consumers
 - `docs/plans/queue/step_1/outputs/executors_map.md` — executor class → methods table
-- `docs/plans/queue/step_1/task_executor_map.md` — add_*_task → executor mapping
+- `docs/plans/queue/step_1/outputs/task_executor_map.md` — add_*_task → executor mapping
 - `docs/plans/queue/step_1/outputs/queuemanager_diff.md` — impl vs root duplicate diff
 - `docs/plans/queue/step_1/outputs/ftp_executor_diff.md` — FTP executor merge plan
 - `docs/plans/queue/step_1/outputs/task_status_map.md` — old → new status translation
 - `docs/plans/queue/step_1/outputs/queue_action_filter_map.md` — action/filter mapping
 - `docs/plans/queue/step_1/outputs/queue_daemon_analysis.md` — daemon analysis
-- `docs/plans/queue/step_1/dependency_matrix.md` — **master migration checklist**
+- `docs/plans/queue/step_1/outputs/dependency_matrix.md` — **master migration checklist**
 
 ## Note on duplicates
 Steps 1.5 and 1.6 perform the **analysis** of duplicates (formerly Step 6.1–6.5).
