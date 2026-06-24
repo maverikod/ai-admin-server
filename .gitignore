@@ -217,3 +217,9 @@ docker/kubeconfig/
 docker/models/
 logs/
 Hello-World/
+projectid
+.cst/
+
+old_code/
+
+*.tree

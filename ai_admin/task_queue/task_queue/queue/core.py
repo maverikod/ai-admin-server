@@ -1,20 +1,14 @@
 """Module queue."""
 
-from ai_admin.core.custom_exceptions import (
-    ConfigurationError,
-    CustomError,
-    NetworkError,
-)
+from ai_admin.core.custom_exceptions import CustomError
 import asyncio
-import json
-import uuid
-import ssl
-import socket
-import ftplib
 from datetime import datetime
-from enum import Enum
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
+
+from ..enums import TaskStatus, TaskType
+from ..task import Task
+from ..task_error_code import TaskErrorCode
+
 
 class QueueCore:
     """Universal task queue for managing any type of operations."""
@@ -39,7 +33,7 @@ class QueueCore:
 
         logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger(__name__)
-        logger.info(f"=== Adding task to queue ===")
+        logger.info("=== Adding task to queue ===")
         logger.info(f"Task ID: {task.id}")
         logger.info(f"Task type: {task.task_type.value}")
         logger.info(f"Task params: {task.params}")
@@ -372,7 +366,7 @@ class QueueCore:
 
         logging.basicConfig(level=logging.DEBUG)
         logger = logging.getLogger(__name__)
-        logger.info(f"=== Trying to start next task ===")
+        logger.info("=== Trying to start next task ===")
         logger.info(f"Running tasks: {len(self._running_tasks)}")
         logger.info(f"Max concurrent: {self.max_concurrent}")
         logger.info(f"Pending queue size: {len(self._pending_queue)}")
@@ -393,7 +387,7 @@ class QueueCore:
         async_task = asyncio.create_task(self._execute_task(task))
         self._running_tasks[task_id] = async_task
         logger.info(f"Task {task_id} added to running tasks")
-        logger.info(f"=== Next task started successfully ===")
+        logger.info("=== Next task started successfully ===")
 
     async def _execute_task(self, task: Task) -> None:
         """Execute a task.
@@ -577,7 +571,8 @@ class QueueCore:
                 await self._execute_ssh_task(task)
             else:
                 logger.warning(
-                    f"Task type {task.task_type} not implemented, using generic executor"
+                    f"Task type {task.task_type} not implemented, "
+                    "using generic executor"
                 )
                 await self._execute_generic_task(task)
             logger.info(f"Task {task.id} execution completed")
@@ -597,6 +592,3 @@ class QueueCore:
             logger.info("Trying to start next task")
             await self._try_start_next_task()
         logger.info(f"=== Completed task execution {task.id} ===")
-
-
-

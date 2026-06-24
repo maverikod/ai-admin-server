@@ -1,20 +1,11 @@
 """Module queue."""
 
-from ai_admin.core.custom_exceptions import (
-    ConfigurationError,
-    CustomError,
-    NetworkError,
-)
+from ai_admin.core.custom_exceptions import CustomError, NetworkError
 import asyncio
-import json
-import uuid
-import ssl
-import socket
-import ftplib
-from datetime import datetime
-from enum import Enum
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass, field
+
+from ..task import Task
+from ..task_error_code import TaskErrorCode
+
 
 class DockerExecutor:
     """Universal task queue for managing any type of operations."""
@@ -36,7 +27,10 @@ class DockerExecutor:
         full_image_name = f"{image_name}:{tag}"
         user_roles = params.get("user_roles", [])
         logger.info(
-            f"Push parameters: image_name={image_name}, tag={tag}, full_name={full_image_name}"
+            "Push parameters: image_name=%s, tag=%s, full_name=%s",
+            image_name,
+            tag,
+            full_image_name,
         )
         security_adapter = DockerSecurityAdapter()
         operation_params = {
@@ -193,7 +187,10 @@ class DockerExecutor:
         user_roles = params.get("user_roles", [])
         full_image_name = f"{image_name}:{tag}" if image_name else tag
         logger.info(
-            f"Build parameters: context={context_path}, dockerfile={dockerfile}, tag={full_image_name}"
+            "Build parameters: context=%s, dockerfile=%s, tag=%s",
+            context_path,
+            dockerfile,
+            full_image_name,
         )
         security_adapter = DockerSecurityAdapter()
         operation_params = {
@@ -248,7 +245,7 @@ class DockerExecutor:
                         build_info.append(line.strip())
                     elif "Step" in line and ":" in line:
                         build_info.append(line.strip())
-                logger.info(f"Build completed successfully")
+                logger.info("Build completed successfully")
                 task.add_log(f"DEBUG: STDOUT: {stdout.decode('utf-8')}")
                 security_adapter.audit_docker_operation(
                     DockerOperation.BUILD, user_roles, operation_params, "executed"
@@ -308,7 +305,10 @@ class DockerExecutor:
         else:
             full_image_name = f"{image_name}:{tag}"
         logger.info(
-            f"Pull parameters: image_name={image_name}, tag={tag}, full_name={full_image_name}"
+            "Pull parameters: image_name=%s, tag=%s, full_name=%s",
+            image_name,
+            tag,
+            full_image_name,
         )
         security_adapter = DockerSecurityAdapter()
         operation_params = {
@@ -465,9 +465,10 @@ class DockerExecutor:
                 task.update_progress(
                     90, f"Docker Network {action} operation completed successfully"
                 )
+                msg = f"Docker Network {action} operation completed successfully"
                 task.complete(
                     {
-                        "message": f"Docker Network {action} operation completed successfully",
+                        "message": msg,
                         "action": action,
                         "result": result.data,
                     }
@@ -614,6 +615,3 @@ class DockerExecutor:
             error_msg = f"Docker Tag operation failed: {str(e)}"
             logger.error(error_msg, exc_info=True)
             task.fail(error_msg, TaskErrorCode.DOCKER_TAG_ERROR, {"exception": str(e)})
-
-
-
